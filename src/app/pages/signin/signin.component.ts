@@ -4,11 +4,10 @@ import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 
 @Component({
-  selector: 'app-signin',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './signin.component.html',
-  styleUrls: ['./signin.component.scss']
+    selector: 'app-signin',
+    imports: [CommonModule],
+    templateUrl: './signin.component.html',
+    styleUrls: ['./signin.component.scss']
 })
 export class SigninComponent {
   constructor(

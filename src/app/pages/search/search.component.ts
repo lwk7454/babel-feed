@@ -5,11 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, NewsItem } from '../../services/api.service';
 
 @Component({
-  selector: 'app-search',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './search.component.html',
-  styleUrls: ['./search.component.scss']
+    selector: 'app-search',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './search.component.html',
+    styleUrls: ['./search.component.scss']
 })
 export class SearchComponent {
   searchQuery: string = '';

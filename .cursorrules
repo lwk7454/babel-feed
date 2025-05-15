@@ -45,7 +45,7 @@
 
 # Tech stack
 * This is a mobile app based on Tauri (a cross platform framework). 
-* Front-end is build in Angular 17. 
+* Front-end is build in Angular 19. 
 * This project is app-only, there will be separate web service project that provides service back-end, provide API endpoint for things like user authentication, retrieve news feed, content personalisation, etc. 
 * Use Bun as JS/TS run time and dependency manager. 
 

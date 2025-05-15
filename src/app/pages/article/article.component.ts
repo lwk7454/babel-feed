@@ -5,11 +5,10 @@ import { ApiService, NewsItem } from '../../services/api.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
-  selector: 'app-article',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './article.component.html',
-  styleUrls: ['./article.component.scss']
+    selector: 'app-article',
+    imports: [CommonModule],
+    templateUrl: './article.component.html',
+    styleUrls: ['./article.component.scss']
 })
 export class ArticleComponent implements OnInit {
   newsItem: NewsItem | undefined;

@@ -4,11 +4,10 @@ import { Router } from '@angular/router';
 import { ApiService, NewsItem } from '../../services/api.service';
 
 @Component({
-  selector: 'app-feed',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './feed.component.html',
-  styleUrls: ['./feed.component.scss']
+    selector: 'app-feed',
+    imports: [CommonModule],
+    templateUrl: './feed.component.html',
+    styleUrls: ['./feed.component.scss']
 })
 export class FeedComponent implements OnInit {
   newsItems: NewsItem[] = [];
