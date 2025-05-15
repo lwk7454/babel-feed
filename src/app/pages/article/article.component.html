@@ -1,0 +1,20 @@
+<div class="app-container">
+  <header class="app-header">
+    <button class="back-button" (click)="goBack()">←</button>
+    <h1 *ngIf="newsItem">{{newsItem.source}}</h1>
+    <div></div> <!-- Empty div for flex spacing -->
+  </header>
+  
+  <div class="webview-container" *ngIf="newsItem">
+    <iframe
+      [src]="safeUrl"
+      class="webview"
+      frameborder="0"
+      title="Content"
+    ></iframe>
+  </div>
+  
+  <button class="translate-button" (click)="toggleTranslation()" [class.active]="isTranslating">
+    文
+  </button>
+</div> 

@@ -1,0 +1,38 @@
+<div class="app-container">
+  <header class="app-header">
+    <h1>Babel Feed</h1>
+    <button (click)="navigateToSearch()">🔍</button>
+  </header>
+  
+  <div class="feed-container" *ngIf="newsItems.length > 0">
+    <div class="card news-item" *ngFor="let item of newsItems" (click)="openNewsItem(item)">
+      <div class="news-item-header">
+        <div class="source">{{item.source}}</div>
+        <div class="time">{{item.publishedAt}}</div>
+      </div>
+      
+      <h2>{{item.title}}</h2>
+      <p>{{item.summary}}</p>
+      
+      <div *ngIf="item.type === 'video'" class="video-indicator">
+        <span>{{item.source}}</span>
+        <span>{{item.duration}}</span>
+      </div>
+      
+      <div *ngIf="item.imageUrl" class="item-image">
+        <img [src]="item.imageUrl" alt="News image">
+      </div>
+    </div>
+  </div>
+  
+  <div class="empty-state" *ngIf="newsItems.length === 0">
+    <div class="empty-icon">≡✕</div>
+    <p>No content available based on your current preferences.</p>
+  </div>
+  
+  <div class="bottom-nav">
+    <button (click)="refreshFeed()">📋</button>
+    <button (click)="navigateToSearch()">🔍</button>
+    <button (click)="navigateToSettings()">⚙️</button>
+  </div>
+</div> 

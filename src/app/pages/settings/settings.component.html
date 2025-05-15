@@ -1,0 +1,39 @@
+<div class="app-container">
+  <header class="app-header">
+    <button class="back-button" (click)="goBack()">←</button>
+    <h1>Settings</h1>
+    <div></div> <!-- Empty div for flex spacing -->
+  </header>
+  
+  <div class="settings-menu">
+    <div class="settings-item" (click)="navigateToLanguageSettings()">
+      <span>Language Settings</span>
+      <span>›</span>
+    </div>
+    
+    <div class="settings-item" (click)="navigateToContentPreferences()">
+      <span>Content Preferences</span>
+      <span>›</span>
+    </div>
+    
+    <div class="settings-item" (click)="navigateToDisplaySettings()">
+      <span>Display</span>
+      <span>›</span>
+    </div>
+    
+    <div class="settings-item" (click)="navigateToAbout()">
+      <span>About Babel Feed</span>
+      <span>›</span>
+    </div>
+    
+    <div class="settings-item" (click)="navigateToPrivacyPolicy()">
+      <span>Privacy Policy</span>
+      <span>›</span>
+    </div>
+    
+    <div class="settings-item" (click)="navigateToTerms()">
+      <span>Terms of Service</span>
+      <span>›</span>
+    </div>
+  </div>
+</div> 

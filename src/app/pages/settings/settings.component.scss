@@ -1,0 +1,16 @@
+.settings-menu {
+  margin-bottom: 60px;
+}
+
+.settings-item {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.settings-item span:last-child {
+  color: var(--inactive-color);
+} 

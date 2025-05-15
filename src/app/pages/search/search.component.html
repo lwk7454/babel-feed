@@ -1,0 +1,42 @@
+<div class="app-container">
+  <header class="app-header">
+    <button class="back-button" (click)="goBack()">←</button>
+    <h1>Search</h1>
+    <div></div> <!-- Empty div for flex spacing -->
+  </header>
+  
+  <div class="search-container">
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      (keyup.enter)="performSearch()"
+      placeholder="Search for news..."
+      class="search-input"
+    />
+  </div>
+  
+  <div class="search-results" *ngIf="results.length > 0">
+    <div class="card search-result" *ngFor="let item of results" (click)="openNewsItem(item)">
+      <div class="result-header">
+        <div class="source">{{item.source}}</div>
+        <div class="time">{{item.publishedAt}}</div>
+      </div>
+      
+      <h2>{{item.title}}</h2>
+      <p>{{item.summary}}</p>
+      
+      <div *ngIf="item.type === 'video'" class="video-details">
+        <span>{{item.source}}</span>
+        <span>{{item.duration}}</span>
+      </div>
+      
+      <div *ngIf="item.imageUrl" class="result-image">
+        <img [src]="item.imageUrl" alt="News image">
+      </div>
+    </div>
+  </div>
+  
+  <div class="no-results" *ngIf="hasSearched && results.length === 0">
+    <p>No results found. Try a different search term.</p>
+  </div>
+</div> 

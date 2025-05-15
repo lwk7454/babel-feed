@@ -1,0 +1,13 @@
+<div class="app-container welcome-container">
+  <h1>Babel Feed</h1>
+  <p>Welcome to your personalized news feed without language barriers.</p>
+  
+  <div class="language-options">
+    <button [ngClass]="{ 'selected': selectedLanguage === 'en' }" (click)="selectLanguage('en')">English</button>
+    <button [ngClass]="{ 'selected': selectedLanguage === 'zh-Hans' }" (click)="selectLanguage('zh-Hans')">简体中文</button>
+    <button [ngClass]="{ 'selected': selectedLanguage === 'zh-Hant' }" (click)="selectLanguage('zh-Hant')">繁體中文</button>
+    <button [ngClass]="{ 'selected': selectedLanguage === 'ja' }" (click)="selectLanguage('ja')">日本語</button>
+  </div>
+  
+  <button class="next-button" (click)="goToSignIn()">Next</button>
+</div> 

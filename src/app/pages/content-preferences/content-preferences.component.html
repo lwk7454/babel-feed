@@ -1,0 +1,26 @@
+<div class="app-container">
+  <header class="app-header">
+    <button class="back-button" (click)="goBack()">←</button>
+    <h1>Content Preferences</h1>
+    <div></div> <!-- Empty div for flex spacing -->
+  </header>
+  
+  <div class="preferences-container">
+    <div class="section-header">Topics</div>
+    
+    <div class="preference-item" *ngFor="let topic of availableTopics">
+      <span>{{topic.name}}</span>
+      <label class="switch">
+        <input type="checkbox" [(ngModel)]="topic.selected" (change)="savePreferences()">
+        <span class="slider"></span>
+      </label>
+    </div>
+    
+    <div class="section-header">Blocked Sources</div>
+    
+    <div class="blocked-source" *ngFor="let source of blockedSources; let i = index">
+      <span>{{source}}</span>
+      <button class="remove-button" (click)="removeBlockedSource(i)">✕</button>
+    </div>
+  </div>
+</div> 

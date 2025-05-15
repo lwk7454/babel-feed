@@ -1,0 +1,65 @@
+# Project Overview
+
+**1. Project Name:** Babel Feed
+
+**2. Core Mission:** To create a mobile application that allows users to seamlessly discover, consume, and understand global news articles and video content, breaking down language barriers through integrated, on-device translation.
+
+**3. Target Audience:**
+    *   **Primary (Initial Launch):** Mandarin Chinese speakers who want to access and understand news and video content from global sources published in other languages.
+    *   **Secondary (Future Expansion):** Japanese speakers, and subsequently, English speakers wishing to consume content from Chinese/Japanese sources.
+    *   **Demographic Focus:** Tech-savvy users, likely younger generations interested in diverse global perspectives, news, and online video content (including potentially niche interests like anime culture, as per previous branding discussions).
+
+**4. Core User Experience & Key Features:**
+    *   **Aggregated Content Feed:**
+        *   The app will present a personalized, scrollable feed of news articles (displaying headlines and legally permissible short snippets/summaries) and video content (thumbnails, titles, source).
+        *   Content will be aggregated from a variety of online sources.
+    *   **In-App Browser for Content Consumption:**
+        *   When a user selects an item, the app will open the original source URL (news article web page or video platform page) within a dedicated in-app browser.
+        *   **Crucially, the app does NOT re-host or re-publish the full content on its own servers.**
+    *   **On-Device, Client-Side Translation:**
+        *   The core differentiating feature: While viewing content in the in-app browser, the user can activate an **on-device LLM-powered translation** feature.
+        *   This functions like a sophisticated browser plugin, translating the currently displayed web page text (for articles) or providing real-time translated captions (for videos, where feasible) into the user's chosen language.
+        *   **All translation processing must occur locally on the user's mobile device.** This is critical for legal compliance regarding copyrighted content.
+    *   **Personalization:** Users should be able to select preferred languages, topics, and potentially sources to customize their feed.
+    *   **User Interface (UI):**
+        *   Text-based news and video content should be clearly differentiated yet cohesively presented in the feed.
+        *   Seamless navigation between the feed, the in-app browser, and translation controls.
+
+**5. Design Philosophy & Aesthetic:**
+    *   **Modern & Cutting-Edge:** The design should feel fresh, contemporary, and technologically advanced.
+    *   **Playful & Engaging (Optional, aligning with branding like "破巴别"):** While clean, it can incorporate subtle playful elements or a tone that resonates with a younger, digitally native audience, potentially drawing inspiration from modern app design trends or even a slight nod to tech-savvy/anime-adjacent cultures (without being overly niche or cluttered).
+    *   **Intuitive & User-Friendly:** Easy to navigate, with clear calls to action. The translation feature should be easily discoverable and simple to activate/deactivate.
+    *   **Developer-Friendly & Minimalist:** Prioritize designs that are achievable with standard UI components and frameworks (e.g., for Tauri). Avoid overly complex artistic elements requiring specialized design skills to implement. Focus on clean lines, good typography, and effective use of space. Consider neumorphism, glassmorphism, or refined minimalism.
+    *   **Performance-Minded:** UI should be lightweight and responsive, especially considering on-device processing.
+
+**6. Key Design Challenges/Considerations:**
+    *   **Integrating Translation Seamlessly:** How to present the translation option within the in-app browser without being intrusive, yet making it obvious and easy to use. Visual feedback for translation status.
+    *   **Legal Compliance in UI:** The design must reinforce that the user is viewing original content from the source and that translation is a client-side tool they are activating. Avoid any UI that implies the app itself is the publisher of the translated content.
+    *   **Content Diversity:** Effectively displaying both text-heavy news items and visual video items in a unified feed.
+    *   **Cross-Platform Consistency (Tauri Implication):** Design elements should translate well to a cross-platform mobile environment.
+
+**7. What to Avoid in Design:**
+    *   Designs that imply the app is hosting or republishing full, translated versions of articles server-side.
+    *   Cluttered interfaces.
+    *   Over-reliance on custom artistic assets that are hard to create/maintain.
+
+# Tech stack
+* This is a mobile app based on Tauri (a cross platform framework). 
+* Front-end is build in Angular 17. 
+* This project is app-only, there will be separate web service project that provides service back-end, provide API endpoint for things like user authentication, retrieve news feed, content personalisation, etc. 
+* Use Bun as JS/TS run time and dependency manager. 
+
+# Architecture
+## Main features
+* News feed display
+* News content summary page
+* News original source webview
+* Tauri plugin that handles the translation logic and communicates with the webview. It loads the on-device LLM and translate the text contents in a whole HTML, then communicate with the webview to inject the translated content.
+
+
+
+
+
+
+
+
