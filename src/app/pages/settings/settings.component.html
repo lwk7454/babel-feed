@@ -1,39 +1,50 @@
-<div class="app-container">
-  <header class="app-header">
-    <button class="back-button" (click)="goBack()">←</button>
-    <h1>Settings</h1>
-    <div></div> <!-- Empty div for flex spacing -->
-  </header>
-  
-  <div class="settings-menu">
-    <div class="settings-item" (click)="navigateToLanguageSettings()">
-      <span>Language Settings</span>
-      <span>›</span>
+<div class="settings-container p-p-2">
+  <p-card styleClass="p-mb-3" *ngIf="isAuthenticated$ | async">
+    <ng-template pTemplate="title">
+      <div class="p-d-flex p-ai-center">
+        <p-avatar 
+          [image]="(userData$ | async)?.photoURL || 'assets/placeholder-avatar.png'" 
+          size="large" 
+          shape="circle"
+          styleClass="p-mr-2">
+        </p-avatar>
+        <span>{{ (userData$ | async)?.displayName || (userData$ | async)?.email || 'User Profile' }}</span>
+      </div>
+    </ng-template>
+  </p-card>
+
+  <p-card header="Settings">
+    <div class="settings-list">
+      <div *ngFor="let item of settingsItems" 
+           class="settings-list-item p-d-flex p-ai-center p-ripple" 
+           pRipple 
+           (click)="item.command()"
+           tabindex="0" 
+           (keydown.enter)="item.command()">
+        <i [class]="'p-mr-2 pi ' + item.icon"></i>
+        <span>{{ item.label }}</span>
+        <i class="pi pi-angle-right p-ml-auto"></i>
+      </div>
     </div>
-    
-    <div class="settings-item" (click)="navigateToContentPreferences()">
-      <span>Content Preferences</span>
-      <span>›</span>
+  </p-card>
+
+  <p-card header="Information" styleClass="p-mt-3">
+    <div class="settings-list">
+      <div *ngFor="let item of infoItems" 
+           class="settings-list-item p-d-flex p-ai-center p-ripple" 
+           pRipple 
+           (click)="item.command()"
+           tabindex="0" 
+           (keydown.enter)="item.command()">
+        <i [class]="'p-mr-2 pi ' + item.icon"></i>
+        <span>{{ item.label }}</span>
+        <i class="pi pi-angle-right p-ml-auto"></i>
+      </div>
     </div>
-    
-    <div class="settings-item" (click)="navigateToDisplaySettings()">
-      <span>Display</span>
-      <span>›</span>
-    </div>
-    
-    <div class="settings-item" (click)="navigateToAbout()">
-      <span>About Babel Feed</span>
-      <span>›</span>
-    </div>
-    
-    <div class="settings-item" (click)="navigateToPrivacyPolicy()">
-      <span>Privacy Policy</span>
-      <span>›</span>
-    </div>
-    
-    <div class="settings-item" (click)="navigateToTerms()">
-      <span>Terms of Service</span>
-      <span>›</span>
-    </div>
+  </p-card>
+
+  <div class="p-mt-4 p-d-flex p-jc-center" *ngIf="isAuthenticated$ | async">
+    <p-button label="Sign Out" icon="pi pi-sign-out" styleClass="p-button-danger" (onClick)="signOut()"></p-button>
   </div>
+
 </div> 

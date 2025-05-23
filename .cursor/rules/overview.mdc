@@ -1,4 +1,8 @@
-# Project Overview
+---
+description: 
+globs: 
+alwaysApply: true
+---
 
 **1. Project Name:** Babel Feed
 
@@ -47,7 +51,8 @@
 * This is a mobile app based on Tauri (a cross platform framework). 
 * Front-end is build in Angular 19. 
 * This project is app-only, there will be separate web service project that provides service back-end, provide API endpoint for things like user authentication, retrieve news feed, content personalisation, etc. 
-* Use Bun as JS/TS run time and dependency manager. 
+* Use Bun as JS/TS run time and dependency manager. Don't use npm. 
+* Authentication is social login only for now with JWTs, achieved via Auth.js, assume there is a serverless backend for provider callbacks. 
 
 # Architecture
 ## Main features
@@ -55,11 +60,5 @@
 * News content summary page
 * News original source webview
 * Tauri plugin that handles the translation logic and communicates with the webview. It loads the on-device LLM and translate the text contents in a whole HTML, then communicate with the webview to inject the translated content.
-
-
-
-
-
-
-
+* App design should follow wireframes in ./src/wireframes
 

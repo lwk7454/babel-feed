@@ -1,13 +1,43 @@
-<div class="app-container welcome-container">
-  <h1>Babel Feed</h1>
-  <p>Welcome to your personalized news feed without language barriers.</p>
-  
-  <div class="language-options">
-    <button [ngClass]="{ 'selected': selectedLanguage === 'en' }" (click)="selectLanguage('en')">English</button>
-    <button [ngClass]="{ 'selected': selectedLanguage === 'zh-Hans' }" (click)="selectLanguage('zh-Hans')">简体中文</button>
-    <button [ngClass]="{ 'selected': selectedLanguage === 'zh-Hant' }" (click)="selectLanguage('zh-Hant')">繁體中文</button>
-    <button [ngClass]="{ 'selected': selectedLanguage === 'ja' }" (click)="selectLanguage('ja')">日本語</button>
-  </div>
-  
-  <button class="next-button" (click)="goToSignIn()">Next</button>
+<div [@fadeIn] class="p-d-flex p-flex-column p-ai-center p-jc-center" style="min-height: 100vh; padding: 1rem;">
+  <p-card styleClass="welcome-card">
+    <ng-template pTemplate="title">
+      <div class="p-text-center">Babel Feed</div>
+    </ng-template>
+    <ng-template pTemplate="subtitle">
+      <div class="p-text-center">Your news, your language.</div>
+    </ng-template>
+
+    <div class="p-fluid">
+      <h3 class="p-text-center p-mb-3">Choose your preferred language:</h3>
+      
+      <p-selectButton 
+        [options]="(languageOptions$ | async) || []"
+        [(ngModel)]="currentSelectedLanguage"
+        (onChange)="onLanguageChange($event)" 
+        optionLabel="label"
+        optionValue="value"
+        [style]="{ textAlign: 'center' }"
+        styleClass="p-mb-4">
+      </p-selectButton>
+
+      <p-button 
+        label="Next"
+        icon="pi pi-arrow-right"
+        iconPos="right"
+        (onClick)="goToSignIn()"
+        [disabled]="!currentSelectedLanguage">
+      </p-button>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-divider></p-divider>
+      <div class="p-d-flex p-jc-end p-ai-center p-mt-2">
+        <p-button 
+          [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
+          (click)="themeService.toggleTheme()" 
+          styleClass="p-button-rounded p-button-text">
+        </p-button>
+      </div>
+    </ng-template>
+  </p-card>
 </div> 

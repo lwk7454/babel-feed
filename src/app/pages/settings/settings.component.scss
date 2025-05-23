@@ -1,16 +1,36 @@
-.settings-menu {
-  margin-bottom: 60px;
+.settings-container {
+  // padding is applied via p-p-2 in the template
 }
 
-.settings-item {
-  padding: 15px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.settings-list-item {
+  padding: 0.75rem 1rem; // Consistent padding for list items
   cursor: pointer;
+  border-bottom: 1px solid var(--surface-border);
+  transition: background-color 0.2s;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: var(--surface-hover);
+  }
+
+  i.pi {
+    font-size: 1.1rem;
+    color: var(--text-color-secondary);
+  }
+
+  i.pi-angle-right {
+    color: var(--text-color-secondary); // Chevron color
+  }
+
+  span {
+    flex-grow: 1; // Ensure text takes available space
+  }
 }
 
-.settings-item span:last-child {
-  color: var(--inactive-color);
+// Remove padding from card content if list items have their own
+:host ::ng-deep .p-card .p-card-content {
+  padding: 0;
 } 

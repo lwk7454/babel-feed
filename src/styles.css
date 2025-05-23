@@ -7,6 +7,11 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
+/*
+  PrimeNG themes will provide the color scheme.
+  The :root variables below are being removed as they conflict with PrimeNG theming.
+*/
+/*
 :root {
   --primary-color: #0984e3;
   --accent-color: #0070c9;
@@ -16,17 +21,19 @@
   --border-color: #333333;
   --inactive-color: #777777;
 }
+*/
 
 body {
-  background-color: var(--background-color);
-  color: var(--text-color);
+  /* background-color and color will be set by PrimeNG theme */
   font-size: 16px;
   line-height: 1.5;
   height: 100vh;
   width: 100vw;
-  overflow: hidden;
+  overflow: hidden; /* This might need to be re-evaluated based on layout */
 }
 
+/* General button and input styles might be overridden by PrimeNG components or can be removed if PrimeNG's styling is sufficient. */
+/*
 button {
   cursor: pointer;
   border: none;
@@ -44,28 +51,29 @@ input {
   background-color: rgba(255, 255, 255, 0.1);
   color: var(--text-color);
 }
+*/
 
 a {
   text-decoration: none;
-  color: var(--primary-color);
+  /* color: var(--primary-color); Color will come from PrimeNG theme */
 }
 
-/* Mobile app container */
+/* Mobile app container - to be reviewed and potentially replaced/styled with PrimeFlex or PrimeNG components */
 .app-container {
-  max-width: 500px;
+  max-width: 500px; /* This suggests a mobile-first design focus */
   height: 100vh;
   margin: 0 auto;
   overflow-y: auto;
 }
 
-/* Header styling */
+/* Header styling - to be reviewed and potentially replaced/styled with PrimeFlex or PrimeNG components */
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 15px;
-  background-color: var(--background-color);
-  border-bottom: 1px solid var(--border-color);
+  /* background-color: var(--background-color); */ /* Use PrimeNG theme variable or component style */
+  /* border-bottom: 1px solid var(--border-color); */ /* Use PrimeNG theme variable or component style */
   position: sticky;
   top: 0;
   z-index: 10;
@@ -82,29 +90,29 @@ a {
   font-size: 20px;
 }
 
-/* Bottom navigation */
+/* Bottom navigation - to be reviewed and potentially replaced/styled with PrimeFlex or PrimeNG components */
 .bottom-nav {
   display: flex;
   justify-content: space-around;
   padding: 10px 0;
-  background-color: var(--background-color);
-  border-top: 1px solid var(--border-color);
+  /* background-color: var(--background-color); */ /* Use PrimeNG theme variable or component style */
+  /* border-top: 1px solid var(--border-color); */ /* Use PrimeNG theme variable or component style */
   position: fixed;
   bottom: 0;
   width: 100%;
-  max-width: 500px;
+  max-width: 500px; /* Consistent with .app-container */
 }
 
-/* Card styling */
+/* Card styling - to be reviewed. PrimeNG Card component should be used. */
 .card {
-  background-color: var(--card-background);
+  /* background-color: var(--card-background); */ /* Use PrimeNG Card component */
   border-radius: 8px;
   padding: 15px;
   margin: 10px 0;
-  border: 1px solid var(--border-color);
+  /* border: 1px solid var(--border-color); */ /* Use PrimeNG Card component */
 }
 
-/* Translation button */
+/* Translate button - to be reviewed. PrimeNG Button component should be used. */
 .translate-button {
   position: fixed;
   bottom: 70px;
@@ -117,12 +125,13 @@ a {
   justify-content: center;
   font-size: 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  /* This should be a PrimeNG button, possibly a SpeedDial or a simple Button */
 }
 
-/* List items */
+/* List items - to be reviewed. PrimeNG list components (e.g., OrderList, DataView) or custom templates with PrimeNG components should be used. */
 .list-item {
   padding: 15px;
-  border-bottom: 1px solid var(--border-color);
+  /* border-bottom: 1px solid var(--border-color); */ /* Use PrimeNG styling */
   display: flex;
   align-items: center;
   justify-content: space-between;

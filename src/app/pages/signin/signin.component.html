@@ -1,17 +1,50 @@
-<div class="app-container signin-container">
-  <h1>Sign in to continue</h1>
-  
-  <div class="signin-options">
-    <button class="signin-button" (click)="signIn('google')">
-      Google sign in
-    </button>
-    
-    <button class="signin-button" (click)="signIn('apple')">
-      Apple sign in
-    </button>
-    
-    <button class="signin-button" (click)="signIn('wechat')">
-      Wechat sign in
-    </button>
-  </div>
+<div class="p-d-flex p-flex-column p-ai-center p-jc-center" style="min-height: 100vh; padding: 1rem;">
+  <p-card styleClass="signin-card">
+    <ng-template pTemplate="title">
+      <div class="p-text-center">Sign In</div>
+    </ng-template>
+    <ng-template pTemplate="subtitle">
+      <div class="p-text-center">Welcome to Babel Feed</div>
+    </ng-template>
+
+    <div class="p-fluid">
+      <p-messages [(value)]="messages" [enableService]="false" [closable]="true"></p-messages>
+      
+      <div *ngIf="!(loading$ | async)">
+        <p-button 
+          label="Sign In with Google"
+          icon="pi pi-google"
+          styleClass="p-button-danger p-mb-3"
+          (onClick)="signInWithGoogle()"
+          [loading]="(loading$ | async) === true">
+        </p-button>
+        <!-- Add other social login buttons here if needed -->
+        <!-- 
+        <p-button 
+          label="Sign In with Apple"
+          icon="pi pi-apple"
+          styleClass="p-button-secondary p-mb-3"
+          (onClick)="signIn('apple')"
+          [disabled]="true">
+        </p-button>
+        -->
+      </div>
+
+      <div *ngIf="loading$ | async" class="p-d-flex p-jc-center p-mt-3">
+        <p-progressSpinner strokeWidth="4" animationDuration=".5s"></p-progressSpinner>
+      </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-divider></p-divider>
+      <div class="p-d-flex p-jc-between p-ai-center p-mt-3">
+        <span>Toggle Theme:</span>
+        <p-button 
+          [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
+          (click)="themeService.toggleTheme()" 
+          styleClass="p-button-rounded p-button-text">
+        </p-button>
+      </div>
+    </ng-template>
+  </p-card>
 </div> 

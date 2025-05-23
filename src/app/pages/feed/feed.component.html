@@ -1,38 +1,84 @@
-<div class="app-container">
-  <header class="app-header">
-    <h1>Babel Feed</h1>
-    <button (click)="navigateToSearch()">🔍</button>
-  </header>
-  
-  <div class="feed-container" *ngIf="newsItems.length > 0">
-    <div class="card news-item" *ngFor="let item of newsItems" (click)="openNewsItem(item)">
-      <div class="news-item-header">
-        <div class="source">{{item.source}}</div>
-        <div class="time">{{item.publishedAt}}</div>
-      </div>
-      
-      <h2>{{item.title}}</h2>
-      <p>{{item.summary}}</p>
-      
-      <div *ngIf="item.type === 'video'" class="video-indicator">
-        <span>{{item.source}}</span>
-        <span>{{item.duration}}</span>
-      </div>
-      
-      <div *ngIf="item.imageUrl" class="item-image">
-        <img [src]="item.imageUrl" alt="News image">
+<div class="feed-page-container p-p-2">
+  <p-messages [(value)]="errorMessages" [enableService]="false" [closable]="true"></p-messages>
+
+  <div *ngIf="loading$ | async">
+    <!-- Skeleton Loader -->
+    <div class="p-grid p-p-2">
+      <div class="p-col-12 p-md-6 p-lg-4" *ngFor="let i of [1,2,3]">
+        <p-skeleton height="10rem" styleClass="p-mb-2"></p-skeleton>
+        <p-skeleton width="70%" height="2rem" styleClass="p-mb-1"></p-skeleton>
+        <p-skeleton width="40%" height="1.5rem" styleClass="p-mb-1"></p-skeleton>
+        <p-skeleton height="1rem"></p-skeleton>
       </div>
     </div>
   </div>
-  
-  <div class="empty-state" *ngIf="newsItems.length === 0">
-    <div class="empty-icon">≡✕</div>
-    <p>No content available based on your current preferences.</p>
+
+  <div *ngIf="!(loading$ | async) && (newsItems$ | async)?.length === 0 && !errorMessages.length" class="empty-state p-text-center p-p-4">
+    <i class="pi pi-inbox" style="font-size: 3rem; color: var(--surface-400);"></i>
+    <h3 class="p-mt-2">No News For You!</h3>
+    <p>Looks like there's nothing new based on your preferences. Try adjusting your settings or check back later.</p>
+    <p-button label="Refresh Feed" icon="pi pi-refresh" (onClick)="refreshFeed()" styleClass="p-mt-2"></p-button>
   </div>
-  
-  <div class="bottom-nav">
-    <button (click)="refreshFeed()">📋</button>
-    <button (click)="navigateToSearch()">🔍</button>
-    <button (click)="navigateToSettings()">⚙️</button>
-  </div>
+
+  <p-dataView 
+      #dv 
+      [value]="(newsItems$ | async) || []" 
+      [layout]="layout" 
+      *ngIf="!(loading$ | async) && (newsItems$ | async) && (newsItems$ | async)!.length > 0">
+    <ng-template pTemplate="header">
+      <div class="p-d-flex p-flex-column p-md-flex-row p-jc-between p-ai-center">
+        <h2 class="p-m-0">Latest News</h2>
+        <div class="p-d-flex p-ai-center">
+          <p-button icon="pi pi-refresh" (onClick)="refreshFeed()" styleClass="p-button-text p-button-rounded p-mr-2" pRipple></p-button>
+          <!-- DataView Layout Toggle (Optional) -->
+          <!-- <p-dataViewLayoutOptions></p-dataViewLayoutOptions> -->
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template let-item pTemplate="listItem">
+      <div class="p-col-12">
+        <p-card (click)="openNewsItem(item)" styleClass="news-item-card p-mb-3" pRipple>
+          <ng-template pTemplate="header" *ngIf="item.imageUrl">
+            <img [alt]="item.title" [src]="item.imageUrl" class="news-item-image"/>
+          </ng-template>
+          <ng-template pTemplate="title">
+            {{ item.title }}
+          </ng-template>
+          <ng-template pTemplate="subtitle">
+            <div class="p-d-flex p-jc-between p-ai-center p-text-secondary">
+              <span>{{ item.source }}</span>
+              <span>{{ item.publishedAt }}</span>
+            </div>
+          </ng-template>
+          <ng-template pTemplate="content">
+            <p class="p-mb-2">{{ item.summary }}</p>
+            <p-tag [value]="item.type" [severity]="getArticleTagSeverity(item.type)"></p-tag>
+            <span *ngIf="item.type === 'video' && item.duration" class="p-ml-2 video-duration">({{ item.duration }})</span>
+          </ng-template>
+        </p-card>
+      </div>
+    </ng-template>
+
+    <ng-template let-item pTemplate="gridItem">
+      <div class="p-col-12 p-md-4 p-lg-3">
+        <p-card (click)="openNewsItem(item)" styleClass="news-item-card p-mb-3" pRipple>
+          <ng-template pTemplate="header" *ngIf="item.imageUrl">
+            <img [alt]="item.title" [src]="item.imageUrl" class="news-item-image-grid"/>
+          </ng-template>
+          <ng-template pTemplate="title">
+            <div class="p-text-truncate" [title]="item.title">{{ item.title }}</div>
+          </ng-template>
+          <ng-template pTemplate="content">
+            <div class="p-d-flex p-jc-between p-ai-center p-text-secondary p-mb-1" style="font-size: 0.9rem;">
+              <span>{{ item.source }}</span>
+              <span>{{ item.publishedAt }}</span>
+            </div>
+            <p-tag [value]="item.type" [severity]="getArticleTagSeverity(item.type)" styleClass="p-mr-1"></p-tag>
+             <small *ngIf="item.type === 'video' && item.duration">({{ item.duration }})</small>
+          </ng-template>
+        </p-card>
+      </div>
+    </ng-template>
+  </p-dataView>
 </div> 

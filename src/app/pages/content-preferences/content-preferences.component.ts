@@ -5,10 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 
 @Component({
-    selector: 'app-content-preferences',
-    imports: [CommonModule, FormsModule],
-    templateUrl: './content-preferences.component.html',
-    styleUrls: ['./content-preferences.component.scss']
+  selector: 'app-content-preferences',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './content-preferences.component.html',
+  styleUrls: ['./content-preferences.component.scss']
 })
 export class ContentPreferencesComponent implements OnInit {
   availableTopics: { name: string; selected: boolean }[] = [
