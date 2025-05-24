@@ -1,59 +1,54 @@
-<div class="signin-page-container p-d-flex p-flex-column p-ai-center p-jc-center">
-  <p-card styleClass="signin-card-panel">
-    <ng-template pTemplate="header">
-      <div class="signin-header p-text-center">
-        <img src="assets/logo-placeholder.png" alt="Babel Feed Logo" class="app-logo" /> <!-- Replace with actual logo -->
-        <h2>Welcome to Babel Feed</h2>
-        <p>Sign in to continue</p>
-      </div>
-    </ng-template>
+<div class="signin-container">
+  <!-- Logo and title -->
+  <div class="signin-header">
+    <div class="logo-placeholder">📰</div>
+    <h1 class="app-title">Babel Feed</h1>
+    <p class="signin-subtitle">Sign in to continue</p>
+  </div>
 
-    <div class="p-fluid">
-      <p-messages [(value)]="messages" [enableService]="false" [closable]="true" styleClass="auth-messages"></p-messages>
-      
-      @if (!(loading$ | async)) {
-        <div class="social-signin-buttons">
-          <p-button 
-            label="Sign In with Google"
-            icon="pi pi-google"
-            styleClass="p-button-danger social-button google-button p-mb-3"
-            (onClick)="signInWithGoogle()">
-          </p-button>
-          
-          <!-- Example for Apple Sign In (can be uncommented and implemented) -->
-          <!-- 
-          <p-button 
-            label="Sign In with Apple"
-            icon="pi pi-apple"
-            styleClass="p-button-secondary social-button apple-button" 
-            (onClick)="signInWithApple()"
-            [disabled]="true"> 
-          </p-button>
-          -->
-        </div>
-      }
+  <!-- Error messages -->
+  <div class="messages-section" *ngIf="messages.length > 0">
+    <p-messages [(value)]="messages" [enableService]="false" [closable]="true" styleClass="auth-messages"></p-messages>
+  </div>
 
-      @if (loading$ | async) {
-        <div class="loading-spinner-container p-d-flex p-jc-center p-mt-3">
-          <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-        </div>
-      }
+  <!-- Sign in section -->
+  <div class="signin-section">
+    <!-- Loading state -->
+    <div *ngIf="loading$ | async" class="loading-container">
+      <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
+      <p class="loading-text">Signing you in...</p>
     </div>
 
-    <ng-template pTemplate="footer">
-      <p-divider styleClass="footer-divider"></p-divider>
-      <div class="theme-toggle-footer p-d-flex p-jc-between p-ai-center p-mt-2">
-        <span>Toggle Theme:</span>
-        <p-button 
-          [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
-          (click)="themeService.toggleTheme()" 
-          styleClass="p-button-rounded p-button-text theme-toggle-button"
-          aria-label="Toggle theme">
-        </p-button>
-      </div>
-      <div class="app-version-footer p-text-center p-mt-2">
-        <small>Version 1.0.0 (Placeholder)</small>
-      </div>
-    </ng-template>
-  </p-card>
+    <!-- Sign in button -->
+    <div *ngIf="!(loading$ | async)" class="signin-actions">
+      <p-button 
+        label="Sign In with Google"
+        icon="pi pi-google"
+        iconPos="left"
+        (onClick)="signInWithGoogle()"
+        styleClass="google-signin-btn">
+      </p-button>
+    </div>
+  </div>
+
+  <!-- Dev-only skip button -->
+  <div class="dev-skip-toggle">
+    <p-button 
+      label="Skip (Dev)"
+      icon="pi pi-fast-forward"
+      (click)="skipLoginForDev()"
+      styleClass="p-button-rounded p-button-warning p-button-text skip-btn"
+      aria-label="Skip login for development">
+    </p-button>
+  </div>
+
+  <!-- Theme toggle button -->
+  <div class="theme-toggle">
+    <p-button 
+      [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
+      (click)="themeService.toggleTheme()" 
+      styleClass="p-button-rounded p-button-text theme-btn"
+      aria-label="Toggle theme">
+    </p-button>
+  </div>
 </div>
