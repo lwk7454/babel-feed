@@ -1,50 +1,55 @@
-<div class="p-d-flex p-flex-column p-ai-center p-jc-center" style="min-height: 100vh; padding: 1rem;">
-  <p-card styleClass="signin-card">
-    <ng-template pTemplate="title">
-      <div class="p-text-center">Sign In</div>
-    </ng-template>
-    <ng-template pTemplate="subtitle">
-      <div class="p-text-center">Welcome to Babel Feed</div>
+<div class="signin-page-container p-d-flex p-flex-column p-ai-center p-jc-center">
+  <p-card styleClass="signin-card-panel">
+    <ng-template pTemplate="header">
+      <div class="signin-header p-text-center">
+        <img src="assets/logo-placeholder.png" alt="Babel Feed Logo" class="app-logo" /> <!-- Replace with actual logo -->
+        <h2>Welcome to Babel Feed</h2>
+        <p>Sign in to continue</p>
+      </div>
     </ng-template>
 
     <div class="p-fluid">
-      <p-messages [(value)]="messages" [enableService]="false" [closable]="true"></p-messages>
+      <p-messages [(value)]="messages" [enableService]="false" [closable]="true" styleClass="auth-messages"></p-messages>
       
-      <div *ngIf="!(loading$ | async)">
+      <div *ngIf="!(loading$ | async)" class="social-signin-buttons">
         <p-button 
           label="Sign In with Google"
           icon="pi pi-google"
-          styleClass="p-button-danger p-mb-3"
-          (onClick)="signInWithGoogle()"
-          [loading]="(loading$ | async) === true">
+          styleClass="p-button-danger social-button google-button p-mb-3"
+          (onClick)="signInWithGoogle()">
         </p-button>
-        <!-- Add other social login buttons here if needed -->
+        
+        <!-- Example for Apple Sign In (can be uncommented and implemented) -->
         <!-- 
         <p-button 
           label="Sign In with Apple"
           icon="pi pi-apple"
-          styleClass="p-button-secondary p-mb-3"
-          (onClick)="signIn('apple')"
-          [disabled]="true">
+          styleClass="p-button-secondary social-button apple-button" 
+          (onClick)="signInWithApple()"
+          [disabled]="true"> 
         </p-button>
         -->
       </div>
 
-      <div *ngIf="loading$ | async" class="p-d-flex p-jc-center p-mt-3">
-        <p-progressSpinner strokeWidth="4" animationDuration=".5s"></p-progressSpinner>
+      <div *ngIf="loading$ | async" class="loading-spinner-container p-d-flex p-jc-center p-mt-3">
+        <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
       </div>
     </div>
 
     <ng-template pTemplate="footer">
-      <p-divider></p-divider>
-      <div class="p-d-flex p-jc-between p-ai-center p-mt-3">
+      <p-divider styleClass="footer-divider"></p-divider>
+      <div class="theme-toggle-footer p-d-flex p-jc-between p-ai-center p-mt-2">
         <span>Toggle Theme:</span>
         <p-button 
           [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
           (click)="themeService.toggleTheme()" 
-          styleClass="p-button-rounded p-button-text">
+          styleClass="p-button-rounded p-button-text theme-toggle-button"
+          aria-label="Toggle theme">
         </p-button>
+      </div>
+      <div class="app-version-footer p-text-center p-mt-2">
+        <small>Version 1.0.0 (Placeholder)</small>
       </div>
     </ng-template>
   </p-card>
-</div> 
+</div>

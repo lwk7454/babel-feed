@@ -1,27 +1,133 @@
-/* Styles for the SigninComponent */
+/* Assuming global dark theme variables are available from styles.scss */
+/* Example variables:
+  --background-color: #121212;
+  --text-color: #e0e0e0;
+  --card-background: #1e1e1e;
+  --surface-border: #2a2a2a;
+  --primary-color: #3498db; // General primary color
+  --google-red: #DB4437; // Google's brand color
+  --apple-black: #000000; // Apple's typical button color
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+*/
 
-.signin-card {
+:host {
+  display: block; // Ensures the component itself can be styled if needed
+}
+
+.signin-page-container {
+  min-height: 100vh;
+  padding: 1rem;
+  background-color: var(--background-color); // Use global background
+  font-family: var(--font-family);
+}
+
+.signin-card-panel {
   width: 100%;
-  max-width: 400px; /* Adjust as needed for desired card width */
-  margin: auto;     /* Center the card if its container is wider and p-d-flex on parent isn't enough */
-}
+  max-width: 420px; // Slightly wider for better spacing
+  margin: auto;
+  background-color: var(--card-background);
+  color: var(--text-color);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px; // Consistent border radius
 
-/* 
-  PrimeFlex utility classes (e.g., p-d-flex, p-ai-center, p-jc-center, p-fluid, p-mb-3, p-mt-3) 
-  are used in the template (signin.component.html) for most layout and spacing. 
-  Ensure PrimeFlex is correctly installed and imported if these classes don't work.
-  Typically, PrimeFlex is installed via npm and then its CSS is imported in angular.json or styles.scss:
-  `npm install primeflex`
-  Then in angular.json styles array or src/styles.scss: `"node_modules/primeflex/primeflex.css"`
-*/
+  .signin-header {
+    padding: 1.5rem 1rem 1rem 1rem; // Padding for the header section
+    border-bottom: 1px solid var(--surface-border);
+    
+    .app-logo {
+      width: 60px; // Adjust size as needed
+      height: 60px;
+      margin-bottom: 1rem;
+      // filter: invert(1) drop-shadow(0 0 2px var(--primary-color)); // Example for dark theme logo visibility
+    }
 
-/* Customizations for PrimeNG components can go here if needed, for example: */
-/*
-:host ::ng-deep .p-button-danger {
-  // Custom styles for the Google button if theme overrides are needed
-}
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      color: var(--text-color);
+    }
+    p {
+      font-size: 0.95rem;
+      color: var(--text-color-secondary, #b0b0b0);
+      margin-bottom: 0;
+    }
+  }
+  
+  // PrimeNG Card body (where buttons and messages go)
+  :host ::ng-deep .p-card-body {
+    padding: 1.5rem; // Main content padding
+  }
 
-:host ::ng-deep .p-messages .p-message-error {
-  // Custom styles for error messages if needed
+  .social-signin-buttons {
+    .social-button {
+      width: 100%; // Make buttons full width
+      font-weight: 500; // Slightly bolder text
+      padding: 0.75rem; // Larger buttons
+
+      // Specific social button styling
+      &.google-button {
+        background-color: var(--google-red) !important; // Override PrimeNG theme if needed
+        border-color: var(--google-red) !important;
+        color: #fff !important; // Ensure text is white
+
+        &:hover {
+          background-color: darken(var(--google-red), 5%) !important;
+          border-color: darken(var(--google-red), 5%) !important;
+        }
+      }
+      
+      &.apple-button {
+         background-color: var(--apple-black) !important;
+         border-color: var(--apple-black) !important;
+         color: #fff !important;
+         
+         &:hover {
+            background-color: lighten(var(--apple-black), 10%) !important;
+            border-color: lighten(var(--apple-black), 10%) !important;
+         }
+      }
+    }
+  }
+  
+  .loading-spinner-container {
+    // p-progressSpinner styling is generally fine, customize if needed
+    :host ::ng-deep .p-progressspinner-circle {
+      stroke: var(--primary-color) !important;
+    }
+  }
+
+  .auth-messages {
+    // Custom styling for p-messages if needed
+    :host ::ng-deep .p-message {
+      // Example: margin-bottom: 1rem;
+    }
+  }
+
+  // Footer styling
+  :host ::ng-deep .p-card-footer {
+    padding: 1rem 1.5rem; // Padding for footer content
+    border-top: 1px solid var(--surface-border);
+  }
+  
+  .footer-divider {
+    margin-bottom: 1rem; // Space before theme toggle
+  }
+  
+  .theme-toggle-footer {
+    span {
+      color: var(--text-color-secondary, #b0b0b0);
+      font-size: 0.9rem;
+    }
+    .theme-toggle-button {
+      color: var(--text-color); // Ensure icon color is visible
+    }
+  }
+  
+  .app-version-footer {
+    small {
+      color: var(--text-color-secondary, #b0b0b0);
+      font-size: 0.8rem;
+    }
+  }
 }
-*/

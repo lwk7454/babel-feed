@@ -1,79 +1,153 @@
-.preferences-container {
-  padding: 10px;
-  margin-bottom: 60px;
-}
+/* Assuming global dark theme variables are available from styles.scss */
+/* Example variables:
+  --background-color: #121212;
+  --text-color: #e0e0e0;
+  --card-background: #1e1e1e; // Used for panel headers and content
+  --surface-border: #2a2a2a;
+  --primary-color: #3498db;
+  --danger-color: #e74c3c; // For remove buttons
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+*/
 
-.section-header {
-  font-weight: bold;
-  padding: 10px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.preference-item {
+:host {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.blocked-source {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.remove-button {
-  background: none;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background-color);
   color: var(--text-color);
-  padding: 5px;
-  font-size: 16px;
+  font-family: var(--font-family);
 }
 
-/* Toggle switch styling */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
+.preferences-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
+.preferences-toolbar {
+  background-color: var(--card-background);
+  border-bottom: 1px solid var(--surface-border);
+  padding: 0.5rem 0.75rem; // Consistent padding
+
+  .page-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-left: 1rem;
+    color: var(--text-color);
+  }
+  
+  :host ::ng-deep .p-toolbar-group-left,
+  :host ::ng-deep .p-toolbar-group-right {
+    display: flex;
+    align-items: center;
+  }
 }
 
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--border-color);
-  transition: .4s;
-  border-radius: 24px;
+.preferences-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  max-width: 800px; // Max width for content readability
+  margin: 0 auto; // Center content area
 }
 
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 16px;
-  width: 16px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
+.preferences-panel {
+  margin-bottom: 2rem;
+  background-color: var(--card-background);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+
+  :host ::ng-deep .p-panel-header {
+    background-color: var(--card-background); // Or a slightly different shade
+    border-bottom: 1px solid var(--surface-border);
+    color: var(--text-color);
+    font-weight: 500;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+
+  :host ::ng-deep .p-panel-content {
+    background-color: var(--card-background);
+    padding: 1.25rem; // Content padding within panels
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+  
+  .panel-description {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary, #b0b0b0);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
 }
 
-input:checked + .slider {
-  background-color: var(--primary-color);
+.topics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); // Responsive grid
+  gap: 1rem;
+
+  .topic-item {
+    // p-checkbox styling will be handled by PrimeNG, customize if needed
+    :host ::ng-deep .p-checkbox .p-checkbox-box {
+      border-color: var(--surface-border);
+    }
+    :host ::ng-deep .p-checkbox:not(.p-checkbox-disabled) .p-checkbox-box.p-focus {
+      border-color: var(--primary-color);
+    }
+    :host ::ng-deep .p-checkbox .p-checkbox-label {
+      color: var(--text-color);
+    }
+  }
 }
 
-input:checked + .slider:before {
-  transform: translateX(26px);
-} 
+.add-source-form {
+  // Using PrimeFlex classes (p-d-flex, p-ai-center, p-mb-3, p-fluid) in HTML
+  // Further custom styling can be added here if needed
+  .p-input-icon-left > i {
+    color: var(--text-color-secondary, #b0b0b0);
+  }
+}
+
+.blocked-sources-list {
+  margin-top: 1rem;
+  max-height: 300px; // Limit height for long lists
+  overflow-y: auto;
+  padding-right: 0.5rem; // Space for scrollbar
+
+  .blocked-source-item {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background-color: lighten(var(--card-background), 5%); // Slightly lighter than panel bg
+
+    span {
+      flex-grow: 1;
+      font-size: 0.95rem;
+    }
+    
+    // PrimeNG button styling will apply, override if needed
+    :host ::ng-deep .p-button.p-button-text.p-button-danger {
+      color: var(--danger-color, #e74c3c);
+    }
+  }
+}
+
+.empty-topics-message,
+.empty-blocked-sources-message {
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-color-secondary, #b0b0b0);
+  font-style: italic;
+}
+
+// PrimeNG Divider
+:host ::ng-deep .p-divider.p-divider-horizontal {
+  border-top-color: var(--surface-border);
+  margin: 2rem 0; // Space around dividers
+}
+
+// Utility for QA attributes (if needed, though not directly stylable)
+[data-qa] { 
+  // No specific style needed, just for selection
+}
