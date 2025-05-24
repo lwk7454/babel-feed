@@ -1,0 +1,6 @@
+/* Styles for AppComponent. Will be minimal as layout is delegated. */
+:host {
+  display: block; /* Or flex, depending on whether it needs to fill height */
+  height: 100%;
+  position: relative; /* Needed for route animations if they affect host */
+}
