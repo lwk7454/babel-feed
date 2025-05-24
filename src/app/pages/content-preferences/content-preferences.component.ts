@@ -7,13 +7,13 @@ import { Observable, Subject, combineLatest } from 'rxjs';
 import { takeUntil, map, startWith } from 'rxjs/operators';
 
 import { AppState } from '../../store';
-import * as UserPreferencesActions from '../../store/actions/user-preferences.actions';
+import * as PreferencesActions from '../../store/actions/preferences.actions';
 import { 
-  selectUserPreferences, 
-  selectAvailableTopics, 
-  selectAvailableSources, // Assuming you might have this
-  UserPreferences 
-} from '../../store/reducers/user-preferences.reducer'; // Adjust path as needed
+  selectTopics, 
+  selectBlockedSources,
+  TopicPreference,
+  BlockedSource
+} from '../../store/reducers/preferences.reducer';
 
 // PrimeNG Modules
 import { CheckboxModule } from 'primeng/checkbox'; // For selecting topics
@@ -57,8 +57,8 @@ export interface SourceVM {
 })
 export class ContentPreferencesComponent implements OnInit, OnDestroy {
   // From Store
-  userPreferences$: Observable<UserPreferences | null>;
-  availableTopics$: Observable<TopicVM[]>; // Topics available for selection
+  topics$: Observable<TopicPreference[]>;
+  blockedSources$: Observable<BlockedSource[]>;
   
   // Local component state
   selectedTopicIds: string[] = []; // IDs of selected topics
@@ -86,35 +86,23 @@ export class ContentPreferencesComponent implements OnInit, OnDestroy {
     private store: Store<AppState>
     // private apiService: ApiService // Keep if direct API calls are still needed for some part
   ) {
-    this.userPreferences$ = this.store.select(selectUserPreferences);
-    
-    // Map available topics from store or use mock, and merge with user's selections
-    this.availableTopics$ = combineLatest([
-      this.store.select(selectAvailableTopics).pipe(startWith(this.allAvailableTopics)), // Or actual selector
-      this.userPreferences$
-    ]).pipe(
-      map(([availableTopics, prefs]) => {
-        return availableTopics.map(topic => ({
-          ...topic,
-          selected: prefs?.preferredTopicIds?.includes(topic.id) ?? false
-        }));
-      })
-    );
+    this.topics$ = this.store.select(selectTopics);
+    this.blockedSources$ = this.store.select(selectBlockedSources);
   }
 
   ngOnInit(): void {
-    this.store.dispatch(UserPreferencesActions.loadUserPreferencesStart());
-    // this.store.dispatch(UserPreferencesActions.loadAvailableTopicsStart()); // If topics are dynamic
+    this.store.dispatch(PreferencesActions.loadPreferences());
 
-    this.userPreferences$.pipe(takeUntil(this.destroy$)).subscribe(prefs => {
-      if (prefs) {
-        this.selectedTopicIds = [...(prefs.preferredTopicIds || [])];
-        this.blockedSources = (prefs.blockedSourceIds || []).map(id => ({ id: id, name: id })); // Assuming name is same as id for now
-      }
+    this.topics$.pipe(takeUntil(this.destroy$)).subscribe(topics => {
+      this.selectedTopicIds = topics.filter(topic => topic.selected).map(topic => topic.id);
+    });
+
+    this.blockedSources$.pipe(takeUntil(this.destroy$)).subscribe(sources => {
+      this.blockedSources = sources.map(source => ({ id: source.id, name: source.name }));
     });
   }
 
-  onTopicChange(topic: TopicVM, isChecked: boolean): void {
+  onTopicChange(topic: TopicPreference, isChecked: boolean): void {
     if (isChecked) {
       if (!this.selectedTopicIds.includes(topic.id)) {
         this.selectedTopicIds.push(topic.id);
@@ -141,14 +129,17 @@ export class ContentPreferencesComponent implements OnInit, OnDestroy {
   }
 
   savePreferences(): void {
-    const preferencesToSave: UserPreferences = {
-      preferredTopicIds: this.selectedTopicIds,
-      blockedSourceIds: this.blockedSources.map(s => s.id),
-      // Add other preferences like preferredLanguageIds if implemented
-    };
-    this.store.dispatch(UserPreferencesActions.updateUserPreferencesStart({ preferences: preferencesToSave }));
-    // Optionally, show a success message or handle errors via effects
-    console.log('Attempting to save preferences:', preferencesToSave);
+    // Update topics
+    this.selectedTopicIds.forEach(topicId => {
+      this.store.dispatch(PreferencesActions.toggleTopic({ topicId }));
+    });
+
+    // Update blocked sources
+    this.blockedSources.forEach(source => {
+      this.store.dispatch(PreferencesActions.addBlockedSource({ source: { id: source.id, name: source.name } }));
+    });
+
+    console.log('Attempting to save preferences');
   }
   
   goBack(): void {

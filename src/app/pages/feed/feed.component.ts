@@ -16,11 +16,17 @@ import { RippleModule } from 'primeng/ripple';
 import { ProgressSpinnerModule } from 'primeng/progressspinner'; // For loading state
 
 // Define a more specific interface for what the template will use, based on NewsItem
-export interface FeedDisplayItem extends NewsItem {
+export interface FeedDisplayItem extends Omit<NewsItem, 'summary'> {
   // Ensure all fields used in mock data and potentially from API are here
   // NewsItem should ideally have: id, title, summary?, source, publishedAt, type: 'article' | 'video', imageUrl?, duration?, category?, content?, language?, country?, keywords?
-  // Adding summary explicitly as optional for type safety in template
+  // Making summary optional for display purposes
   summary?: string;
+  // Additional fields for display
+  category?: string;
+  content?: string;
+  language?: string;
+  country?: string;
+  keywords?: string[];
 }
 
 @Component({
@@ -54,6 +60,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       publishedAt: new Date(Date.now() - 3600 * 1000 * 2).toISOString(), // 2 hours ago
       type: 'article',
       imageUrl: 'https://images.unsplash.com/photo-1524704654690-b56c05c78a00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA&ixlib=rb-4.0.3&q=80&w=400',
+      url: 'https://example.com/ocean-discovery',
       category: 'Science',
       content: 'Full article content here...',
       language: 'en',
@@ -67,6 +74,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       publishedAt: new Date(Date.now() - 3600 * 1000 * 28).toISOString(), // 28 hours ago
       type: 'video',
       imageUrl: 'https://images.unsplash.com/photo-1519994940911-d6907047f529?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA&ixlib=rb-4.0.3&q=80&w=400', // Placeholder thumbnail
+      url: 'https://example.com/architectural-marvels-video',
       duration: '15:32',
       category: 'Technology',
       content: 'Details about the video content...',
@@ -82,7 +90,8 @@ export class FeedComponent implements OnInit, OnDestroy {
       source: 'Eco World News',
       publishedAt: new Date(Date.now() - 3600 * 1000 * 72).toISOString(), // 3 days ago
       type: 'article',
-      imageUrl: null, // Example of an article without an image
+      imageUrl: undefined, // Example of an article without an image
+      url: 'https://example.com/sustainable-energy',
       category: 'Environment',
       content: 'Full article content here...',
       language: 'en',
