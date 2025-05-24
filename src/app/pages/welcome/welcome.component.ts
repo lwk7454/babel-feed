@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -22,12 +22,12 @@ import { ThemeService } from '../../services/theme.service';
   selector: 'app-welcome',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ButtonModule,
     CardModule,
     SelectButtonModule,
-    DividerModule
+    DividerModule,
+    AsyncPipe
   ],
   templateUrl: './welcome.component.html',
   styleUrls: ['./welcome.component.scss'],

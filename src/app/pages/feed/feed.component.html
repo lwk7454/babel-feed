@@ -4,58 +4,79 @@
     <button pButton type="button" icon="pi pi-refresh" (click)="refreshFeed()" label="Refresh" [disabled]="(loading$ | async) === true" pRipple class="p-button-outlined"></button>
   </div>
 
-  <div *ngIf="(loading$ | async) === true && !(newsItems$ | async)?.length" class="loading-indicator">
-    <p-progressSpinner styleClass="custom-spinner" strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-    <p>Loading news...</p>
-  </div>
-
-  <div *ngIf="currentError" class="error-message">
-    <i class="pi pi-exclamation-circle"></i>
-    <p>{{ currentError }}</p>
-    <button pButton type="button" (click)="refreshFeed()" label="Try Again" class="p-button-sm p-button-text"></button>
-  </div>
-
-  <div *ngIf="!(loading$ | async) && !(currentError) && (newsItems$ | async)?.length === 0" class="empty-state">
-    <i class="pi pi-objects-column"></i>
-    <h3>Nothing new to show</h3>
-    <p>Your feed is currently empty. Try refreshing or check back later.</p>
-  </div>
-
-  <div class="feed-scroll-container" *ngIf="(newsItems$ | async) as items">
-    <div *ngFor="let item of items; trackBy: trackById" 
-         class="feed-item" 
-         [ngClass]="{
-           'article-item': item.type === 'article', 
-           'video-item': item.type === 'video',
-           'no-image': !item.imageUrl
-          }"
-         (click)="openNewsItem(item)"
-         tabindex="0" 
-         role="article"
-         [attr.aria-label]="item.title + ' from ' + item.source">
-
-      <!-- Common structure for image (if available) -->
-      <div class="item-image-wrapper" *ngIf="item.imageUrl">
-        <img [src]="item.imageUrl" [alt]="'Image for ' + item.title" class="item-image"/>
-        <div *ngIf="item.type === 'video'" class="video-play-overlay">
-          <i class="pi pi-play-circle"></i>
-        </div>
-        <span *ngIf="item.type === 'video' && item.duration" class="video-duration-badge">{{ item.duration }}</span>
-      </div>
-      
-      <div class="item-content-wrapper">
-        <h3 class="item-title">{{ item.title }}</h3>
-        
-        <p *ngIf="item.type === 'article' && item.summary" class="item-summary">
-          {{ item.summary }}
-        </p>
-        
-        <div class="item-meta">
-          <span class="item-source">{{ item.source }}</span>
-          <span class="item-published-date">{{ item.publishedAt | date:'short' }}</span>
-        </div>
-      </div>
-      
+  @if ((loading$ | async) === true && !(newsItems$ | async)?.length) {
+    <div class="loading-indicator">
+      <p-progressSpinner styleClass="custom-spinner" strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
+      <p>Loading news...</p>
     </div>
-  </div>
+  }
+
+  @if (currentError) {
+    <div class="error-message">
+      <i class="pi pi-exclamation-circle"></i>
+      <p>{{ currentError }}</p>
+      <button pButton type="button" (click)="refreshFeed()" label="Try Again" class="p-button-sm p-button-text"></button>
+    </div>
+  }
+
+  @if (!(loading$ | async) && !(currentError) && (newsItems$ | async)?.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-objects-column"></i>
+      <h3>Nothing new to show</h3>
+      <p>Your feed is currently empty. Try refreshing or check back later.</p>
+    </div>
+  }
+
+  @if (newsItems$ | async; as items) {
+    <div class="feed-scroll-container">
+      @for (item of items; track item.id) {
+        <div class="feed-item" 
+             [ngClass]="{
+               'article-item': item.type === 'article', 
+               'video-item': item.type === 'video',
+               'no-image': !item.imageUrl
+              }"
+             (click)="openNewsItem(item)"
+             tabindex="0" 
+             role="article"
+             [attr.aria-label]="item.title + ' from ' + item.source">
+
+          @if (item.imageUrl) {
+            <div class="item-image-wrapper">
+              <img [src]="item.imageUrl" [alt]="'Image for ' + item.title" class="item-image"/>
+              @if (item.type === 'video') {
+                <div class="video-play-overlay">
+                  <i class="pi pi-play-circle"></i>
+                </div>
+              }
+              @if (item.type === 'video' && item.duration) {
+                <span class="video-duration-badge">{{ item.duration }}</span>
+              }
+            </div>
+          }
+          
+          <div class="item-content-wrapper">
+            <h3 class="item-title">{{ item.title }}</h3>
+            
+            @if (item.type === 'article' && item.summary) {
+              <p class="item-summary">
+                {{ item.summary }}
+              </p>
+            }
+            
+            <div class="item-meta">
+              <span class="item-source">{{ item.source }}</span>
+              <span class="item-published-date">{{ item.publishedAt | date:'short' }}</span>
+            </div>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state">
+          <i class="pi pi-objects-column"></i>
+          <h3>Nothing new to show</h3>
+          <p>Your feed is currently empty. Try refreshing or check back later.</p>
+        </div>
+      }
+    </div>
+  }
 </div>

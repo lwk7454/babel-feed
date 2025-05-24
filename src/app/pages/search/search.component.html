@@ -14,66 +14,84 @@
           aria-label="Search query"
           class="search-input-field"/>
       </span>
-      <p-button 
-        *ngIf="searchQuery" 
-        icon="pi pi-times" 
-        (click)="searchQuery = ''; onSearchQueryChange(''); performSearch()" 
-        styleClass="p-button-text clear-button p-ml-2" 
-        aria-label="Clear search query">
-      </p-button>
+      @if (searchQuery) {
+        <p-button 
+          icon="pi pi-times" 
+          (click)="searchQuery = ''; onSearchQueryChange(''); performSearch()" 
+          styleClass="p-button-text clear-button p-ml-2" 
+          aria-label="Clear search query">
+        </p-button>
+      }
     </div>
   </div>
 
   <div class="search-content-area">
-    <div *ngIf="isLoading" class="loading-indicator">
-      <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-      <p>Searching...</p>
-    </div>
+    @if (isLoading) {
+      <div class="loading-indicator">
+        <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
+        <p>Searching...</p>
+      </div>
+    }
 
-    <div *ngIf="!isLoading && errorMessage" class="error-message-display">
-      <p-message severity="error" [text]="errorMessage"></p-message>
-    </div>
+    @if (!isLoading && errorMessage) {
+      <div class="error-message-display">
+        <p-message severity="error" [text]="errorMessage"></p-message>
+      </div>
+    }
 
-    <div *ngIf="!isLoading && !errorMessage && hasSearched && results.length === 0 && searchQuery.trim()" class="no-results-display">
-      <i class="pi pi-search-minus"></i>
-      <h3>No Results Found</h3>
-      <p>Try using different keywords or check your spelling.</p>
-    </div>
+    @if (!isLoading && !errorMessage && hasSearched && results.length === 0 && searchQuery.trim()) {
+      <div class="no-results-display">
+        <i class="pi pi-search-minus"></i>
+        <h3>No Results Found</h3>
+        <p>Try using different keywords or check your spelling.</p>
+      </div>
+    }
     
-    <div *ngIf="!isLoading && !errorMessage && !hasSearched && !searchQuery.trim()" class="initial-search-prompt">
-        <i class="pi pi-search"></i>
-        <h3>Search the News</h3>
-        <p>Find articles, topics, and more.</p>
-    </div>
+    @if (!isLoading && !errorMessage && !hasSearched && !searchQuery.trim()) {
+      <div class="initial-search-prompt">
+          <i class="pi pi-search"></i>
+          <h3>Search the News</h3>
+          <p>Find articles, topics, and more.</p>
+      </div>
+    }
 
-    <div class="search-results-list" *ngIf="!isLoading && !errorMessage && results.length > 0">
-      <p-card 
-        *ngFor="let item of results" 
-        (click)="openNewsItem(item)" 
-        styleClass="search-result-item p-mb-3" 
-        pRipple>
-        <ng-template pTemplate="header" *ngIf="item.imageUrl">
-          <img [alt]="item.title" [src]="item.imageUrl" class="result-item-image"/>
-        </ng-template>
-        <ng-template pTemplate="title">
-          <span class="result-item-title">{{ item.title }}</span>
-        </ng-template>
-        <ng-template pTemplate="subtitle">
-          <div class="result-item-meta p-d-flex p-jc-between p-ai-center">
-            <span class="result-item-source">{{ item.source }}</span>
-            <span class="result-item-date">{{ item.publishedAt | date:'shortDate' }}</span>
-          </div>
-        </ng-template>
-        <ng-template pTemplate="content" *ngIf="item.summary">
-          <p class="result-item-summary">{{ item.summary }}</p>
-        </ng-template>
-         <ng-template pTemplate="footer" *ngIf="item.type === 'video' && item.duration">
-            <div class="video-info-footer p-d-flex p-ai-center">
-                <i class="pi pi-video p-mr-1"></i>
-                <span>Video - {{item.duration}}</span>
-            </div>
-        </ng-template>
-      </p-card>
-    </div>
+    @if (!isLoading && !errorMessage && results.length > 0) {
+      <div class="search-results-list">
+        @for (item of results; track item.id) {
+          <p-card 
+            (click)="openNewsItem(item)" 
+            styleClass="search-result-item p-mb-3" 
+            pRipple>
+            @if (item.imageUrl) {
+              <ng-template pTemplate="header">
+                <img [alt]="item.title" [src]="item.imageUrl" class="result-item-image"/>
+              </ng-template>
+            }
+            <ng-template pTemplate="title">
+              <span class="result-item-title">{{ item.title }}</span>
+            </ng-template>
+            <ng-template pTemplate="subtitle">
+              <div class="result-item-meta p-d-flex p-jc-between p-ai-center">
+                <span class="result-item-source">{{ item.source }}</span>
+                <span class="result-item-date">{{ item.publishedAt | date:'shortDate' }}</span>
+              </div>
+            </ng-template>
+            @if (item.summary) {
+              <ng-template pTemplate="content">
+                <p class="result-item-summary">{{ item.summary }}</p>
+              </ng-template>
+            }
+            @if (item.type === 'video' && item.duration) {
+              <ng-template pTemplate="footer">
+                  <div class="video-info-footer p-d-flex p-ai-center">
+                      <i class="pi pi-video p-mr-1"></i>
+                      <span>Video - {{item.duration}}</span>
+                  </div>
+              </ng-template>
+            }
+          </p-card>
+        }
+      </div>
+    }
   </div>
 </div>

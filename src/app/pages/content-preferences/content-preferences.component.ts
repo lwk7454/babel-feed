@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms'; // For ngModel
 import { Store } from '@ngrx/store';
@@ -41,7 +41,6 @@ export interface SourceVM {
   selector: 'app-content-preferences',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     CheckboxModule,
     InputTextModule,
@@ -50,7 +49,8 @@ export interface SourceVM {
     PanelModule,
     DividerModule,
     MultiSelectModule,
-    ToolbarModule
+    ToolbarModule,
+    AsyncPipe
   ],
   templateUrl: './content-preferences.component.html',
   styleUrls: ['./content-preferences.component.scss']
@@ -68,23 +68,9 @@ export class ContentPreferencesComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  // Mock or initial data (can be replaced by store selectors if available)
-  private allAvailableTopics: TopicVM[] = [
-    { id: 'tech', name: 'Technology', selected: false },
-    { id: 'business', name: 'Business', selected: false },
-    { id: 'sports', name: 'Sports', selected: false },
-    { id: 'entertainment', name: 'Entertainment', selected: false },
-    { id: 'science', name: 'Science', selected: false },
-    { id: 'health', name: 'Health & Wellness', selected: false },
-    { id: 'world', name: 'World News', selected: false },
-    { id: 'politics', name: 'Politics', selected: false },
-  ];
-
-
   constructor(
     private router: Router,
     private store: Store<AppState>
-    // private apiService: ApiService // Keep if direct API calls are still needed for some part
   ) {
     this.topics$ = this.store.select(selectTopics);
     this.blockedSources$ = this.store.select(selectBlockedSources);

@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable, Subject, Subscription } from 'rxjs';
@@ -32,13 +32,13 @@ export interface SettingsActionItem {
   selector: 'app-settings',
   standalone: true,
   imports: [
-    CommonModule,
     ButtonModule,
     AvatarModule,
     RippleModule,
     ListboxModule,
     PanelModule,
-    DividerModule
+    DividerModule,
+    AsyncPipe
   ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
