@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common'; // Added DatePipe
+import { DatePipe } from '@angular/common'; // Added DatePipe
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem structure
@@ -19,7 +19,6 @@ import { RippleModule } from 'primeng/ripple';
   selector: 'app-search',
   standalone: true,
   imports: [
-    CommonModule, 
     FormsModule,
     InputTextModule,
     ButtonModule,

@@ -1,5 +1,4 @@
 import { Component, OnInit } from "@angular/core";
-import { CommonModule } from "@angular/common";
 import { RouterOutlet, ChildrenOutletContexts } from "@angular/router"; // Router, NavigationEnd removed for now
 import { ThemeService } from "./services/theme.service";
 // Removed ToolbarModule, ButtonModule, TieredMenuModule
@@ -10,7 +9,6 @@ import { fadeAnimation } from './route-animations';
   selector: "app-root",
   standalone: true,
   imports: [
-    CommonModule, 
     RouterOutlet, 
   ],
   templateUrl: './app.component.html',

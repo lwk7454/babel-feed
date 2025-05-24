@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { DatePipe, AsyncPipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable, Subject, of } from 'rxjs';
 import { takeUntil, map } from 'rxjs/operators';
 
 import { AppState } from '../../store'; // Assuming AppState is correctly defined
-import { NewsItem } from '../../services/api.service'; // Assuming NewsItem structure
+import { NewsItem, ApiService } from '../../services/api.service'; // Assuming NewsItem structure
 import * as FeedActions from '../../store/actions/feed.actions';
 import { selectFeedItems, selectFeedLoading, selectFeedError } from '../../store/reducers/feed.reducer';
 
@@ -15,29 +15,19 @@ import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
 import { ProgressSpinnerModule } from 'primeng/progressspinner'; // For loading state
 
-// Define a more specific interface for what the template will use, based on NewsItem
-export interface FeedDisplayItem extends Omit<NewsItem, 'summary'> {
-  // Ensure all fields used in mock data and potentially from API are here
-  // NewsItem should ideally have: id, title, summary?, source, publishedAt, type: 'article' | 'video', imageUrl?, duration?, category?, content?, language?, country?, keywords?
-  // Making summary optional for display purposes
-  summary?: string;
-  // Additional fields for display
-  category?: string;
-  content?: string;
-  language?: string;
-  country?: string;
-  keywords?: string[];
-}
+// Use NewsItem directly since it now has all the fields we need
+export type FeedDisplayItem = NewsItem;
 
 @Component({
   selector: 'app-feed',
   standalone: true,
   imports: [
-    CommonModule,
     ButtonModule,
     RippleModule,
     ProgressSpinnerModule,
-    DatePipe // For formatting dates in the template
+    DatePipe, // For formatting dates in the template
+    AsyncPipe, // For async pipe
+    NgClass // For ngClass directive
   ],
   templateUrl: './feed.component.html',
   styleUrls: ['./feed.component.scss']
@@ -50,65 +40,15 @@ export class FeedComponent implements OnInit, OnDestroy {
   currentError: string | null = null;
   private destroy$ = new Subject<void>();
 
-  // Mock data for UI development and styling
-  private mockNewsItems: FeedDisplayItem[] = [
-    {
-      id: 'mock1',
-      title: 'Exploring the Depths: A New Underwater Discovery',
-      summary: 'Scientists have found a previously unknown species of glowing fish in the Mariana Trench, challenging our understanding of deep-sea ecosystems.',
-      source: 'Oceanographic Today',
-      publishedAt: new Date(Date.now() - 3600 * 1000 * 2).toISOString(), // 2 hours ago
-      type: 'article',
-      imageUrl: 'https://images.unsplash.com/photo-1524704654690-b56c05c78a00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA&ixlib=rb-4.0.3&q=80&w=400',
-      url: 'https://example.com/ocean-discovery',
-      category: 'Science',
-      content: 'Full article content here...',
-      language: 'en',
-      country: 'us',
-      keywords: ['ocean', 'discovery', 'science']
-    },
-    {
-      id: 'mock2',
-      title: 'Architectural Marvels: The Future of Urban Living (Video)',
-      source: 'FutureScapes Channel',
-      publishedAt: new Date(Date.now() - 3600 * 1000 * 28).toISOString(), // 28 hours ago
-      type: 'video',
-      imageUrl: 'https://images.unsplash.com/photo-1519994940911-d6907047f529?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA&ixlib=rb-4.0.3&q=80&w=400', // Placeholder thumbnail
-      url: 'https://example.com/architectural-marvels-video',
-      duration: '15:32',
-      category: 'Technology',
-      content: 'Details about the video content...',
-      language: 'en',
-      country: 'us',
-      keywords: ['architecture', 'urban', 'future', 'video'],
-      // summary is not typically for video items in this design
-    },
-    {
-      id: 'mock3',
-      title: 'The Rise of Sustainable Energy Solutions',
-      summary: 'A comprehensive analysis of how renewable energy sources are becoming increasingly viable and the impact on global markets.',
-      source: 'Eco World News',
-      publishedAt: new Date(Date.now() - 3600 * 1000 * 72).toISOString(), // 3 days ago
-      type: 'article',
-      imageUrl: undefined, // Example of an article without an image
-      url: 'https://example.com/sustainable-energy',
-      category: 'Environment',
-      content: 'Full article content here...',
-      language: 'en',
-      country: 'us',
-      keywords: ['sustainability', 'energy', 'environment']
-    }
-  ];
-
   constructor(
     private router: Router,
-    private store: Store<AppState>
+    private store: Store<AppState>,
+    private apiService: ApiService
   ) {
-    // Initialize with mock data for immediate UI rendering.
-    // The store-based data loading will replace this when available.
-    this.newsItems$ = of(this.mockNewsItems); 
-    this.loading$ = of(false); // Default to not loading with mock data
-    this.error$ = of(null);   // Default to no error with mock data
+    // Use API service for immediate data loading as fallback
+    this.newsItems$ = this.apiService.getNewsFeed(); 
+    this.loading$ = of(false);
+    this.error$ = of(null);
 
     // Uncomment below to use NGRX store for data (assuming effects and reducers are set up)
     /*
@@ -152,17 +92,16 @@ export class FeedComponent implements OnInit, OnDestroy {
   }
 
   refreshFeed(): void {
-    console.log('Dispatching refresh feed action...');
-    this.currentError = null; // Clear any existing error messages
-    // this.loading$ = of(true); // Manually trigger loading for mock if needed
+    console.log('Refreshing feed...');
+    this.currentError = null;
+    this.loading$ = of(true);
+    
+    // Try to load from store first, fallback to API service
     this.store.dispatch(FeedActions.loadFeedStart());
     
-    // For testing mock data refresh:
-    // this.newsItems$ = of([]);
-    // setTimeout(() => {
-    //   this.newsItems$ = of(this.mockNewsItems);
-    //   this.loading$ = of(false);
-    // }, 1000);
+    // As fallback, also refresh from API service
+    this.newsItems$ = this.apiService.getNewsFeed();
+    this.loading$ = of(false);
   }
   
   // Helper to track items in *ngFor for better performance

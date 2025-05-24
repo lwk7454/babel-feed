@@ -4,79 +4,90 @@
   </div>
 
   <!-- User Profile Section -->
-  <div class="user-profile-section p-mb-3" *ngIf="isAuthenticated$ | async">
-    <div class="p-d-flex p-ai-center">
-      <p-avatar 
-        [image]="(userData$ | async)?.photoURL || 'assets/placeholder-avatar.png'" 
-        size="xlarge" 
-        shape="circle"
-        styleClass="p-mr-3 user-avatar">
-      </p-avatar>
-      <div class="user-info">
-        <h2 class="user-name">{{ (userData$ | async)?.displayName || 'User' }}</h2>
-        <p class="user-email">{{ (userData$ | async)?.email || 'No email provided' }}</p>
+  @if (isAuthenticated$ | async) {
+    <div class="user-profile-section p-mb-3">
+      <div class="p-d-flex p-ai-center">
+        <p-avatar 
+          [image]="(userData$ | async)?.photoURL || 'assets/placeholder-avatar.png'" 
+          size="xlarge" 
+          shape="circle"
+          styleClass="p-mr-3 user-avatar">
+        </p-avatar>
+        <div class="user-info">
+          <h2 class="user-name">{{ (userData$ | async)?.displayName || 'User' }}</h2>
+          <p class="user-email">{{ (userData$ | async)?.email || 'No email provided' }}</p>
+        </div>
       </div>
     </div>
-  </div>
-  <p-divider *ngIf="isAuthenticated$ | async" styleClass="p-mb-3"></p-divider>
+    <p-divider styleClass="p-mb-3"></p-divider>
+  }
 
   <!-- Account Settings -->
-  <p-panel header="Account" styleClass="settings-panel" *ngIf="isAuthenticated$ | async">
-    <ul class="settings-list">
-      <li *ngFor="let item of accountItems" 
-          (click)="handleItemClick(item)" 
-          (keydown.enter)="handleItemClick(item)" 
-          tabindex="0" 
-          pRipple
-          [attr.data-qa]="item.dataQa">
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
-        <i class="pi pi-angle-right"></i>
-      </li>
-    </ul>
-  </p-panel>
+  @if (isAuthenticated$ | async) {
+    <p-panel header="Account" styleClass="settings-panel">
+      <ul class="settings-list">
+        @for (item of accountItems; track item.dataQa) {
+          <li (click)="handleItemClick(item)" 
+              (keydown.enter)="handleItemClick(item)" 
+              tabindex="0" 
+              pRipple
+              [attr.data-qa]="item.dataQa">
+            <i [class]="item.icon"></i>
+            <span>{{ item.label }}</span>
+            <i class="pi pi-angle-right"></i>
+          </li>
+        }
+      </ul>
+    </p-panel>
+  }
 
   <!-- Appearance Settings -->
   <p-panel header="Appearance & Preferences" styleClass="settings-panel">
     <ul class="settings-list">
-      <li *ngFor="let item of appearanceItems" 
-          (click)="handleItemClick(item)" 
-          (keydown.enter)="handleItemClick(item)" 
-          tabindex="0" 
-          pRipple
-          [attr.data-qa]="item.dataQa">
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
-        <i class="pi pi-angle-right" *ngIf="item.route"></i> <!-- Show chevron only for navigation items -->
-      </li>
+      @for (item of appearanceItems; track item.dataQa) {
+        <li (click)="handleItemClick(item)" 
+            (keydown.enter)="handleItemClick(item)" 
+            tabindex="0" 
+            pRipple
+            [attr.data-qa]="item.dataQa">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+          @if (item.route) {
+            <i class="pi pi-angle-right"></i> <!-- Show chevron only for navigation items -->
+          }
+        </li>
+      }
     </ul>
   </p-panel>
 
   <!-- Information Section -->
   <p-panel header="Information" styleClass="settings-panel">
     <ul class="settings-list">
-      <li *ngFor="let item of informationItems" 
-          (click)="handleItemClick(item)" 
-          (keydown.enter)="handleItemClick(item)" 
-          tabindex="0" 
-          pRipple
-          [attr.data-qa]="item.dataQa">
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
-        <i class="pi pi-angle-right"></i>
-      </li>
+      @for (item of informationItems; track item.dataQa) {
+        <li (click)="handleItemClick(item)" 
+            (keydown.enter)="handleItemClick(item)" 
+            tabindex="0" 
+            pRipple
+            [attr.data-qa]="item.dataQa">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+          <i class="pi pi-angle-right"></i>
+        </li>
+      }
     </ul>
   </p-panel>
 
   <!-- Sign Out Button -->
-  <div class="sign-out-section p-mt-4" *ngIf="isAuthenticated$ | async">
-    <p-button 
-      label="Sign Out" 
-      icon="pi pi-sign-out" 
-      styleClass="p-button-danger p-button-outlined full-width-button" 
-      (onClick)="signOut()"
-      data-qa="sign-out-button">
-    </p-button>
-  </div>
+  @if (isAuthenticated$ | async) {
+    <div class="sign-out-section p-mt-4">
+      <p-button 
+        label="Sign Out" 
+        icon="pi pi-sign-out" 
+        styleClass="p-button-danger p-button-outlined full-width-button" 
+        (onClick)="signOut()"
+        data-qa="sign-out-button">
+      </p-button>
+    </div>
+  }
 
 </div>

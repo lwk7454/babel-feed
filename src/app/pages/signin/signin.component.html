@@ -11,29 +11,33 @@
     <div class="p-fluid">
       <p-messages [(value)]="messages" [enableService]="false" [closable]="true" styleClass="auth-messages"></p-messages>
       
-      <div *ngIf="!(loading$ | async)" class="social-signin-buttons">
-        <p-button 
-          label="Sign In with Google"
-          icon="pi pi-google"
-          styleClass="p-button-danger social-button google-button p-mb-3"
-          (onClick)="signInWithGoogle()">
-        </p-button>
-        
-        <!-- Example for Apple Sign In (can be uncommented and implemented) -->
-        <!-- 
-        <p-button 
-          label="Sign In with Apple"
-          icon="pi pi-apple"
-          styleClass="p-button-secondary social-button apple-button" 
-          (onClick)="signInWithApple()"
-          [disabled]="true"> 
-        </p-button>
-        -->
-      </div>
+      @if (!(loading$ | async)) {
+        <div class="social-signin-buttons">
+          <p-button 
+            label="Sign In with Google"
+            icon="pi pi-google"
+            styleClass="p-button-danger social-button google-button p-mb-3"
+            (onClick)="signInWithGoogle()">
+          </p-button>
+          
+          <!-- Example for Apple Sign In (can be uncommented and implemented) -->
+          <!-- 
+          <p-button 
+            label="Sign In with Apple"
+            icon="pi pi-apple"
+            styleClass="p-button-secondary social-button apple-button" 
+            (onClick)="signInWithApple()"
+            [disabled]="true"> 
+          </p-button>
+          -->
+        </div>
+      }
 
-      <div *ngIf="loading$ | async" class="loading-spinner-container p-d-flex p-jc-center p-mt-3">
-        <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-      </div>
+      @if (loading$ | async) {
+        <div class="loading-spinner-container p-d-flex p-jc-center p-mt-3">
+          <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
+        </div>
+      }
     </div>
 
     <ng-template pTemplate="footer">

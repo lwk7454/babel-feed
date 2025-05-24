@@ -13,22 +13,27 @@
     <!-- Preferred Topics Section -->
     <p-panel header="My Preferred Topics" styleClass="preferences-panel">
       <p class="panel-description">Select topics you're interested in to personalize your feed.</p>
-      <div class="topics-grid" *ngIf="topics$ | async as topics">
-        <div *ngFor="let topic of topics" class="topic-item">
-          <p-checkbox 
-            [binary]="true" 
-            [value]="topic.id" 
-            [(ngModel)]="topic.selected" 
-            (onChange)="onTopicChange(topic, $event.checked)"
-            [inputId]="'topic-' + topic.id"
-            [attr.data-qa]="'topic-checkbox-' + topic.id">
-          </p-checkbox>
-          <label [for]="'topic-' + topic.id" class="p-checkbox-label">{{ topic.name }}</label>
+      @if (topics$ | async; as topics) {
+        <div class="topics-grid">
+          @for (topic of topics; track topic.id) {
+            <div class="topic-item">
+              <p-checkbox 
+                [binary]="true" 
+                [value]="topic.id" 
+                [(ngModel)]="topic.selected" 
+                (onChange)="onTopicChange(topic, $event.checked)"
+                [inputId]="'topic-' + topic.id"
+                [attr.data-qa]="'topic-checkbox-' + topic.id">
+              </p-checkbox>
+              <label [for]="'topic-' + topic.id" class="p-checkbox-label">{{ topic.name }}</label>
+            </div>
+          } @empty {
+            <div class="empty-topics-message">
+              <p>No topics available at the moment. Please check back later.</p>
+            </div>
+          }
         </div>
-        <div *ngIf="!topics.length" class="empty-topics-message">
-          <p>No topics available at the moment. Please check back later.</p>
-        </div>
-      </div>
+      }
     </p-panel>
 
     <p-divider layout="horizontal"></p-divider>
@@ -58,21 +63,26 @@
         </p-button>
       </div>
 
-      <div class="blocked-sources-list" *ngIf="blockedSources.length > 0">
-        <div *ngFor="let source of blockedSources" class="blocked-source-item p-d-flex p-ai-center p-jc-between">
-          <span>{{ source.name }}</span>
-          <p-button 
-            icon="pi pi-times" 
-            (click)="removeBlockedSource(source)" 
-            styleClass="p-button-text p-button-danger p-button-rounded"
-            aria-label="Remove blocked source"
-            [attr.data-qa]="'remove-blocked-source-' + source.id">
-          </p-button>
+      @if (blockedSources.length > 0) {
+        <div class="blocked-sources-list">
+          @for (source of blockedSources; track source.id) {
+            <div class="blocked-source-item p-d-flex p-ai-center p-jc-between">
+              <span>{{ source.name }}</span>
+              <p-button 
+                icon="pi pi-times" 
+                (click)="removeBlockedSource(source)" 
+                styleClass="p-button-text p-button-danger p-button-rounded"
+                aria-label="Remove blocked source"
+                [attr.data-qa]="'remove-blocked-source-' + source.id">
+              </p-button>
+            </div>
+          }
         </div>
-      </div>
-      <div *ngIf="blockedSources.length === 0" class="empty-blocked-sources-message">
-        <p>You haven't blocked any sources yet.</p>
-      </div>
+      } @else {
+        <div class="empty-blocked-sources-message">
+          <p>You haven't blocked any sources yet.</p>
+        </div>
+      }
     </p-panel>
 
     <!-- Future sections (e.g., Preferred Languages) can be added here -->

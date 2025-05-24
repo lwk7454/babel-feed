@@ -42,9 +42,11 @@
       </div>
     </p-panel>
     
-    <div class="no-content-message" *ngIf="true"> <!-- Change condition based on actual content presence -->
-      <i class="pi pi-info-circle"></i>
-      <p>Further model configuration options will be available here in a future update.</p>
-    </div>
+    @if (true) { <!-- Change condition based on actual content presence -->
+      <div class="no-content-message">
+        <i class="pi pi-info-circle"></i>
+        <p>Further model configuration options will be available here in a future update.</p>
+      </div>
+    }
   </div>
 </div>

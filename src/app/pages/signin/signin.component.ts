@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Store } from '@ngrx/store';
@@ -21,12 +21,12 @@ import { ThemeService } from '../../services/theme.service'; // For theme toggle
   selector: 'app-signin',
   standalone: true,
   imports: [
-    CommonModule,
     ButtonModule,
     ProgressSpinnerModule,
     MessagesModule,
     CardModule,
-    DividerModule
+    DividerModule,
+    AsyncPipe
   ],
   templateUrl: './signin.component.html',
   styleUrls: ['./signin.component.scss']

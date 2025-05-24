@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When using libraries such as Angular 19 and frameng, make you sure have sufficient knowledge of that version you are using. If not, search its documentation and make sure you fully understand that version before proceeding. 
+
+Try to build all UI components with PrimeNG, if the library doesn't have suitable components, build your own. 
+
+Never use `any` in types, fix them. Also run `bun run build` to confirm your code works.
+
+Build API services for an imaginary web service for back end. 
+Don't hard code any dynamic data in the UI, you can mock service responses, but the app itself should be feature-complete. 
+
+Follow best practices for project strucure. Don't embed HTML and SCSS into TS files, separate them into their own files. 
+
+If you failed to update any files (writing error), delete the file then create with original content with your changes.

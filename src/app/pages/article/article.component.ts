@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem has a 'url' property
@@ -18,7 +17,6 @@ import { InputSwitchModule } from 'primeng/inputswitch'; // For translate toggle
   selector: 'app-article',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ButtonModule,
     ProgressSpinnerModule,

@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms'; // Import FormsModule
 
@@ -16,7 +15,6 @@ import { CheckboxModule } from 'primeng/checkbox'; // Added CheckboxModule
   selector: 'app-model-config',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule, // Add FormsModule here
     PanelModule,
     ButtonModule,
