@@ -1,52 +1,43 @@
-<div @fadeInOut class="welcome-page-container p-d-flex p-flex-column p-ai-center p-jc-center">
-  <p-card styleClass="welcome-card-panel">
-    <ng-template pTemplate="header">
-      <div class="welcome-header p-text-center">
-        <img src="assets/logo-placeholder.png" alt="Babel Feed Logo" class="app-logo" /> <!-- Replace with actual logo -->
-        <h1>Babel Feed</h1>
-        <p>Your News, Effortlessly Translated.</p>
-      </div>
-    </ng-template>
+<div @fadeInOut class="welcome-container">
+  <!-- Logo and title -->
+  <div class="welcome-header">
+    <div class="logo-placeholder">📰</div>
+    <h1 class="app-title">Babel Feed</h1>
+    <p class="app-subtitle">Your News, Effortlessly Translated.</p>
+  </div>
 
-    <div class="welcome-content p-fluid">
-      <h3 class="language-prompt p-text-center p-mb-3">Choose your preferred language:</h3>
-      
-      <p-selectButton 
-        [options]="(languageOptions$ | async) || []"
-        [(ngModel)]="currentSelectedLanguage"
-        (onChange)="onLanguageChange($event)" 
-        optionLabel="label"
-        optionValue="value" 
-        styleClass="language-selector p-mb-4">
-        <!-- Optional: Custom template for select button items if icons or complex labels are needed -->
-        <!-- 
-        <ng-template let-item pTemplate="item">
-          <i [class]="item.icon" *ngIf="item.icon" style="margin-right: 0.5rem;"></i>
-          <span>{{item.label}}</span>
-        </ng-template>
-        -->
-      </p-selectButton>
-
-      <p-button 
-        label="Get Started"
-        icon="pi pi-arrow-right"
-        iconPos="right"
-        (onClick)="goToSignIn()"
-        [disabled]="!currentSelectedLanguage"
-        styleClass="get-started-button">
-      </p-button>
+  <!-- Language selection -->
+  <div class="language-section">
+    <h3 class="language-prompt">Choose your preferred language:</h3>
+    
+    <div class="language-grid">
+      <button 
+        *ngFor="let option of (languageOptions$ | async) || []"
+        class="language-option"
+        [class.selected]="currentSelectedLanguage?.id === option.value.id"
+        (click)="onLanguageSelect(option.value)">
+        {{ option.label }}
+      </button>
     </div>
 
-    <ng-template pTemplate="footer">
-      <p-divider styleClass="footer-divider"></p-divider>
-      <div class="theme-toggle-footer p-d-flex p-jc-end p-ai-center p-mt-2">
-        <p-button 
-          [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
-          (click)="themeService.toggleTheme()" 
-          styleClass="p-button-rounded p-button-text theme-toggle-button"
-          aria-label="Toggle theme">
-        </p-button>
-      </div>
-    </ng-template>
-  </p-card>
+    <!-- Get Started Button -->
+    <p-button 
+      label="Get Started"
+      icon="pi pi-arrow-right"
+      iconPos="right"
+      (onClick)="goToSignIn()"
+      [disabled]="!currentSelectedLanguage"
+      styleClass="get-started-btn">
+    </p-button>
+  </div>
+
+  <!-- Theme toggle button -->
+  <div class="theme-toggle">
+    <p-button 
+      [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
+      (click)="themeService.toggleTheme()" 
+      styleClass="p-button-rounded p-button-text theme-btn"
+      aria-label="Toggle theme">
+    </p-button>
+  </div>
 </div>

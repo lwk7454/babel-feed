@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, CommonModule } from '@angular/common';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Store } from '@ngrx/store';
@@ -8,24 +8,20 @@ import { Store } from '@ngrx/store';
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessagesModule } from 'primeng/messages';
-// import { Message } from 'primeng/api'; // Use specific Message interface
-import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider'; // For visual separation
 
 import * as UserActions from '../../store/actions/user.actions';
 import { AppState } from '../../store';
 import { selectUserError, selectUserIsAuthenticated, selectUserLoading } from '../../store/reducers/user.reducer';
-import { ThemeService } from '../../services/theme.service'; // For theme toggle in footer
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-signin',
   standalone: true,
   imports: [
+    CommonModule,
     ButtonModule,
     ProgressSpinnerModule,
     MessagesModule,
-    CardModule,
-    DividerModule,
     AsyncPipe
   ],
   templateUrl: './signin.component.html',
@@ -34,14 +30,14 @@ import { ThemeService } from '../../services/theme.service'; // For theme toggle
 export class SigninComponent implements OnInit, OnDestroy {
   loading$: Observable<boolean>;
   error$: Observable<string | null>;
-  isAuthenticated$: Observable<boolean>; // To potentially redirect if already authenticated
+  isAuthenticated$: Observable<boolean>;
   
-  messages: any[] = []; // Use PrimeNG Message interface
+  messages: any[] = [];
   private destroy$ = new Subject<void>();
 
   constructor(
     private store: Store<AppState>,
-    public themeService: ThemeService // Public for template access
+    public themeService: ThemeService
   ) {
     this.loading$ = this.store.select(selectUserLoading);
     this.error$ = this.store.select(selectUserError);
@@ -49,26 +45,48 @@ export class SigninComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Subscribe to errors and show them as messages
     this.error$.pipe(takeUntil(this.destroy$)).subscribe(error => {
       if (error) {
-        this.messages = [{ severity: 'error', summary: 'Sign-In Error', detail: error, closable: true }];
+        this.messages = [{ 
+          severity: 'error', 
+          summary: 'Sign-In Error', 
+          detail: error, 
+          closable: true 
+        }];
       } else {
         this.messages = [];
       }
     });
-
-    // Optional: Redirect if user is already authenticated and lands on sign-in page
-    // this.isAuthenticated$.pipe(
-    //   filter(isAuthenticated => isAuthenticated),
-    //   take(1) // Only need to check once
-    // ).subscribe(() => {
-    //   this.router.navigate(['/feed']); // Or to a dashboard
-    // });
   }
   
   signInWithGoogle(): void {
-    this.messages = []; // Clear previous messages
+    // Clear any previous error messages
+    this.messages = [];
     this.store.dispatch(UserActions.signInStart({ provider: 'google' }));
+  }
+
+  /**
+   * Dev-only method to skip login and simulate successful authentication
+   * This directly dispatches a sign-in success action with mock user data
+   */
+  skipLoginForDev(): void {
+    console.log('🚀 Dev Skip: Simulating successful login with mock user data');
+    
+    // Clear any previous error messages
+    this.messages = [];
+    
+    // Mock user data that matches the UserData interface
+    const mockUserData = {
+      id: 'dev-user-123',
+      email: 'dev.user@babelfeed.com',
+      displayName: 'Dev User',
+      photoURL: 'https://via.placeholder.com/150/22c55e/ffffff?text=DEV',
+      provider: 'dev-skip'
+    };
+
+    // Dispatch success action directly with mock data
+    this.store.dispatch(UserActions.signInSuccess({ userData: mockUserData }));
   }
 
   // Example for other providers (Apple, etc.) if they were to be implemented
