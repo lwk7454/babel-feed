@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators'; // Removed tap, not strictly needed here
 import { FormsModule } from '@angular/forms';
 
 // PrimeNG components
@@ -32,46 +32,57 @@ import { ThemeService } from '../../services/theme.service';
   templateUrl: './welcome.component.html',
   styleUrls: ['./welcome.component.scss'],
   animations: [
-    trigger('fadeIn', [
+    trigger('fadeInOut', [ // Renamed for clarity if more states are added
       transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(20px)' }),
-        animate('500ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
-      ])
+        style({ opacity: 0, transform: 'translateY(15px)' }), // Slightly less Y translation
+        animate('500ms cubic-bezier(0.35, 0, 0.25, 1)', style({ opacity: 1, transform: 'translateY(0)' })) // Smoother easing
+      ]),
+      // transition(':leave', [ // Example for fadeOut if needed
+      //   animate('300ms ease-in', style({ opacity: 0, transform: 'translateY(-15px)' }))
+      // ])
     ])
   ]
 })
-export class WelcomeComponent implements OnInit {
-  availableLanguages$: Observable<LanguagePreference[]>;
+export class WelcomeComponent implements OnInit, OnDestroy {
+  // No need for availableLanguages$ if languageOptions$ is derived correctly
   selectedLanguage$: Observable<LanguagePreference | null>;
   currentSelectedLanguage: LanguagePreference | null = null;
 
-  languageOptions$: Observable<{ label: string, value: LanguagePreference }[]>;
+  languageOptions$: Observable<{ label: string, value: LanguagePreference, icon?: string }[]>; // Added optional icon
   
+  private destroy$ = new Subject<void>();
+
   constructor(
     private router: Router,
     private store: Store<AppState>,
-    public themeService: ThemeService
+    public themeService: ThemeService // public for template access
   ) {
-    this.availableLanguages$ = this.store.select(selectAvailableLanguages);
+    // Dispatch action to load languages if they aren't loaded by default/app init
+    // this.store.dispatch(PreferencesActions.loadAvailableLanguages()); // Assuming an action like this exists
+
     this.selectedLanguage$ = this.store.select(selectSelectedLanguage);
 
-    this.languageOptions$ = this.availableLanguages$.pipe(
-      map(languages => languages.map(lang => ({ label: lang.native, value: lang })))
+    this.languageOptions$ = this.store.select(selectAvailableLanguages).pipe(
+      map(languages => languages.map(lang => ({ 
+        label: lang.native, // e.g., "English", "Español"
+        value: lang, 
+        // icon: `flag flag-${lang.code.toLowerCase()}` // Example if using a flag icon library
+      })))
     );
   }
   
   ngOnInit(): void {
     this.selectedLanguage$.pipe(
-      tap(lang => {
-        this.currentSelectedLanguage = lang;
-      })
-    ).subscribe();
+      takeUntil(this.destroy$) 
+    ).subscribe(lang => {
+      this.currentSelectedLanguage = lang;
+    });
   }
   
   onLanguageChange(event: SelectButtonChangeEvent): void {
-    const language = event.value as LanguagePreference | null;
+    const language = event.value as LanguagePreference | null; // event.value is the selected LanguagePreference object
     if (language) {
-      this.currentSelectedLanguage = language;
+      this.currentSelectedLanguage = language; // Update local state
       this.store.dispatch(PreferencesActions.setLanguage({ language }));
     }
   }
@@ -80,7 +91,14 @@ export class WelcomeComponent implements OnInit {
     if (this.currentSelectedLanguage) {
       this.router.navigate(['/signin']);
     } else {
-      console.warn('No language selected. Please select a language to continue.');
+      // Optionally, provide user feedback if no language is selected,
+      // though the button should be disabled.
+      console.warn('No language selected. Please select a language to proceed.');
     }
   }
-} 
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+}

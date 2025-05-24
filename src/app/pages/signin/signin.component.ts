@@ -1,18 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { Store } from '@ngrx/store';
+
+// PrimeNG Modules
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessagesModule } from 'primeng/messages';
-// import { Message } from 'primeng/api'; // Temporarily commented out due to persistent import issues
+import { Message } from 'primeng/api'; // Use specific Message interface
 import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
+import { DividerModule } from 'primeng/divider'; // For visual separation
 
 import * as UserActions from '../../store/actions/user.actions';
 import { AppState } from '../../store';
 import { selectUserError, selectUserIsAuthenticated, selectUserLoading } from '../../store/reducers/user.reducer';
-import { ThemeService } from '../../services/theme.service';
+import { ThemeService } from '../../services/theme.service'; // For theme toggle in footer
 
 @Component({
   selector: 'app-signin',
@@ -28,16 +31,17 @@ import { ThemeService } from '../../services/theme.service';
   templateUrl: './signin.component.html',
   styleUrls: ['./signin.component.scss']
 })
-export class SigninComponent implements OnInit {
+export class SigninComponent implements OnInit, OnDestroy {
   loading$: Observable<boolean>;
   error$: Observable<string | null>;
-  isAuthenticated$: Observable<boolean>;
+  isAuthenticated$: Observable<boolean>; // To potentially redirect if already authenticated
   
-  messages: any[] = []; // Temporarily reverting to any[]
+  messages: Message[] = []; // Use PrimeNG Message interface
+  private destroy$ = new Subject<void>();
 
   constructor(
     private store: Store<AppState>,
-    public themeService: ThemeService
+    public themeService: ThemeService // Public for template access
   ) {
     this.loading$ = this.store.select(selectUserLoading);
     this.error$ = this.store.select(selectUserError);
@@ -45,23 +49,36 @@ export class SigninComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.error$.subscribe(error => {
+    this.error$.pipe(takeUntil(this.destroy$)).subscribe(error => {
       if (error) {
-        this.messages = [{ severity: 'error', summary: 'Error', detail: error }];
+        this.messages = [{ severity: 'error', summary: 'Sign-In Error', detail: error, closable: true }];
       } else {
         this.messages = [];
       }
     });
+
+    // Optional: Redirect if user is already authenticated and lands on sign-in page
+    // this.isAuthenticated$.pipe(
+    //   filter(isAuthenticated => isAuthenticated),
+    //   take(1) // Only need to check once
+    // ).subscribe(() => {
+    //   this.router.navigate(['/feed']); // Or to a dashboard
+    // });
   }
   
   signInWithGoogle(): void {
-    this.messages = [];
+    this.messages = []; // Clear previous messages
     this.store.dispatch(UserActions.signInStart({ provider: 'google' }));
   }
 
-  // Placeholder for other providers if they were to be implemented
-  // signIn(provider: string): void {
+  // Example for other providers (Apple, etc.) if they were to be implemented
+  // signInWithApple(): void {
   //   this.messages = [];
-  //   this.store.dispatch(UserActions.signInStart({ provider }));
+  //   this.store.dispatch(UserActions.signInStart({ provider: 'apple' }));
   // }
-} 
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+}

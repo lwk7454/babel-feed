@@ -1,26 +1,87 @@
-<div class="app-container">
-  <header class="app-header">
-    <button class="back-button" (click)="goBack()">←</button>
-    <h1>Content Preferences</h1>
-    <div></div> <!-- Empty div for flex spacing -->
-  </header>
-  
-  <div class="preferences-container">
-    <div class="section-header">Topics</div>
-    
-    <div class="preference-item" *ngFor="let topic of availableTopics">
-      <span>{{topic.name}}</span>
-      <label class="switch">
-        <input type="checkbox" [(ngModel)]="topic.selected" (change)="savePreferences()">
-        <span class="slider"></span>
-      </label>
+<div class="preferences-page-container">
+  <p-toolbar styleClass="preferences-toolbar">
+    <div class="p-toolbar-group-left">
+      <p-button icon="pi pi-arrow-left" (click)="goBack()" styleClass="p-button-text" aria-label="Back to Settings"></p-button>
+      <h1 class="page-title">Content Preferences</h1>
     </div>
-    
-    <div class="section-header">Blocked Sources</div>
-    
-    <div class="blocked-source" *ngFor="let source of blockedSources; let i = index">
-      <span>{{source}}</span>
-      <button class="remove-button" (click)="removeBlockedSource(i)">✕</button>
+    <div class="p-toolbar-group-right">
+      <p-button label="Save Changes" icon="pi pi-save" (click)="savePreferences()" styleClass="p-button-success"></p-button>
     </div>
+  </p-toolbar>
+
+  <div class="preferences-content">
+    <!-- Preferred Topics Section -->
+    <p-panel header="My Preferred Topics" styleClass="preferences-panel">
+      <p class="panel-description">Select topics you're interested in to personalize your feed.</p>
+      <div class="topics-grid" *ngIf="availableTopics$ | async as topics">
+        <div *ngFor="let topic of topics" class="topic-item">
+          <p-checkbox 
+            [binary]="true" 
+            [label]="topic.name" 
+            [value]="topic.id" 
+            [(ngModel)]="topic.selected" 
+            (onChange)="onTopicChange(topic, $event.checked)"
+            [inputId]="'topic-' + topic.id"
+            [attr.data-qa]="'topic-checkbox-' + topic.id">
+          </p-checkbox>
+        </div>
+        <div *ngIf="!topics.length" class="empty-topics-message">
+          <p>No topics available at the moment. Please check back later.</p>
+        </div>
+      </div>
+    </p-panel>
+
+    <p-divider layout="horizontal"></p-divider>
+
+    <!-- Blocked Sources Section -->
+    <p-panel header="Manage Blocked Sources" styleClass="preferences-panel">
+      <p class="panel-description">Articles from these sources will not appear in your feed. Add a source by typing its name or website domain.</p>
+      
+      <div class="add-source-form p-fluid p-d-flex p-ai-center p-mb-3">
+        <span class="p-input-icon-left p-mr-2" style="flex-grow: 1;">
+          <i class="pi pi-ban"></i>
+          <input 
+            pInputText 
+            type="text" 
+            [(ngModel)]="newBlockedSource" 
+            placeholder="e.g., examplesource.com or Example Source Name"
+            (keyup.enter)="addBlockedSource()"
+            data-qa="add-blocked-source-input" />
+        </span>
+        <p-button 
+          icon="pi pi-plus" 
+          label="Add" 
+          (click)="addBlockedSource()" 
+          [disabled]="!newBlockedSource.trim()"
+          styleClass="p-button-outlined"
+          data-qa="add-blocked-source-button">
+        </p-button>
+      </div>
+
+      <div class="blocked-sources-list" *ngIf="blockedSources.length > 0">
+        <div *ngFor="let source of blockedSources" class="blocked-source-item p-d-flex p-ai-center p-jc-between">
+          <span>{{ source.name }}</span>
+          <p-button 
+            icon="pi pi-times" 
+            (click)="removeBlockedSource(source)" 
+            styleClass="p-button-text p-button-danger p-button-rounded"
+            aria-label="Remove blocked source"
+            [attr.data-qa]="'remove-blocked-source-' + source.id">
+          </p-button>
+        </div>
+      </div>
+      <div *ngIf="blockedSources.length === 0" class="empty-blocked-sources-message">
+        <p>You haven't blocked any sources yet.</p>
+      </div>
+    </p-panel>
+
+    <!-- Future sections (e.g., Preferred Languages) can be added here -->
+    <!-- 
+    <p-divider layout="horizontal"></p-divider>
+    <p-panel header="Preferred Languages" styleClass="preferences-panel">
+      <p class="panel-description">Select languages you understand to see content in those languages.</p>
+      // Language selection controls here
+    </p-panel>
+    -->
   </div>
-</div> 
+</div>

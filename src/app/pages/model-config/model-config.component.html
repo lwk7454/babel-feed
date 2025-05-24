@@ -1,0 +1,50 @@
+<div class="model-config-page-container">
+  <p-toolbar styleClass="config-toolbar">
+    <div class="p-toolbar-group-left">
+      <p-button icon="pi pi-arrow-left" (click)="goBack()" styleClass="p-button-text" aria-label="Go Back"></p-button>
+      <h1 class="page-title">Model Configuration</h1>
+    </div>
+    <div class="p-toolbar-group-right">
+      <p-button label="Save" icon="pi pi-save" (click)="saveConfiguration()" styleClass="p-button-success"></p-button>
+    </div>
+  </p-toolbar>
+
+  <div class="config-content">
+    <p-panel header="Language Model Settings" styleClass="config-panel">
+      <p class="panel-description">
+        Adjust settings related to the underlying language models. (This is a placeholder UI)
+      </p>
+      <div class="p-fluid">
+        <div class="p-field p-grid">
+          <label for="model-select" class="p-col-12 p-md-3">Select Model:</label>
+          <div class="p-col-12 p-md-9">
+            <!-- Example: Dropdown for model selection -->
+            <p-dropdown inputId="model-select" [options]="[{label: 'Default Model (Placeholder)', value: 'default'}]" placeholder="Select a Model (Placeholder)"></p-dropdown>
+          </div>
+        </div>
+        <div class="p-field p-grid">
+          <label for="temperature" class="p-col-12 p-md-3">Temperature:</label>
+          <div class="p-col-12 p-md-9">
+            <!-- Example: Slider for temperature -->
+            <p-slider inputId="temperature" [(ngModel)]="value" [min]="0" [max]="1" [step]="0.1"></p-slider>
+            <small>Controls randomness. Lower is more deterministic. (Placeholder)</small>
+          </div>
+        </div>
+      </div>
+    </p-panel>
+
+    <p-panel header="Content Filtering" styleClass="config-panel">
+      <p class="panel-description">
+        Manage content filtering levels and safety settings. (This is a placeholder UI)
+      </p>
+      <div class="p-field">
+        <p-checkbox inputId="safe-search" [(ngModel)]="safeSearchEnabled" [binary]="true" label="Enable Safe Search (Placeholder)"></p-checkbox>
+      </div>
+    </p-panel>
+    
+    <div class="no-content-message" *ngIf="true"> <!-- Change condition based on actual content presence -->
+      <i class="pi pi-info-circle"></i>
+      <p>Further model configuration options will be available here in a future update.</p>
+    </div>
+  </div>
+</div>

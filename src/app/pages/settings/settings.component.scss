@@ -1,36 +1,158 @@
-.settings-container {
-  // padding is applied via p-p-2 in the template
+/* Assuming global dark theme variables are available from styles.scss */
+/* Example variables:
+  --background-color: #121212;
+  --text-color: #e0e0e0;
+  --card-background: #1e1e1e; // Used for panel headers
+  --surface-ground: var(--background-color); // Page background
+  --surface-card: var(--card-background); // Used for panel content background
+  --surface-section: var(--card-background); // Panel background
+  --surface-border: #2a2a2a;
+  --primary-color: #3498db;
+  --text-color-secondary: #b0b0b0; // Lighter than main text for subtitles
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+*/
+
+:host {
+  display: block;
+  height: 100%;
+  background-color: var(--surface-ground);
+  color: var(--text-color);
+  font-family: var(--font-family);
 }
 
-.settings-list-item {
-  padding: 0.75rem 1rem; // Consistent padding for list items
-  cursor: pointer;
-  border-bottom: 1px solid var(--surface-border);
-  transition: background-color 0.2s;
+.settings-page-container {
+  padding: 1rem 1rem 6rem 1rem; // Padding at bottom for scroll space if content overflows
+  max-width: 700px; // Max width for settings page for better readability on large screens
+  margin: 0 auto; // Center content
+  overflow-y: auto;
+  height: 100%;
+}
 
-  &:last-child {
-    border-bottom: none;
+.settings-header {
+  padding: 0.5rem 0 1.5rem 0;
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+  }
+}
+
+.user-profile-section {
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  background-color: transparent; // Or var(--surface-section) if you want a card-like bg
+
+  .user-avatar {
+    // Custom styling for avatar if needed, PrimeNG defaults are usually fine
+    // border: 2px solid var(--primary-color); // Example border
+  }
+  
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
-  &:hover {
-    background-color: var(--surface-hover);
+  .user-name {
+    font-size: 1.4rem;
+    font-weight: 500;
+    margin: 0 0 0.25rem 0;
+    color: var(--text-color);
   }
 
-  i.pi {
-    font-size: 1.1rem;
+  .user-email {
+    font-size: 0.9rem;
     color: var(--text-color-secondary);
-  }
-
-  i.pi-angle-right {
-    color: var(--text-color-secondary); // Chevron color
-  }
-
-  span {
-    flex-grow: 1; // Ensure text takes available space
+    margin: 0;
   }
 }
 
-// Remove padding from card content if list items have their own
-:host ::ng-deep .p-card .p-card-content {
+.settings-panel {
+  margin-bottom: 1.5rem;
+  background-color: var(--surface-section); // Panel background
+  border: 1px solid var(--surface-border);
+  border-radius: 8px; // Consistent border radius
+
+  // Panel header styling
+  :host ::ng-deep .p-panel-header {
+    background-color: var(--surface-card); // Slightly different from content or same
+    border-bottom: 1px solid var(--surface-border);
+    color: var(--text-color);
+    font-weight: 500;
+    padding: 0.75rem 1.25rem; // Adjust padding
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+  
+  // Panel content styling
+  :host ::ng-deep .p-panel-content {
+    padding: 0; // Remove default padding as list items will have their own
+    background-color: var(--surface-card); // Content area background
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+}
+
+.settings-list {
+  list-style: none;
   padding: 0;
-} 
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem; // Consistent padding for list items
+    cursor: pointer;
+    border-bottom: 1px solid var(--surface-border);
+    transition: background-color 0.2s ease;
+    color: var(--text-color);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover, &:focus {
+      background-color: rgba(var(--primary-color-rgb, 52, 152, 219), 0.1); // Use primary color with low opacity for hover
+      outline: none;
+    }
+    
+    i:first-child { // Icon on the left
+      font-size: 1.2rem;
+      margin-right: 1rem;
+      color: var(--text-color-secondary); // Icon color
+      width: 24px; // Fixed width for icon alignment
+      text-align: center;
+    }
+
+    span { // Text label
+      flex-grow: 1;
+      font-size: 1rem;
+    }
+
+    i.pi-angle-right { // Chevron icon on the right
+      font-size: 0.9rem;
+      color: var(--text-color-secondary);
+      margin-left: 0.5rem;
+    }
+  }
+}
+
+.sign-out-section {
+  margin-top: 2rem;
+  padding: 0 0.5rem; // Align with panel content if panels have internal padding
+  
+  .full-width-button {
+    width: 100%;
+    // PrimeNG button styling will apply; can override if needed
+    // e.g., :host ::ng-deep .p-button.p-button-danger.p-button-outlined { ... }
+  }
+}
+
+// PrimeNG Divider
+:host ::ng-deep .p-divider.p-divider-horizontal {
+  border-top-color: var(--surface-border);
+  margin-top: 0.5rem; // Adjust spacing
+  margin-bottom: 1.5rem; // Adjust spacing
+}

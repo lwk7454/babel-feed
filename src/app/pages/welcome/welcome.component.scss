@@ -1,21 +1,119 @@
-/* Styles for the WelcomeComponent */
+/* Assuming global dark theme variables are available from styles.scss */
+/* Example variables:
+  --background-color: #121212;
+  --text-color: #e0e0e0;
+  --card-background: #1e1e1e;
+  --surface-border: #2a2a2a;
+  --primary-color: #3498db;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+*/
 
-.welcome-card {
+:host {
+  display: block; // Ensures the component itself can be styled if needed
+}
+
+.welcome-page-container {
+  min-height: 100vh;
+  padding: 1rem;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
+}
+
+.welcome-card-panel {
   width: 100%;
-  max-width: 500px; /* Adjust as needed */
+  max-width: 550px; // Slightly wider for language options
   margin: auto;
-}
+  background-color: var(--card-background);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px; // Consistent border radius
 
-/* Ensure p-selectButton options are centered or styled as desired */
-:host ::ng-deep .p-selectbutton .p-button {
-  flex: 1; /* Make buttons in selectButton take equal width */
-  justify-content: center;
-}
+  .welcome-header {
+    padding: 1.5rem 1rem 1rem 1rem; // Padding for the header section
+    border-bottom: 1px solid var(--surface-border);
 
-/* Additional custom styles for elements within the welcome component can go here */
-/* For instance, if specific typography is needed beyond the theme: */
-/*
-.welcome-card .p-card-title {
-  font-size: 2rem; // Example
+    .app-logo {
+      width: 60px; // Adjust size as needed
+      height: 60px;
+      margin-bottom: 0.75rem;
+      // Consider a dark-theme compatible version of the logo or use CSS filters
+      // filter: brightness(0) invert(1); // Basic inversion for dark theme if logo is dark
+    }
+
+    h1 {
+      font-size: 2rem; // Larger title for welcome page
+      font-weight: 600;
+      color: var(--primary-color); // Use primary color for main title
+      margin-bottom: 0.25rem;
+    }
+    p {
+      font-size: 1rem;
+      color: var(--text-color-secondary, #b0b0b0);
+      margin-bottom: 0;
+    }
+  }
+
+  // PrimeNG Card body
+  :host ::ng-deep .p-card-body {
+    padding: 1.5rem 2rem; // More padding for content
+  }
+
+  .welcome-content {
+    .language-prompt {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .language-selector {
+      // Ensure p-selectButton options are centered and styled for dark theme
+      :host ::ng-deep .p-selectbutton .p-button {
+        flex: 1; // Make buttons in selectButton take equal width
+        justify-content: center;
+        background-color: var(--surface-card); // Ensure buttons match card bg
+        border-color: var(--surface-border);
+        color: var(--text-color);
+
+        &:not(.p-highlight):hover {
+          background-color: lighten(var(--surface-card), 5%);
+          border-color: var(--primary-color);
+        }
+
+        &.p-highlight { // Selected button
+          background-color: var(--primary-color);
+          border-color: var(--primary-color);
+          color: var(--primary-button-text-color, #ffffff); // Ensure text is readable on primary bg
+        }
+         &.p-highlight:hover {
+            background-color: darken(var(--primary-color), 5%);
+            border-color: darken(var(--primary-color), 5%);
+         }
+      }
+    }
+    
+    .get-started-button {
+      width: 100%; // Full width button
+      padding: 0.8rem;
+      font-size: 1.05rem;
+      font-weight: 500;
+      // PrimeNG button styling will apply, can be customized further if needed
+      // e.g., :host ::ng-deep .p-button { background-color: var(--accent-color); border-color: var(--accent-color); }
+    }
+  }
+
+  // Footer styling
+  :host ::ng-deep .p-card-footer {
+    padding: 1rem 1.5rem; // Padding for footer content
+    border-top: 1px solid var(--surface-border);
+  }
+
+  .footer-divider {
+    margin-bottom: 0.75rem; // Space before theme toggle
+  }
+
+  .theme-toggle-footer {
+    .theme-toggle-button {
+      color: var(--text-color); // Ensure icon color is visible
+    }
+  }
 }
-*/ 

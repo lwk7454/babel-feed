@@ -1,20 +1,52 @@
-<div class="app-container">
-  <header class="app-header">
-    <button class="back-button" (click)="goBack()">←</button>
-    <h1 *ngIf="newsItem">{{newsItem.source}}</h1>
-    <div></div> <!-- Empty div for flex spacing -->
-  </header>
-  
-  <div class="webview-container" *ngIf="newsItem">
-    <iframe
-      [src]="safeUrl"
-      class="webview"
-      frameborder="0"
-      title="Content"
-    ></iframe>
+<div class="article-view-container">
+  <p-toolbar styleClass="article-toolbar">
+    <div class="p-toolbar-group-left">
+      <p-button icon="pi pi-arrow-left" (click)="goBack()" styleClass="p-button-text" aria-label="Go Back"></p-button>
+      <div class="source-url-display" *ngIf="!isLoading && !errorMessage && currentUrl">
+        <i class="pi pi-globe" aria-hidden="true"></i>
+        <a [href]="currentUrl" target="_blank" rel="noopener noreferrer" title="Open original article in new tab">{{ currentUrl }}</a>
+      </div>
+    </div>
+    <div class="p-toolbar-group-right">
+      <div class="translate-control" *ngIf="!isLoading && !errorMessage && newsItem">
+        <label for="translate-switch" class="p-mr-2">Translate</label>
+        <p-inputSwitch inputId="translate-switch" [(ngModel)]="isTranslating" (onChange)="onToggleTranslate($event)"></p-inputSwitch>
+      </div>
+    </div>
+  </p-toolbar>
+
+  <div class="content-area">
+    <div *ngIf="isLoading" class="loading-indicator">
+      <p-progressSpinner strokeWidth="4" animationDuration=".8s"></p-progressSpinner>
+      <p>Loading article...</p>
+    </div>
+
+    <div *ngIf="!isLoading && errorMessage" class="error-display">
+      <p-message severity="error" [text]="errorMessage"></p-message>
+      <p-button label="Go Back" (click)="goBack()" styleClass="p-mt-2"></p-button>
+    </div>
+
+    <div id="webview-container" class="webview-container" *ngIf="!isLoading && !errorMessage && safeUrl">
+      <!-- 
+        The iframe will display the external content.
+        Security considerations (like X-Frame-Options) might prevent some URLs from being iframed.
+        A backend proxy or fetching content server-side could be a more robust solution for production.
+      -->
+      <iframe 
+        [src]="safeUrl" 
+        class="article-iframe" 
+        frameborder="0" 
+        title="External Content View"
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms" 
+        (load)="onIframeLoad()"
+        aria-label="Content from external source">
+      </iframe>
+    </div>
+    
+    <div *ngIf="!isLoading && !errorMessage && !safeUrl && newsItem" class="no-content-display">
+       <p-message severity="warn" text="The article URL is valid, but content cannot be displayed in an iframe. Try opening it directly."></p-message>
+       <p-button label="Open in New Tab" icon="pi pi-external-link" (click)="currentUrl && (window.open(currentUrl, '_blank'))" styleClass="p-mt-2"></p-button>
+    </div>
+
   </div>
-  
-  <button class="translate-button" (click)="toggleTranslation()" [class.active]="isTranslating">
-    文
-  </button>
-</div> 
+</div>
