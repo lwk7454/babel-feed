@@ -13,17 +13,17 @@
     <!-- Preferred Topics Section -->
     <p-panel header="My Preferred Topics" styleClass="preferences-panel">
       <p class="panel-description">Select topics you're interested in to personalize your feed.</p>
-      <div class="topics-grid" *ngIf="availableTopics$ | async as topics">
+      <div class="topics-grid" *ngIf="topics$ | async as topics">
         <div *ngFor="let topic of topics" class="topic-item">
           <p-checkbox 
             [binary]="true" 
-            [label]="topic.name" 
             [value]="topic.id" 
             [(ngModel)]="topic.selected" 
             (onChange)="onTopicChange(topic, $event.checked)"
             [inputId]="'topic-' + topic.id"
             [attr.data-qa]="'topic-checkbox-' + topic.id">
           </p-checkbox>
+          <label [for]="'topic-' + topic.id" class="p-checkbox-label">{{ topic.name }}</label>
         </div>
         <div *ngIf="!topics.length" class="empty-topics-message">
           <p>No topics available at the moment. Please check back later.</p>

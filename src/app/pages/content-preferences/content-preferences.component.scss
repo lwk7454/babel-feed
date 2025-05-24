@@ -119,7 +119,7 @@
     border: 1px solid var(--surface-border);
     border-radius: 6px;
     margin-bottom: 0.5rem;
-    background-color: lighten(var(--card-background), 5%); // Slightly lighter than panel bg
+    background-color: color-mix(in srgb, var(--card-background) 95%, white 5%); // Slightly lighter than panel bg
 
     span {
       flex-grow: 1;

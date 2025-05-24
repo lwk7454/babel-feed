@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem has a 'url' property
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -18,6 +19,7 @@ import { InputSwitchModule } from 'primeng/inputswitch'; // For translate toggle
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ButtonModule,
     ProgressSpinnerModule,
     MessageModule,
@@ -108,6 +110,10 @@ export class ArticleComponent implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/feed']); // Fallback to feed
     }
+  }
+
+  openInNewTab(url: string): void {
+    window.open(url, '_blank');
   }
 
   // Handle iframe load event to potentially turn off loader

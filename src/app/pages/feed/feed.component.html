@@ -21,8 +21,8 @@
     <p>Your feed is currently empty. Try refreshing or check back later.</p>
   </div>
 
-  <div class="feed-scroll-container" *ngIf="(newsItems$ | async)?.length > 0">
-    <div *ngFor="let item of (newsItems$ | async); trackBy: trackById" 
+  <div class="feed-scroll-container" *ngIf="(newsItems$ | async) as items">
+    <div *ngFor="let item of items; trackBy: trackById" 
          class="feed-item" 
          [ngClass]="{
            'article-item': item.type === 'article', 

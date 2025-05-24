@@ -72,8 +72,8 @@
         color: #fff !important; // Ensure text is white
 
         &:hover {
-          background-color: darken(var(--google-red), 5%) !important;
-          border-color: darken(var(--google-red), 5%) !important;
+          background-color: color-mix(in srgb, var(--google-red) 95%, black 5%) !important;
+          border-color: color-mix(in srgb, var(--google-red) 95%, black 5%) !important;
         }
       }
       
@@ -83,8 +83,8 @@
          color: #fff !important;
          
          &:hover {
-            background-color: lighten(var(--apple-black), 10%) !important;
-            border-color: lighten(var(--apple-black), 10%) !important;
+            background-color: color-mix(in srgb, var(--apple-black) 90%, white 10%) !important;
+            border-color: color-mix(in srgb, var(--apple-black) 90%, white 10%) !important;
          }
       }
     }

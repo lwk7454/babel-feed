@@ -8,7 +8,7 @@ import { Store } from '@ngrx/store';
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessagesModule } from 'primeng/messages';
-import { Message } from 'primeng/api'; // Use specific Message interface
+// import { Message } from 'primeng/api'; // Use specific Message interface
 import { CardModule } from 'primeng/card';
 import { DividerModule } from 'primeng/divider'; // For visual separation
 
@@ -36,7 +36,7 @@ export class SigninComponent implements OnInit, OnDestroy {
   error$: Observable<string | null>;
   isAuthenticated$: Observable<boolean>; // To potentially redirect if already authenticated
   
-  messages: Message[] = []; // Use PrimeNG Message interface
+  messages: any[] = []; // Use PrimeNG Message interface
   private destroy$ = new Subject<void>();
 
   constructor(

@@ -1,4 +1,5 @@
 import { Injectable, RendererFactory2, Renderer2 } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +9,9 @@ export class ThemeService {
   private currentTheme: 'light' | 'dark' = 'light'; // Default to light
   private readonly themeKey = 'app-theme';
   private readonly darkThemeClass = 'dark-theme';
+  private themeSubject = new BehaviorSubject<'light' | 'dark'>('light');
+  
+  public themeChanged$: Observable<'light' | 'dark'> = this.themeSubject.asObservable();
 
   constructor(rendererFactory: RendererFactory2) {
     this.renderer = rendererFactory.createRenderer(null, null);
@@ -34,6 +38,7 @@ export class ThemeService {
     } else {
       this.renderer.removeClass(document.body, this.darkThemeClass);
     }
+    this.themeSubject.next(theme);
   }
 
   toggleTheme(): void {

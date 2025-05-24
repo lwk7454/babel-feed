@@ -75,7 +75,7 @@
         color: var(--text-color);
 
         &:not(.p-highlight):hover {
-          background-color: lighten(var(--surface-card), 5%);
+          background-color: color-mix(in srgb, var(--surface-card) 95%, white 5%);
           border-color: var(--primary-color);
         }
 
@@ -85,8 +85,8 @@
           color: var(--primary-button-text-color, #ffffff); // Ensure text is readable on primary bg
         }
          &.p-highlight:hover {
-            background-color: darken(var(--primary-color), 5%);
-            border-color: darken(var(--primary-color), 5%);
+            background-color: color-mix(in srgb, var(--primary-color) 95%, black 5%);
+            border-color: color-mix(in srgb, var(--primary-color) 95%, black 5%);
          }
       }
     }

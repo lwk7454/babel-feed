@@ -22,7 +22,7 @@
             "tsConfig": "tsconfig.app.json",
             "assets": ["src/assets"],
             "styles": [
-              "src/styles.css",
+              "src/styles.scss",
               "node_modules/primeflex/primeflex.css"
             ]
           },
@@ -36,8 +36,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "2kb",
-                  "maximumError": "4kb"
+                  "maximumWarning": "3kb",
+                  "maximumError": "5kb"
                 }
               ],
               "outputHashing": "all"

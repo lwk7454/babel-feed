@@ -45,7 +45,7 @@
     
     <div *ngIf="!isLoading && !errorMessage && !safeUrl && newsItem" class="no-content-display">
        <p-message severity="warn" text="The article URL is valid, but content cannot be displayed in an iframe. Try opening it directly."></p-message>
-       <p-button label="Open in New Tab" icon="pi pi-external-link" (click)="currentUrl && (window.open(currentUrl, '_blank'))" styleClass="p-mt-2"></p-button>
+       <p-button label="Open in New Tab" icon="pi pi-external-link" (click)="openInNewTab(currentUrl)" styleClass="p-mt-2"></p-button>
     </div>
 
   </div>
