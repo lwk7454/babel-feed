@@ -15,3 +15,5 @@ Don't hard code any dynamic data in the UI, you can mock service responses, but 
 Follow best practices for project strucure. Don't embed HTML and SCSS into TS files, separate them into their own files. 
 
 If you failed to update any files (writing error), delete the file then create with original content with your changes.
+
+Be DRY with SCSS code. Always search for shared styles that can be reused before writing new styles.

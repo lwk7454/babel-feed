@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { Observable, of, delay } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface NewsItem {
+// Base interface with common properties
+interface BaseNewsItem {
   id: string;
   title: string;
   summary?: string;
@@ -10,14 +11,39 @@ export interface NewsItem {
   publishedAt: string;
   imageUrl?: string;
   url: string;
-  type: 'article' | 'video';
-  duration?: string; // for videos
   category?: string;
-  content?: string;
   language?: string;
   country?: string;
   keywords?: string[];
+  // Original content in source language
+  originalContent?: {
+    title: string;
+    summary?: string;
+    content?: string;
+  };
+  // Translated content if translation was requested
+  translatedContent?: {
+    title: string;
+    summary?: string;
+    content?: string;
+    targetLanguage: string;
+  };
 }
+
+// Article-specific type
+interface ArticleNewsItem extends BaseNewsItem {
+  type: 'article';
+  content?: string;
+}
+
+// Video-specific type
+interface VideoNewsItem extends BaseNewsItem {
+  type: 'video';
+  duration: string; // Required for videos
+}
+
+// Discriminated union type
+export type NewsItem = ArticleNewsItem | VideoNewsItem;
 
 export interface User {
   id: string;
@@ -59,13 +85,13 @@ export class ApiService {
   }
 
   // News feed methods
-  getNewsFeed(): Observable<NewsItem[]> {
-    console.log(`Fetching news feed from ${this.apiUrl}/feed`);
-    return this.mockRequest<NewsItem[]>('feed', this.getMockNewsItems());
+  getNewsFeed(targetLanguage?: string): Observable<NewsItem[]> {
+    console.log(`Fetching news feed from ${this.apiUrl}/feed${targetLanguage ? `?lang=${targetLanguage}` : ''}`);
+    return this.mockRequest<NewsItem[]>('feed', this.getMockNewsItems(targetLanguage));
   }
 
-  private getMockNewsItems(): NewsItem[] {
-    return [
+  private getMockNewsItems(targetLanguage?: string): NewsItem[] {
+    const baseItems: NewsItem[] = [
       {
         id: 'mock1',
         title: 'Exploring the Depths: A New Underwater Discovery',
@@ -79,7 +105,12 @@ export class ApiService {
         content: 'Full article content here...',
         language: 'en',
         country: 'us',
-        keywords: ['ocean', 'discovery', 'science']
+        keywords: ['ocean', 'discovery', 'science'],
+        originalContent: {
+          title: 'Exploring the Depths: A New Underwater Discovery',
+          summary: 'Scientists have found a previously unknown species of glowing fish in the Mariana Trench, challenging our understanding of deep-sea ecosystems.',
+          content: 'Full article content here...'
+        }
       },
       {
         id: 'mock2',
@@ -92,10 +123,14 @@ export class ApiService {
         url: 'https://example.com/architectural-marvels-video',
         duration: '15:32',
         category: 'Technology',
-        content: 'Details about the video content...',
         language: 'en',
         country: 'us',
-        keywords: ['architecture', 'urban', 'future', 'video']
+        keywords: ['architecture', 'urban', 'future', 'video'],
+        originalContent: {
+          title: 'Architectural Marvels: The Future of Urban Living (Video)',
+          summary: 'Discover how cutting-edge architecture is reshaping our cities and creating sustainable living spaces for the future.',
+          content: 'Details about the video content...'
+        }
       },
       {
         id: 'mock3',
@@ -109,7 +144,12 @@ export class ApiService {
         content: 'Full article content here...',
         language: 'en',
         country: 'us',
-        keywords: ['sustainability', 'energy', 'environment']
+        keywords: ['sustainability', 'energy', 'environment'],
+        originalContent: {
+          title: 'The Rise of Sustainable Energy Solutions',
+          summary: 'A comprehensive analysis of how renewable energy sources are becoming increasingly viable and the impact on global markets.',
+          content: 'Full article content here...'
+        }
       },
       {
         id: 'mock4',
@@ -124,7 +164,12 @@ export class ApiService {
         content: 'Full article content here...',
         language: 'en',
         country: 'us',
-        keywords: ['AI', 'healthcare', 'technology', 'medicine']
+        keywords: ['AI', 'healthcare', 'technology', 'medicine'],
+        originalContent: {
+          title: 'AI Revolution in Healthcare: Transforming Patient Care',
+          summary: 'How artificial intelligence is revolutionizing medical diagnosis, treatment planning, and patient outcomes across the globe.',
+          content: 'Full article content here...'
+        }
       },
       {
         id: 'mock5',
@@ -137,24 +182,43 @@ export class ApiService {
         url: 'https://example.com/climate-summit-2024',
         duration: '8:45',
         category: 'Environment',
-        content: 'Video summary and key points...',
         language: 'en',
         country: 'global',
-        keywords: ['climate', 'summit', 'environment', 'policy']
+        keywords: ['climate', 'summit', 'environment', 'policy'],
+        originalContent: {
+          title: 'Climate Summit 2024: Key Takeaways (Video)',
+          summary: 'Watch the highlights from this year\'s international climate summit and learn about the new commitments made by world leaders.',
+          content: 'Video summary and key points...'
+        }
       }
     ];
+
+    // Add translated content if target language is specified
+    if (targetLanguage && targetLanguage !== 'en') {
+      return baseItems.map(item => ({
+        ...item,
+        translatedContent: {
+          title: `[${targetLanguage.toUpperCase()}] ${item.originalContent?.title || item.title}`,
+          summary: item.originalContent?.summary ? `[${targetLanguage.toUpperCase()}] ${item.originalContent.summary}` : undefined,
+          content: item.originalContent?.content ? `[${targetLanguage.toUpperCase()}] ${item.originalContent.content}` : undefined,
+          targetLanguage
+        }
+      }));
+    }
+
+    return baseItems;
   }
 
-  getNewsItem(id: string): Observable<NewsItem | undefined> {
-    console.log(`Fetching news item ${id} from ${this.apiUrl}/items/${id}`);
-    const mockItems = this.getMockNewsItems();
+  getNewsItem(id: string, targetLanguage?: string): Observable<NewsItem | undefined> {
+    console.log(`Fetching news item ${id} from ${this.apiUrl}/items/${id}${targetLanguage ? `?lang=${targetLanguage}` : ''}`);
+    const mockItems = this.getMockNewsItems(targetLanguage);
     const foundItem = mockItems.find(item => item.id === id);
     return this.mockRequest<NewsItem | undefined>(`items/${id}`, foundItem);
   }
 
-  searchNews(query: string): Observable<NewsItem[]> {
-    console.log(`Searching for "${query}" at ${this.apiUrl}/search?q=${query}`);
-    const mockItems = this.getMockNewsItems();
+  searchNews(query: string, targetLanguage?: string): Observable<NewsItem[]> {
+    console.log(`Searching for "${query}" at ${this.apiUrl}/search?q=${query}${targetLanguage ? `&lang=${targetLanguage}` : ''}`);
+    const mockItems = this.getMockNewsItems(targetLanguage);
     // Simple mock search - filter by title, summary, keywords, or category
     const filteredItems = mockItems.filter(item => 
       item.title.toLowerCase().includes(query.toLowerCase()) ||

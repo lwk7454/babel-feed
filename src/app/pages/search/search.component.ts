@@ -2,9 +2,14 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { DatePipe } from '@angular/common'; // Added DatePipe
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
 import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem structure
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, takeUntil, catchError, tap } from 'rxjs/operators'; // Added more operators
+import { Observable, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil, catchError, tap, withLatestFrom } from 'rxjs/operators'; // Added more operators
+
+// State management
+import { AppState } from '../../store';
+import { selectSelectedLanguage, LanguagePreference } from '../../store/reducers/preferences.reducer';
 
 // PrimeNG Modules
 import { InputTextModule } from 'primeng/inputtext';
@@ -37,21 +42,26 @@ export class SearchComponent implements OnInit, OnDestroy {
   isLoading: boolean = false;
   hasSearched: boolean = false;
   errorMessage: string | null = null;
+  selectedLanguage$: Observable<LanguagePreference>;
 
   private searchQuery$ = new Subject<string>();
   private destroy$ = new Subject<void>();
   
   constructor(
     private router: Router,
-    private apiService: ApiService
-  ) {}
+    private apiService: ApiService,
+    private store: Store<AppState>
+  ) {
+    this.selectedLanguage$ = this.store.select(selectSelectedLanguage);
+  }
 
   ngOnInit(): void {
     this.searchQuery$.pipe(
       debounceTime(300), // Wait for 300ms pause in events
       distinctUntilChanged(), // Only emit if value has changed
-      tap(() => { // Side effect for loading state
-        if(this.searchQuery.trim()){
+      withLatestFrom(this.selectedLanguage$), // Combine with current language preference
+      tap(([query, language]) => { // Side effect for loading state
+        if(query.trim()){
           this.isLoading = true;
           this.hasSearched = true;
           this.results = [];
@@ -63,11 +73,15 @@ export class SearchComponent implements OnInit, OnDestroy {
           this.errorMessage = null;
         }
       }),
-      switchMap(query => {
+      switchMap(([query, language]) => {
         if (!query.trim()) {
           return []; // Return empty array if query is empty, preventing API call
         }
-        return this.apiService.searchNews(query).pipe(
+        
+        // Determine if we should request translated content
+        const requestLanguage = language?.code && language.code !== 'en' ? language.code : undefined;
+        
+        return this.apiService.searchNews(query, requestLanguage).pipe(
           catchError(error => {
             console.error('Error searching news:', error);
             this.errorMessage = 'An error occurred while searching. Please try again.';

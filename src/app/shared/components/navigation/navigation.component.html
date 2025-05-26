@@ -1,0 +1,85 @@
+<!-- Header with navigation and action buttons -->
+<div class="navigation-header">
+  <div class="header-left">
+    <p-button 
+      icon="pi pi-bars"
+      (click)="toggleMenu()"
+      styleClass="p-button-rounded p-button-text menu-btn"
+      aria-label="Open menu">
+    </p-button>
+    <div class="app-branding">
+      <span class="logo-icon">📰</span>
+      <h1 class="app-name">Babel Feed</h1>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <!-- Search button - conditionally shown -->
+    <p-button 
+      *ngIf="showSearch"
+      icon="pi pi-search"
+      (click)="openSearch()"
+      styleClass="p-button-rounded p-button-text search-btn"
+      aria-label="Search">
+    </p-button>
+    
+    <!-- Refresh button - conditionally shown -->
+    <p-button 
+      *ngIf="showRefresh"
+      icon="pi pi-refresh"
+      (click)="handleRefresh()"
+      styleClass="p-button-rounded p-button-text refresh-btn"
+      aria-label="Refresh">
+    </p-button>
+  </div>
+</div>
+
+<!-- Navigation Menu Overlay -->
+<div class="menu-overlay" [class.open]="isMenuOpen" (click)="closeMenu()"></div>
+
+<!-- Navigation Menu -->
+<div class="navigation-menu" [class.open]="isMenuOpen">
+  <div class="menu-header">
+    <div class="user-profile">
+      <img [src]="(userData$ | async)?.photoURL || '/assets/default-avatar.png'" 
+           [alt]="(userData$ | async)?.displayName || 'User'" 
+           class="user-avatar">
+      <div class="user-info">
+        <h3 class="user-name">{{ (userData$ | async)?.displayName || 'User' }}</h3>
+        <p class="user-email">{{ (userData$ | async)?.email || 'user@example.com' }}</p>
+      </div>
+    </div>
+    <p-button 
+      icon="pi pi-times"
+      (click)="closeMenu()"
+      styleClass="p-button-rounded p-button-text close-btn"
+      aria-label="Close menu">
+    </p-button>
+  </div>
+
+  <div class="menu-items">
+    <div class="menu-item" (click)="navigateTo('/feed')" [class.active]="currentRoute === '/feed'">
+      <i class="pi pi-home"></i>
+      <span>Home Feed</span>
+    </div>
+    <div class="menu-item" (click)="navigateTo('/search')" [class.active]="currentRoute === '/search'">
+      <i class="pi pi-search"></i>
+      <span>Search</span>
+    </div>
+    <div class="menu-item" (click)="navigateTo('/content-preferences')" [class.active]="currentRoute === '/content-preferences'">
+      <i class="pi pi-cog"></i>
+      <span>Content Preferences</span>
+    </div>
+    <div class="menu-item" (click)="navigateTo('/settings')" [class.active]="currentRoute === '/settings'">
+      <i class="pi pi-user"></i>
+      <span>Settings & Profile</span>
+    </div>
+  </div>
+
+  <div class="menu-footer">
+    <div class="menu-item danger" (click)="signOut()">
+      <i class="pi pi-sign-out"></i>
+      <span>Sign Out</span>
+    </div>
+  </div>
+</div> 

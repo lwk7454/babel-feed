@@ -1,19 +1,20 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { DatePipe, AsyncPipe, NgClass } from '@angular/common';
+import { AsyncPipe, CommonModule, DatePipe, NgClass } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { Observable, Subject, of } from 'rxjs';
-import { takeUntil, map } from 'rxjs/operators';
+import { Observable, of, Subject } from 'rxjs';
+import { switchMap, takeUntil } from 'rxjs/operators';
 
+import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem structure
 import { AppState } from '../../store'; // Assuming AppState is correctly defined
-import { NewsItem, ApiService } from '../../services/api.service'; // Assuming NewsItem structure
 import * as FeedActions from '../../store/actions/feed.actions';
-import { selectFeedItems, selectFeedLoading, selectFeedError } from '../../store/reducers/feed.reducer';
+import { LanguagePreference, selectSelectedLanguage } from '../../store/reducers/preferences.reducer';
+import { NavigationComponent } from '../../shared/components';
 
 // PrimeNG Modules for basic UI elements (e.g., button, ripple for interaction)
 import { ButtonModule } from 'primeng/button';
-import { RippleModule } from 'primeng/ripple';
 import { ProgressSpinnerModule } from 'primeng/progressspinner'; // For loading state
+import { RippleModule } from 'primeng/ripple';
 
 // Use NewsItem directly since it now has all the fields we need
 export type FeedDisplayItem = NewsItem;
@@ -22,12 +23,14 @@ export type FeedDisplayItem = NewsItem;
   selector: 'app-feed',
   standalone: true,
   imports: [
+    CommonModule,
     ButtonModule,
     RippleModule,
     ProgressSpinnerModule,
     DatePipe, // For formatting dates in the template
     AsyncPipe, // For async pipe
-    NgClass // For ngClass directive
+    NgClass, // For ngClass directive
+    NavigationComponent // Navigation component
   ],
   templateUrl: './feed.component.html',
   styleUrls: ['./feed.component.scss']
@@ -36,6 +39,7 @@ export class FeedComponent implements OnInit, OnDestroy {
   newsItems$: Observable<FeedDisplayItem[]>;
   loading$: Observable<boolean>;
   error$: Observable<string | null>;
+  selectedLanguage$: Observable<LanguagePreference>;
   
   currentError: string | null = null;
   private destroy$ = new Subject<void>();
@@ -45,8 +49,15 @@ export class FeedComponent implements OnInit, OnDestroy {
     private store: Store<AppState>,
     private apiService: ApiService
   ) {
-    // Use API service for immediate data loading as fallback
-    this.newsItems$ = this.apiService.getNewsFeed(); 
+    this.selectedLanguage$ = this.store.select(selectSelectedLanguage);
+    
+    // Use API service for immediate data loading with language preference
+    this.newsItems$ = this.selectedLanguage$.pipe(
+      switchMap(language => {
+        const requestLanguage = language?.code && language.code !== 'en' ? language.code : undefined;
+        return this.apiService.getNewsFeed(requestLanguage);
+      })
+    );
     this.loading$ = of(false);
     this.error$ = of(null);
 
@@ -82,6 +93,15 @@ export class FeedComponent implements OnInit, OnDestroy {
     // });
   }
 
+
+
+  /**
+   * Handle search button click from navigation
+   */
+  handleSearch(): void {
+    this.router.navigate(['/search']);
+  }
+
   openNewsItem(item: FeedDisplayItem): void {
     if (item && item.id) {
       // Navigate to the article detail page
@@ -99,8 +119,13 @@ export class FeedComponent implements OnInit, OnDestroy {
     // Try to load from store first, fallback to API service
     this.store.dispatch(FeedActions.loadFeedStart());
     
-    // As fallback, also refresh from API service
-    this.newsItems$ = this.apiService.getNewsFeed();
+    // As fallback, also refresh from API service with language preference
+    this.newsItems$ = this.selectedLanguage$.pipe(
+      switchMap(language => {
+        const requestLanguage = language?.code && language.code !== 'en' ? language.code : undefined;
+        return this.apiService.getNewsFeed(requestLanguage);
+      })
+    );
     this.loading$ = of(false);
   }
   

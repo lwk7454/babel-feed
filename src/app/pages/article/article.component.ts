@@ -3,8 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem has a 'url' property
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
+import { Observable, Subject, combineLatest } from 'rxjs';
+import { takeUntil, switchMap, distinctUntilChanged } from 'rxjs/operators';
+
+// State management
+import { AppState } from '../../store';
+import { selectSelectedLanguage, LanguagePreference } from '../../store/reducers/preferences.reducer';
 
 // PrimeNG Modules for UI elements
 import { ButtonModule } from 'primeng/button';
@@ -36,44 +41,66 @@ export class ArticleComponent implements OnInit, OnDestroy {
   errorMessage: string | null = null;
   
   isTranslating: boolean = false; // For the translation toggle
+  selectedLanguage$: Observable<LanguagePreference>;
   
   private destroy$ = new Subject<void>();
+  private articleId: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private apiService: ApiService,
-    private sanitizer: DomSanitizer
-  ) {}
+    private sanitizer: DomSanitizer,
+    private store: Store<AppState>
+  ) {
+    this.selectedLanguage$ = this.store.select(selectSelectedLanguage);
+  }
   
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.loadArticle(id);
+    this.articleId = this.route.snapshot.paramMap.get('id');
+    if (this.articleId) {
+      // Combine route params and user language preference to load article
+      combineLatest([
+        this.route.paramMap,
+        this.selectedLanguage$
+      ]).pipe(
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      ).subscribe(([paramMap, language]) => {
+        const id = paramMap.get('id');
+        if (id) {
+          this.loadArticle(id, language?.code);
+        }
+      });
     } else {
       this.isLoading = false;
       this.errorMessage = 'Article ID not found.';
-      // Consider navigating back or showing a more prominent error
-      // this.router.navigate(['/feed']); 
     }
   }
   
-  loadArticle(id: string): void {
+  loadArticle(id: string, targetLanguage?: string): void {
     this.isLoading = true;
     this.errorMessage = null;
     this.safeUrl = null;
 
-    this.apiService.getNewsItem(id).pipe(takeUntil(this.destroy$)).subscribe({
+    // Determine if we should request translated content
+    // Only request translation if the target language is different from English (source language)
+    const requestLanguage = targetLanguage && targetLanguage !== 'en' ? targetLanguage : undefined;
+
+    this.apiService.getNewsItem(id, requestLanguage).pipe(takeUntil(this.destroy$)).subscribe({
       next: (item) => {
         if (item && item.url) {
           this.newsItem = item;
           this.currentUrl = item.url; // Store the original URL for display
+          
+          // Auto-enable translation toggle if we have translated content
+          this.isTranslating = !!item.translatedContent;
+          
           // For now, we assume any URL can be iframed. In reality, X-Frame-Options might prevent this.
           // A backend service might be needed to proxy or fetch content if direct iframe is blocked.
           this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(item.url);
         } else {
           this.errorMessage = 'Article content or URL not found.';
-          // this.router.navigate(['/feed']); // Or show error in place
         }
         this.isLoading = false;
       },
@@ -81,7 +108,6 @@ export class ArticleComponent implements OnInit, OnDestroy {
         console.error('Error loading article:', error);
         this.errorMessage = 'Failed to load article. Please try again later.';
         this.isLoading = false;
-        // this.router.navigate(['/feed']); // Or show error in place
       }
     });
   }
@@ -92,11 +118,17 @@ export class ArticleComponent implements OnInit, OnDestroy {
     
     if (this.isTranslating && this.newsItem) {
       console.log(`Placeholder: Translation activated for ${this.currentUrl}`);
+      // Show translated content if available
+      if (this.newsItem.translatedContent) {
+        console.log(`Showing translated content in ${this.newsItem.translatedContent.targetLanguage}`);
+      }
       // Future: Call Tauri plugin or translation service
       // Simulate translation process
       // alert(`Simulating translation for: ${this.currentUrl}`);
     } else {
       console.log(`Placeholder: Translation deactivated for ${this.currentUrl}`);
+      // Show original content
+      console.log('Showing original content');
       // Future: Revert to original content if translation was done client-side
       // alert(`Simulating reversion to original for: ${this.currentUrl}`);
     }
