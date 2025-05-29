@@ -1,54 +1,65 @@
-<div class="signin-container">
+<div class="signin-container p-xl">
+  <!-- Back button -->
+  <div class="back-button-container mb-lg">
+    <p-button 
+      icon="pi pi-arrow-left" 
+      (click)="goBack()" 
+      styleClass="p-button-text p-button-rounded back-btn" 
+      [attr.aria-label]="'common.back' | translate">
+    </p-button>
+  </div>
+
   <!-- Logo and title -->
-  <div class="signin-header">
+  <div class="signin-header mb-xl">
     <div class="logo-placeholder">📰</div>
     <h1 class="app-title">Babel Feed</h1>
-    <p class="signin-subtitle">Sign in to continue</p>
+    <p class="signin-subtitle">{{ 'auth.signInSubtitle' | translate }}</p>
   </div>
 
   <!-- Error messages -->
-  <div class="messages-section" *ngIf="messages.length > 0">
+  <div class="messages-section mb-lg" *ngIf="messages.length > 0">
     <p-messages [(value)]="messages" [enableService]="false" [closable]="true" styleClass="auth-messages"></p-messages>
   </div>
 
   <!-- Sign in section -->
-  <div class="signin-section">
+  <div class="signin-section" [formGroup]="signInForm">
     <!-- Loading state -->
     <div *ngIf="loading$ | async" class="loading-container">
       <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-      <p class="loading-text">Signing you in...</p>
+      <p class="loading-text">{{ 'auth.signingIn' | translate }}</p>
     </div>
 
-    <!-- Sign in button -->
+    <!-- Sign in form -->
     <div *ngIf="!(loading$ | async)" class="signin-actions">
+      <div class="p-fluid form-group mb-lg">
+        <span class="p-input-icon-left">
+          <i class="pi pi-envelope"></i>
+          <input type="email" pInputText formControlName="email" [placeholder]="'auth.emailPlaceholder' | translate" />
+        </span>
+        <small 
+          *ngIf="signInForm.get('email')?.invalid && signInForm.get('email')?.touched" 
+          class="p-error block mt-1">
+          {{ 'auth.errorInvalidEmail' | translate }}
+        </small>
+      </div>
       <p-button 
-        label="Sign In with Google"
-        icon="pi pi-google"
-        iconPos="left"
-        (onClick)="signInWithGoogle()"
-        styleClass="google-signin-btn">
+        [label]="'auth.continueWithEmail' | translate"
+        icon="pi pi-arrow-right"
+        iconPos="right"
+        (onClick)="signInWithEmail()"
+        styleClass="email-signin-btn"
+        [disabled]="signInForm.invalid">
       </p-button>
     </div>
   </div>
 
-  <!-- Dev-only skip button -->
-  <div class="dev-skip-toggle">
-    <p-button 
-      label="Skip (Dev)"
-      icon="pi pi-fast-forward"
-      (click)="skipLoginForDev()"
-      styleClass="p-button-rounded p-button-warning p-button-text skip-btn"
-      aria-label="Skip login for development">
-    </p-button>
-  </div>
-
   <!-- Theme toggle button -->
-  <div class="theme-toggle">
+  <div class="theme-toggle mt-xl">
     <p-button 
       [icon]="themeService.getCurrentTheme() === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
       (click)="themeService.toggleTheme()" 
       styleClass="p-button-rounded p-button-text theme-btn"
-      aria-label="Toggle theme">
+      [attr.aria-label]="'settings.themeDesc' | translate">
     </p-button>
   </div>
 </div>

@@ -201,18 +201,4 @@
       }
     }
   }
-
-  .menu-footer {
-    padding: 8px 0;
-    border-top: 1px solid var(--surface-border);
-
-    .menu-item.danger {
-      color: #e74c3c;
-
-      &:hover {
-        background-color: rgba(231, 76, 60, 0.1);
-        color: #e74c3c;
-      }
-    }
-  }
 } 

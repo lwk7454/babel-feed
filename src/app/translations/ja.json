@@ -1,0 +1,116 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "back": "戻る",
+    "next": "次へ",
+    "previous": "前へ",
+    "search": "検索",
+    "refresh": "更新",
+    "settings": "設定",
+    "close": "閉じる",
+    "open": "開く",
+    "yes": "はい",
+    "no": "いいえ"
+  },
+  "navigation": {
+    "feed": "フィード",
+    "search": "検索",
+    "settings": "設定",
+    "goBack": "戻る"
+  },
+  "article": {
+    "loadingArticle": "記事を読み込み中...",
+    "translate": "翻訳",
+    "openOriginal": "新しいタブで元の記事を開く",
+    "cannotDisplay": "記事のURLは有効ですが、iframeでコンテンツを表示できません。直接開いてみてください。",
+    "openInNewTab": "新しいタブで開く"
+  },
+  "settings": {
+    "title": "設定とプロフィール",
+    "preferences": "設定",
+    "contentPreferences": "コンテンツ設定",
+    "contentPreferencesDesc": "トピックとブロックされたソースを管理",
+    "translationModel": "翻訳モデル",
+    "translationModelDesc": "AI翻訳設定を構成",
+    "appearance": "外観",
+    "lightTheme": "ライトテーマ",
+    "darkTheme": "ダークテーマ",
+    "themeDesc": "ライトテーマとダークテーマを切り替え",
+    "language": "言語",
+    "languageDesc": "アプリの表示言語と翻訳言語を変更",
+    "information": "情報",
+    "aboutApp": "Babel Feedについて",
+    "aboutAppDesc": "アプリについて詳しく学ぶ",
+    "privacyPolicy": "プライバシーポリシー",
+    "privacyPolicyDesc": "プライバシーの取り組みを確認",
+    "termsOfService": "利用規約",
+    "termsOfServiceDesc": "利用規約と条件を読む",
+    "signOut": "サインアウト",
+    "themeChanged": "テーマが変更されました",
+    "themeChangedDesc": "{{theme}}テーマに切り替えました",
+    "comingSoon": "近日公開",
+    "comingSoonDesc": "{{feature}}の情報は近日公開予定です",
+    "signedOut": "サインアウトしました",
+    "signedOutDesc": "正常にサインアウトしました",
+    "languageChanged": "言語が変更されました",
+    "languageChangedDesc": "アプリの言語が{{language}}に変更されました"
+  },
+  "feed": {
+    "title": "ニュースフィード",
+    "loadingFeed": "パーソナライズされたフィードを読み込み中...",
+    "noArticles": "フィードが空です",
+    "noArticlesDesc": "現在表示する記事がありません。更新するかコンテンツ設定を調整してみてください。",
+    "loadMore": "さらに読み込む",
+    "refreshFeed": "フィードを更新",
+    "errorLoading": "記事の読み込みエラー",
+    "retry": "再試行"
+  },
+  "search": {
+    "title": "検索",
+    "placeholder": "記事を検索...",
+    "searchDesc": "記事、トピックなどを検索できます。",
+    "noResults": "結果が見つかりません",
+    "noResultsDesc": "異なるキーワードを試すか、スペルを確認してください。",
+    "searchResults": "検索結果",
+    "clearSearch": "検索をクリア"
+  },
+  "auth": {
+    "signIn": "サインイン",
+    "signOut": "サインアウト",
+    "welcome": "ようこそ",
+    "signInRequired": "続行するにはサインインしてください",
+    "signInWith": "{{provider}}でサインイン"
+  },
+  "contentPreferences": {
+    "title": "コンテンツ設定",
+    "topics": "トピック",
+    "sources": "ソース",
+    "blockedSources": "ブロックされたソース",
+    "addTopic": "トピックを追加",
+    "removeTopic": "トピックを削除"
+  },
+  "modelConfig": {
+    "title": "翻訳モデル設定",
+    "modelSettings": "モデル設定",
+    "translationQuality": "翻訳品質",
+    "processingSpeed": "処理速度"
+  },
+  "welcome": {
+    "title": "Babel Feedへようこそ",
+    "subtitle": "言語の壁なしに世界のニュースを発見",
+    "getStarted": "始める",
+    "learnMore": "詳しく学ぶ"
+  },
+  "errors": {
+    "networkError": "ネットワークエラーが発生しました",
+    "serverError": "サーバーエラーが発生しました",
+    "unknownError": "不明なエラーが発生しました",
+    "tryAgain": "もう一度お試しください"
+  }
+} 

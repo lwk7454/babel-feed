@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms'; // Import FormsModule
 
@@ -30,7 +31,10 @@ export class ModelConfigComponent implements OnInit {
   value: number = 0.5; // Example for p-slider
   safeSearchEnabled: boolean = false; // Example for p-checkbox
 
-  constructor(private router: Router) { }
+  constructor(
+    private router: Router,
+    private location: Location
+  ) { }
 
   ngOnInit(): void {
     // Initialization logic for model configurations if any
@@ -43,11 +47,11 @@ export class ModelConfigComponent implements OnInit {
     // Potentially navigate away or show success message
   }
 
+  /**
+   * Navigate back to settings page
+   * Direct navigation to avoid browser history issues
+   */
   goBack(): void {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      this.router.navigate(['/settings']); // Fallback to settings or another appropriate route
-    }
+    this.router.navigate(['/settings']);
   }
 }

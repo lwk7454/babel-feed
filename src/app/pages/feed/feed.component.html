@@ -8,42 +8,42 @@
   </app-navigation>
 
   <!-- Feed Content -->
-  <div class="feed-content">
+  <div class="feed-content overflow-y-auto">
     <!-- Loading state -->
-    <div *ngIf="(loading$ | async) === true && !(newsItems$ | async)?.length" class="loading-indicator">
+    <div *ngIf="(loading$ | async) === true && !(newsItems$ | async)?.length" class="loading-state">
       <p-progressSpinner styleClass="custom-spinner" strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-      <p>Loading your personalized feed...</p>
+      <p class="state-description">{{ 'feed.loadingFeed' | translate }}</p>
     </div>
 
     <!-- Error state -->
-    <div *ngIf="currentError" class="error-message">
-      <i class="pi pi-exclamation-circle"></i>
-      <h3>Something went wrong</h3>
-      <p>{{ currentError }}</p>
+    <div *ngIf="currentError" class="error-state">
+      <i class="pi pi-exclamation-circle state-icon"></i>
+      <h3 class="state-title">{{ 'common.error' | translate }}</h3>
+      <p class="state-description">{{ currentError }}</p>
       <p-button 
-        label="Try Again" 
+        [label]="'feed.retry' | translate" 
         (click)="refreshFeed()" 
-        styleClass="p-button-outlined retry-btn">
+        styleClass="p-button-outlined">
       </p-button>
     </div>
 
     <!-- Empty state -->
     <div *ngIf="!(loading$ | async) && !(currentError) && (newsItems$ | async)?.length === 0" class="empty-state">
-      <i class="pi pi-objects-column"></i>
-      <h3>Your feed is empty</h3>
-      <p>No articles to show right now. Try refreshing or adjusting your content preferences.</p>
+      <i class="pi pi-objects-column state-icon"></i>
+      <h3 class="state-title">{{ 'feed.noArticles' | translate }}</h3>
+      <p class="state-description">{{ 'feed.noArticlesDesc' | translate }}</p>
       <p-button 
-        label="Refresh Feed" 
+        [label]="'feed.refreshFeed' | translate" 
         icon="pi pi-refresh"
         (click)="refreshFeed()" 
-        styleClass="refresh-empty-btn">
+        styleClass="btn-primary">
       </p-button>
     </div>
 
     <!-- Feed Items -->
-    <div *ngIf="newsItems$ | async as items" class="feed-scroll-container">
+    <div *ngIf="newsItems$ | async as items" class="container p-xl">
       <div *ngFor="let item of items; trackBy: trackById" 
-           class="feed-item" 
+           class="card card-interactive mb-xl feed-item" 
            [ngClass]="{
              'article-item': item.type === 'article', 
              'video-item': item.type === 'video',

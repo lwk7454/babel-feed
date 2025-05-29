@@ -1,0 +1,140 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "close": "Close",
+    "open": "Open",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "navigation": {
+    "feed": "Feed",
+    "search": "Search",
+    "settings": "Settings",
+    "goBack": "Go Back"
+  },
+  "article": {
+    "loadingArticle": "Loading article...",
+    "translate": "Translate",
+    "openOriginal": "Open original article in new tab",
+    "cannotDisplay": "The article URL is valid, but content cannot be displayed in an iframe. Try opening it directly.",
+    "openInNewTab": "Open in New Tab"
+  },
+  "settings": {
+    "title": "Settings & Profile",
+    "preferences": "Preferences",
+    "contentPreferences": "Content Preferences",
+    "contentPreferencesDesc": "Manage topics and blocked sources",
+    "translationModel": "Translation Model",
+    "translationModelDesc": "Configure AI translation settings",
+    "appearance": "Appearance",
+    "lightTheme": "Light Theme",
+    "darkTheme": "Dark Theme",
+    "themeDesc": "Switch between light and dark themes",
+    "language": "Language",
+    "languageDesc": "Change app display and translation language",
+    "information": "Information",
+    "aboutApp": "About Babel Feed",
+    "aboutAppDesc": "Learn more about the app",
+    "privacyPolicy": "Privacy Policy",
+    "privacyPolicyDesc": "Review our privacy practices",
+    "termsOfService": "Terms of Service",
+    "termsOfServiceDesc": "Read our terms and conditions",
+    "signOut": "Sign Out",
+    "themeChanged": "Theme Changed",
+    "themeChangedDesc": "Switched to {{theme}} theme",
+    "comingSoon": "Coming Soon",
+    "comingSoonDesc": "{{feature}} information will be available soon",
+    "signedOut": "Signed Out",
+    "signedOutDesc": "You have been successfully signed out",
+    "languageChanged": "Language Changed",
+    "languageChangedDesc": "App language changed to {{language}}",
+    "emailVerified": "Verified",
+    "emailNotVerified": "Not Verified",
+    "verifyEmailButton": "Verify Email",
+    "userEmailNotFound": "User email not found.",
+    "otpRequestFailed": "OTP Request Failed"
+  },
+  "feed": {
+    "title": "News Feed",
+    "loadingFeed": "Loading your personalized feed...",
+    "noArticles": "Your feed is empty",
+    "noArticlesDesc": "No articles to show right now. Try refreshing or adjusting your content preferences.",
+    "loadMore": "Load More",
+    "refreshFeed": "Refresh Feed",
+    "errorLoading": "Error loading articles",
+    "retry": "Try Again"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search articles...",
+    "searchDesc": "Find articles, topics, and more.",
+    "noResults": "No results found",
+    "noResultsDesc": "Try using different keywords or check your spelling.",
+    "searchResults": "Search Results",
+    "clearSearch": "Clear Search"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "welcome": "Welcome",
+    "signInRequired": "Please sign in to continue",
+    "signInWith": "Sign in with {{provider}}",
+    "signInSubtitle": "Enter your email to continue",
+    "continueWithEmail": "Continue with Email",
+    "signingIn": "Signing you in...",
+    "emailPlaceholder": "Email address",
+    "errorInvalidEmail": "Please enter a valid email address.",
+    "errorSignInTitle": "Sign-In Error",
+    "errorInvalidInputTitle": "Invalid Input"
+  },
+  "otp": {
+    "verifyTitle": "Verify Your Email",
+    "sentTo": "An OTP has been sent to",
+    "yourEmailPlaceholder": "your email",
+    "enterBelow": "Please enter it below.",
+    "placeholder": "Enter 4-digit OTP",
+    "errorInvalidOtp": "Please enter a valid 4-digit OTP.",
+    "verifyButton": "Verify OTP",
+    "errorVerificationTitle": "Verification Error",
+    "successMessage": "Email verified successfully!",
+    "otpInputLabel": "OTP"
+  },
+  "contentPreferences": {
+    "title": "Content Preferences",
+    "topics": "Topics",
+    "sources": "Sources",
+    "blockedSources": "Blocked Sources",
+    "addTopic": "Add Topic",
+    "removeTopic": "Remove Topic"
+  },
+  "modelConfig": {
+    "title": "Translation Model Configuration",
+    "modelSettings": "Model Settings",
+    "translationQuality": "Translation Quality",
+    "processingSpeed": "Processing Speed"
+  },
+  "welcome": {
+    "title": "Welcome to Babel Feed",
+    "subtitle": "Discover global news without language barriers",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More"
+  },
+  "errors": {
+    "networkError": "Network error occurred",
+    "serverError": "Server error occurred",
+    "unknownError": "An unknown error occurred",
+    "tryAgain": "Please try again"
+  }
+} 

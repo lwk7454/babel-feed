@@ -1,10 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms'; // For ngModel
 import { Store } from '@ngrx/store';
-import { Observable, Subject, combineLatest } from 'rxjs';
-import { takeUntil, map, startWith } from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { AppState } from '../../store';
 import * as PreferencesActions from '../../store/actions/preferences.actions';
@@ -14,27 +14,20 @@ import {
   TopicPreference,
   BlockedSource
 } from '../../store/reducers/preferences.reducer';
+import { NavigationComponent } from '../../shared/components';
 
 // PrimeNG Modules
-import { CheckboxModule } from 'primeng/checkbox'; // For selecting topics
-import { InputTextModule } from 'primeng/inputtext'; // For adding blocked sources
+import { CheckboxModule } from 'primeng/checkbox';
+import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
-import { OrderListModule } from 'primeng/orderlist'; // For managing blocked sources
 import { PanelModule } from 'primeng/panel';
 import { DividerModule } from 'primeng/divider';
-import { MultiSelectModule } from 'primeng/multiselect'; // For selecting multiple topics/sources easily
-import { ToolbarModule } from 'primeng/toolbar'; // For header/footer actions
-
-export interface TopicVM {
-  id: string;
-  name: string;
-  selected: boolean;
-}
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 export interface SourceVM {
   id: string;
   name: string;
-  // 'blocked' status can be derived or managed
 }
 
 @Component({
@@ -45,13 +38,13 @@ export interface SourceVM {
     CheckboxModule,
     InputTextModule,
     ButtonModule,
-    OrderListModule,
     PanelModule,
     DividerModule,
-    MultiSelectModule,
-    ToolbarModule,
+    ToastModule,
+    NavigationComponent,
     AsyncPipe
   ],
+  providers: [MessageService],
   templateUrl: './content-preferences.component.html',
   styleUrls: ['./content-preferences.component.scss']
 })
@@ -60,77 +53,92 @@ export class ContentPreferencesComponent implements OnInit, OnDestroy {
   topics$: Observable<TopicPreference[]>;
   blockedSources$: Observable<BlockedSource[]>;
   
-  // Local component state
-  selectedTopicIds: string[] = []; // IDs of selected topics
-  blockedSources: SourceVM[] = []; // List of sources marked as blocked by user
-  
-  newBlockedSource: string = ''; // For the input field to add a new source to block
+  // Local component state for blocked sources management
+  newBlockedSource: string = '';
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
-    private store: Store<AppState>
+    private location: Location,
+    private store: Store<AppState>,
+    private messageService: MessageService
   ) {
     this.topics$ = this.store.select(selectTopics);
     this.blockedSources$ = this.store.select(selectBlockedSources);
   }
 
   ngOnInit(): void {
-    this.store.dispatch(PreferencesActions.loadPreferences());
-
-    this.topics$.pipe(takeUntil(this.destroy$)).subscribe(topics => {
-      this.selectedTopicIds = topics.filter(topic => topic.selected).map(topic => topic.id);
-    });
-
-    this.blockedSources$.pipe(takeUntil(this.destroy$)).subscribe(sources => {
-      this.blockedSources = sources.map(source => ({ id: source.id, name: source.name }));
-    });
+    // Preferences are loaded on user sign-in via an effect.
+    // No need to dispatch loadPreferences() here.
   }
 
+  /**
+   * Handle topic selection change - immediately updates store
+   */
   onTopicChange(topic: TopicPreference, isChecked: boolean): void {
-    if (isChecked) {
-      if (!this.selectedTopicIds.includes(topic.id)) {
-        this.selectedTopicIds.push(topic.id);
-      }
-    } else {
-      this.selectedTopicIds = this.selectedTopicIds.filter(id => id !== topic.id);
+    if (topic.selected !== isChecked) {
+      this.store.dispatch(PreferencesActions.toggleTopic({ topicId: topic.id }));
+      this.showToast('success', 'Updated', `${topic.name} ${isChecked ? 'added to' : 'removed from'} your interests`);
     }
-    // No immediate save, user will click a "Save" button
   }
   
+  /**
+   * Add a new blocked source
+   */
   addBlockedSource(): void {
     const sourceName = this.newBlockedSource.trim();
-    if (sourceName && !this.blockedSources.find(s => s.name.toLowerCase() === sourceName.toLowerCase())) {
-      // For simplicity, using the name as ID. In a real app, sources would have stable IDs.
-      this.blockedSources = [...this.blockedSources, { id: sourceName, name: sourceName }];
-      this.newBlockedSource = ''; // Clear input
+    if (!sourceName) {
+      this.showToast('warn', 'Warning', 'Please enter a source name');
+      return;
     }
-    // No immediate save
+
+    // Check if source already exists
+    this.blockedSources$.pipe(takeUntil(this.destroy$)).subscribe(sources => {
+      const exists = sources.find(s => s.name.toLowerCase() === sourceName.toLowerCase());
+      if (exists) {
+        this.showToast('warn', 'Already Blocked', 'This source is already in your blocked list');
+        return;
+      }
+
+      // Add to store
+      const newSource: BlockedSource = { 
+        id: this.generateSourceId(sourceName), 
+        name: sourceName 
+      };
+      this.store.dispatch(PreferencesActions.addBlockedSource({ source: newSource }));
+      this.newBlockedSource = '';
+      this.showToast('success', 'Source Blocked', `${sourceName} will no longer appear in your feed`);
+    }).unsubscribe();
   }
 
-  removeBlockedSource(sourceToRemove: SourceVM): void {
-    this.blockedSources = this.blockedSources.filter(source => source.id !== sourceToRemove.id);
-    // No immediate save
+  /**
+   * Remove a blocked source
+   */
+  removeBlockedSource(source: BlockedSource): void {
+    this.store.dispatch(PreferencesActions.removeBlockedSource({ sourceId: source.id }));
+    this.showToast('info', 'Source Unblocked', `${source.name} can now appear in your feed`);
   }
 
-  savePreferences(): void {
-    // Update topics
-    this.selectedTopicIds.forEach(topicId => {
-      this.store.dispatch(PreferencesActions.toggleTopic({ topicId }));
-    });
+  /**
+   * Generate a unique ID for a source
+   */
+  private generateSourceId(sourceName: string): string {
+    return sourceName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
+  }
 
-    // Update blocked sources
-    this.blockedSources.forEach(source => {
-      this.store.dispatch(PreferencesActions.addBlockedSource({ source: { id: source.id, name: source.name } }));
-    });
-
-    console.log('Attempting to save preferences');
+  /**
+   * Show toast message
+   */
+  private showToast(severity: string, summary: string, detail: string): void {
+    this.messageService.add({ severity, summary, detail, life: 3000 });
   }
   
+  /**
+   * Navigate back to settings page
+   * Direct navigation to avoid browser history issues
+   */
   goBack(): void {
-    // Check if there are unsaved changes before navigating
-    // For simplicity, directly navigating back. Add a confirmation dialog if needed.
     this.router.navigate(['/settings']);
   }
 

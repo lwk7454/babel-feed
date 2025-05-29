@@ -25,7 +25,10 @@ export const removeBlockedSource = createAction(
 );
 
 // Load preferences from API
-export const loadPreferences = createAction('[Preferences] Load Preferences');
+export const loadPreferences = createAction(
+  '[Preferences] Load Preferences',
+  props<{ userId: string | null }>()
+);
 
 export const loadPreferencesSuccess = createAction(
   '[Preferences] Load Preferences Success',
@@ -50,4 +53,9 @@ export const savePreferencesSuccess = createAction(
 export const savePreferencesFailure = createAction(
   '[Preferences] Save Preferences Failure',
   props<{ error: string }>()
+);
+
+// Clear all preferences (e.g., on sign out)
+export const clearAllPreferences = createAction(
+  '[Preferences] Clear All Preferences'
 ); 

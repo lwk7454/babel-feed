@@ -1,93 +1,164 @@
 <div class="settings-page-container">
-  <div class="settings-header">
-    <h1>Settings</h1>
-  </div>
+  <!-- Navigation Component -->
+  <app-navigation 
+    [showSearch]="false" 
+    [showRefresh]="false">
+  </app-navigation>
 
-  <!-- User Profile Section -->
-  @if (isAuthenticated$ | async) {
-    <div class="user-profile-section p-mb-3">
-      <div class="p-d-flex p-ai-center">
-        <p-avatar 
-          [image]="(userData$ | async)?.photoURL || 'assets/placeholder-avatar.png'" 
-          size="xlarge" 
-          shape="circle"
-          styleClass="p-mr-3 user-avatar">
-        </p-avatar>
-        <div class="user-info">
-          <h2 class="user-name">{{ (userData$ | async)?.displayName || 'User' }}</h2>
-          <p class="user-email">{{ (userData$ | async)?.email || 'No email provided' }}</p>
+  <!-- Page Content -->
+  <div class="settings-content p-lg">
+    <!-- Page Header -->
+    <div class="page-header mb-lg">
+      <h1 class="page-title">{{ 'settings.title' | translate }}</h1>
+    </div>
+
+    <!-- User Profile Section -->
+    @if (isAuthenticated$ | async) {
+      <div class="user-profile-section mb-lg">
+        <div class="profile-info">
+          <p-avatar 
+            [image]="(userData$ | async)?.photoURL || 'assets/default-avatar.png'" 
+            size="xlarge" 
+            shape="circle"
+            styleClass="user-avatar">
+          </p-avatar>
+          <div class="user-details">
+            <h2 class="user-name">{{ (userData$ | async)?.displayName || ('auth.welcome' | translate) }}</h2>
+            <div class="email-info">
+              <p class="user-email">{{ (userData$ | async)?.email }}</p>
+              @if ((isEmailVerified$ | async) === true) {
+                <p-tag severity="success" [value]="'settings.emailVerified' | translate" icon="pi pi-check-circle"></p-tag>
+              } @else if ((isEmailVerified$ | async) === false) {
+                <p-tag severity="warning" [value]="'settings.emailNotVerified' | translate" icon="pi pi-exclamation-triangle"></p-tag>
+              }
+            </div>
+          </div>
+        </div>
+        @if ((isEmailVerified$ | async) === false) {
+          <p-button 
+            [label]="'settings.verifyEmailButton' | translate"
+            icon="pi pi-envelope"
+            (onClick)="startEmailVerification()"
+            styleClass="p-button-sm verify-email-btn">
+          </p-button>
+        }
+      </div>
+
+      <p-divider class="mb-lg"></p-divider>
+    }
+
+    <!-- Preferences Settings -->
+    <p-panel [header]="'settings.preferences' | translate" styleClass="settings-panel mb-lg">
+      <div class="settings-list">
+        <div class="settings-item" (click)="navigateToContentPreferences()" pRipple>
+          <div class="item-info">
+            <i class="pi pi-sliders-h item-icon"></i>
+            <div class="item-content">
+              <span class="item-label">{{ 'settings.contentPreferences' | translate }}</span>
+              <span class="item-description">{{ 'settings.contentPreferencesDesc' | translate }}</span>
+            </div>
+          </div>
+          <i class="pi pi-angle-right chevron-icon"></i>
+        </div>
+
+        <div class="settings-item" (click)="navigateToModelConfig()" pRipple>
+          <div class="item-info">
+            <i class="pi pi-cog item-icon"></i>
+            <div class="item-content">
+              <span class="item-label">{{ 'settings.translationModel' | translate }}</span>
+              <span class="item-description">{{ 'settings.translationModelDesc' | translate }}</span>
+            </div>
+          </div>
+          <i class="pi pi-angle-right chevron-icon"></i>
         </div>
       </div>
-    </div>
-    <p-divider styleClass="p-mb-3"></p-divider>
-  }
-
-  <!-- Account Settings -->
-  @if (isAuthenticated$ | async) {
-    <p-panel header="Account" styleClass="settings-panel">
-      <ul class="settings-list">
-        @for (item of accountItems; track item.dataQa) {
-          <li (click)="handleItemClick(item)" 
-              (keydown.enter)="handleItemClick(item)" 
-              tabindex="0" 
-              pRipple
-              [attr.data-qa]="item.dataQa">
-            <i [class]="item.icon"></i>
-            <span>{{ item.label }}</span>
-            <i class="pi pi-angle-right"></i>
-          </li>
-        }
-      </ul>
     </p-panel>
-  }
 
-  <!-- Appearance Settings -->
-  <p-panel header="Appearance & Preferences" styleClass="settings-panel">
-    <ul class="settings-list">
-      @for (item of appearanceItems; track item.dataQa) {
-        <li (click)="handleItemClick(item)" 
-            (keydown.enter)="handleItemClick(item)" 
-            tabindex="0" 
-            pRipple
-            [attr.data-qa]="item.dataQa">
-          <i [class]="item.icon"></i>
-          <span>{{ item.label }}</span>
-          @if (item.route) {
-            <i class="pi pi-angle-right"></i> <!-- Show chevron only for navigation items -->
-          }
-        </li>
-      }
-    </ul>
-  </p-panel>
+    <!-- Appearance Settings -->
+    <p-panel [header]="'settings.appearance' | translate" styleClass="settings-panel mb-lg">
+      <div class="settings-list">
+        <div class="settings-item" (click)="toggleTheme()" pRipple>
+          <div class="item-info">
+            <i [class]="getThemeIcon() + ' item-icon'"></i>
+            <div class="item-content">
+              <span class="item-label">{{ getThemeLabel() }}</span>
+              <span class="item-description">{{ 'settings.themeDesc' | translate }}</span>
+            </div>
+          </div>
+          <i class="pi pi-refresh theme-toggle-icon"></i>
+        </div>
 
-  <!-- Information Section -->
-  <p-panel header="Information" styleClass="settings-panel">
-    <ul class="settings-list">
-      @for (item of informationItems; track item.dataQa) {
-        <li (click)="handleItemClick(item)" 
-            (keydown.enter)="handleItemClick(item)" 
-            tabindex="0" 
-            pRipple
-            [attr.data-qa]="item.dataQa">
-          <i [class]="item.icon"></i>
-          <span>{{ item.label }}</span>
-          <i class="pi pi-angle-right"></i>
-        </li>
-      }
-    </ul>
-  </p-panel>
+        <div class="settings-item language-selector">
+          <div class="item-info">
+            <i class="pi pi-globe item-icon"></i>
+            <div class="item-content">
+              <span class="item-label">{{ 'settings.language' | translate }}</span>
+              <span class="item-description">{{ 'settings.languageDesc' | translate }}</span>
+            </div>
+          </div>
+          <p-dropdown 
+            [options]="(availableLanguages$ | async) || []" 
+            [(ngModel)]="selectedLanguage" 
+            optionLabel="native"
+            (onChange)="onLanguageChange($event.value)"
+            styleClass="language-dropdown"
+            placeholder="{{ 'settings.language' | translate }}">
+          </p-dropdown>
+        </div>
+      </div>
+    </p-panel>
 
-  <!-- Sign Out Button -->
-  @if (isAuthenticated$ | async) {
-    <div class="sign-out-section p-mt-4">
-      <p-button 
-        label="Sign Out" 
-        icon="pi pi-sign-out" 
-        styleClass="p-button-danger p-button-outlined full-width-button" 
-        (onClick)="signOut()"
-        data-qa="sign-out-button">
-      </p-button>
-    </div>
-  }
+    <!-- Information Section -->
+    <p-panel [header]="'settings.information' | translate" styleClass="settings-panel mb-lg">
+      <div class="settings-list">
+        <div class="settings-item" (click)="showAboutInfo()" pRipple>
+          <div class="item-info">
+            <i class="pi pi-info-circle item-icon"></i>
+            <div class="item-content">
+              <span class="item-label">{{ 'settings.aboutApp' | translate }}</span>
+              <span class="item-description">{{ 'settings.aboutAppDesc' | translate }}</span>
+            </div>
+          </div>
+          <i class="pi pi-angle-right chevron-icon"></i>
+        </div>
 
+        <div class="settings-item" (click)="showPrivacyInfo()" pRipple>
+          <div class="item-info">
+            <i class="pi pi-shield item-icon"></i>
+            <div class="item-content">
+              <span class="item-label">{{ 'settings.privacyPolicy' | translate }}</span>
+              <span class="item-description">{{ 'settings.privacyPolicyDesc' | translate }}</span>
+            </div>
+          </div>
+          <i class="pi pi-angle-right chevron-icon"></i>
+        </div>
+
+        <div class="settings-item" (click)="showTermsInfo()" pRipple>
+          <div class="item-info">
+            <i class="pi pi-book item-icon"></i>
+            <div class="item-content">
+              <span class="item-label">{{ 'settings.termsOfService' | translate }}</span>
+              <span class="item-description">{{ 'settings.termsOfServiceDesc' | translate }}</span>
+            </div>
+          </div>
+          <i class="pi pi-angle-right chevron-icon"></i>
+        </div>
+      </div>
+    </p-panel>
+
+    <!-- Sign Out Section -->
+    @if (isAuthenticated$ | async) {
+      <div class="sign-out-section mt-xl mb-lg">
+        <p-button 
+          [label]="'settings.signOut' | translate" 
+          icon="pi pi-sign-out" 
+          styleClass="p-button-danger p-button-outlined sign-out-btn" 
+          (onClick)="signOut()">
+        </p-button>
+      </div>
+    }
+  </div>
+
+  <!-- Toast for notifications -->
+  <p-toast position="bottom-center"></p-toast>
 </div>

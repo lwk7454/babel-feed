@@ -1,34 +1,41 @@
-<div class="preferences-page-container">
-  <p-toolbar styleClass="preferences-toolbar">
-    <div class="p-toolbar-group-left">
-      <p-button icon="pi pi-arrow-left" (click)="goBack()" styleClass="p-button-text" aria-label="Back to Settings"></p-button>
+<div class="content-preferences-page-container">
+  <!-- Navigation Component -->
+  <app-navigation 
+    [showSearch]="false" 
+    [showRefresh]="false">
+  </app-navigation>
+
+  <!-- Page Content -->
+  <div class="preferences-content">
+    <div class="page-header">
+      <p-button 
+        icon="pi pi-arrow-left" 
+        (click)="goBack()" 
+        styleClass="p-button-text p-button-rounded back-btn" 
+        aria-label="Back to Settings">
+      </p-button>
       <h1 class="page-title">Content Preferences</h1>
     </div>
-    <div class="p-toolbar-group-right">
-      <p-button label="Save Changes" icon="pi pi-save" (click)="savePreferences()" styleClass="p-button-success"></p-button>
-    </div>
-  </p-toolbar>
 
-  <div class="preferences-content">
     <!-- Preferred Topics Section -->
     <p-panel header="My Preferred Topics" styleClass="preferences-panel">
-      <p class="panel-description">Select topics you're interested in to personalize your feed.</p>
+      <p class="panel-description">Select topics you're interested in to personalize your feed. Changes are saved automatically.</p>
       @if (topics$ | async; as topics) {
         <div class="topics-grid">
           @for (topic of topics; track topic.id) {
             <div class="topic-item">
               <p-checkbox 
                 [binary]="true" 
-                [value]="topic.id" 
-                [(ngModel)]="topic.selected" 
+                [ngModel]="topic.selected" 
                 (onChange)="onTopicChange(topic, $event.checked)"
                 [inputId]="'topic-' + topic.id"
                 [attr.data-qa]="'topic-checkbox-' + topic.id">
               </p-checkbox>
-              <label [for]="'topic-' + topic.id" class="p-checkbox-label">{{ topic.name }}</label>
+              <label [for]="'topic-' + topic.id" class="topic-label">{{ topic.name }}</label>
             </div>
           } @empty {
             <div class="empty-topics-message">
+              <i class="pi pi-objects-column"></i>
               <p>No topics available at the moment. Please check back later.</p>
             </div>
           }
@@ -42,8 +49,8 @@
     <p-panel header="Manage Blocked Sources" styleClass="preferences-panel">
       <p class="panel-description">Articles from these sources will not appear in your feed. Add a source by typing its name or website domain.</p>
       
-      <div class="add-source-form p-fluid p-d-flex p-ai-center p-mb-3">
-        <span class="p-input-icon-left p-mr-2" style="flex-grow: 1;">
+      <div class="add-source-form">
+        <span class="p-input-icon-left">
           <i class="pi pi-ban"></i>
           <input 
             pInputText 
@@ -51,47 +58,48 @@
             [(ngModel)]="newBlockedSource" 
             placeholder="e.g., examplesource.com or Example Source Name"
             (keyup.enter)="addBlockedSource()"
+            class="add-source-input"
             data-qa="add-blocked-source-input" />
         </span>
         <p-button 
           icon="pi pi-plus" 
-          label="Add" 
+          label="Block Source" 
           (click)="addBlockedSource()" 
           [disabled]="!newBlockedSource.trim()"
-          styleClass="p-button-outlined"
+          styleClass="p-button-outlined add-source-btn"
           data-qa="add-blocked-source-button">
         </p-button>
       </div>
 
-      @if (blockedSources.length > 0) {
-        <div class="blocked-sources-list">
-          @for (source of blockedSources; track source.id) {
-            <div class="blocked-source-item p-d-flex p-ai-center p-jc-between">
-              <span>{{ source.name }}</span>
-              <p-button 
-                icon="pi pi-times" 
-                (click)="removeBlockedSource(source)" 
-                styleClass="p-button-text p-button-danger p-button-rounded"
-                aria-label="Remove blocked source"
-                [attr.data-qa]="'remove-blocked-source-' + source.id">
-              </p-button>
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="empty-blocked-sources-message">
-          <p>You haven't blocked any sources yet.</p>
-        </div>
+      @if (blockedSources$ | async; as blockedSources) {
+        @if (blockedSources.length > 0) {
+          <div class="blocked-sources-list">
+            @for (source of blockedSources; track source.id) {
+              <div class="blocked-source-item">
+                <div class="source-info">
+                  <i class="pi pi-ban source-icon"></i>
+                  <span class="source-name">{{ source.name }}</span>
+                </div>
+                <p-button 
+                  icon="pi pi-times" 
+                  (click)="removeBlockedSource(source)" 
+                  styleClass="p-button-text p-button-danger p-button-rounded remove-btn"
+                  aria-label="Remove blocked source"
+                  [attr.data-qa]="'remove-blocked-source-' + source.id">
+                </p-button>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-blocked-sources-message">
+            <i class="pi pi-check-circle"></i>
+            <p>You haven't blocked any sources yet. All news sources will appear in your feed.</p>
+          </div>
+        }
       }
     </p-panel>
-
-    <!-- Future sections (e.g., Preferred Languages) can be added here -->
-    <!-- 
-    <p-divider layout="horizontal"></p-divider>
-    <p-panel header="Preferred Languages" styleClass="preferences-panel">
-      <p class="panel-description">Select languages you understand to see content in those languages.</p>
-      // Language selection controls here
-    </p-panel>
-    -->
   </div>
+
+  <!-- Toast for notifications -->
+  <p-toast position="bottom-center"></p-toast>
 </div>

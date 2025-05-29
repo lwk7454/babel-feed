@@ -1,0 +1,54 @@
+<div class="verify-otp-container page-container container-centered p-xl">
+  <!-- Back button -->
+  <div class="back-button-container" style="position: absolute; top: 20px; left: 20px;">
+    <p-button 
+      icon="pi pi-arrow-left" 
+      (click)="goBack()" 
+      styleClass="p-button-text p-button-rounded back-btn"
+      [attr.aria-label]="'common.back' | translate">
+    </p-button>
+  </div>
+
+  <div class="verify-otp-content">
+    <div class="header mb-xl">
+      <h1 class="title">{{ 'otp.verifyTitle' | translate }}</h1>
+      <p class="subtitle">
+        {{ 'otp.sentTo' | translate }} 
+        <strong>{{ emailToVerify || ('otp.yourEmailPlaceholder' | translate) }}</strong>. 
+        {{ 'otp.enterBelow' | translate }}
+      </p>
+    </div>
+
+    <div class="messages-section mb-lg" *ngIf="messages.length > 0">
+      <p-messages [(value)]="messages" [enableService]="false" [closable]="true"></p-messages>
+    </div>
+
+    <form [formGroup]="otpForm" (ngSubmit)="onVerifyOtp()" class="otp-form">
+      <div class="p-fluid form-group mb-lg">
+        <label for="otp-input" class="mb-sm">{{ 'otp.otpInputLabel' | translate }}</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-key"></i>
+          <input id="otp-input" type="text" pInputText formControlName="otp" [placeholder]="'otp.placeholder' | translate" maxlength="4" />
+        </span>
+        <small 
+          *ngIf="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched" 
+          class="p-error block mt-1">
+          {{ 'otp.errorInvalidOtp' | translate }}
+        </small>
+      </div>
+
+      <div *ngIf="loading$ | async" class="loading-container">
+        <p-progressSpinner strokeWidth="4" animationDuration="1s"></p-progressSpinner>
+      </div>
+
+      <p-button 
+        *ngIf="!(loading$ | async)"
+        [label]="'otp.verifyButton' | translate"
+        icon="pi pi-check"
+        type="submit"
+        styleClass="verify-otp-btn mt-3"
+        [disabled]="otpForm.invalid">
+      </p-button>
+    </form>
+  </div>
+</div> 

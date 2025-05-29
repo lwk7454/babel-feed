@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService, NewsItem } from '../../services/api.service'; // Assuming NewsItem has a 'url' property
@@ -10,6 +11,9 @@ import { takeUntil, switchMap, distinctUntilChanged } from 'rxjs/operators';
 // State management
 import { AppState } from '../../store';
 import { selectSelectedLanguage, LanguagePreference } from '../../store/reducers/preferences.reducer';
+
+// Translation
+import { TranslatePipe } from '../../shared/pipes';
 
 // PrimeNG Modules for UI elements
 import { ButtonModule } from 'primeng/button';
@@ -27,7 +31,8 @@ import { InputSwitchModule } from 'primeng/inputswitch'; // For translate toggle
     ProgressSpinnerModule,
     MessageModule,
     ToolbarModule,
-    InputSwitchModule
+    InputSwitchModule,
+    TranslatePipe
   ],
   templateUrl: './article.component.html',
   styleUrls: ['./article.component.scss']
@@ -35,10 +40,10 @@ import { InputSwitchModule } from 'primeng/inputswitch'; // For translate toggle
 export class ArticleComponent implements OnInit, OnDestroy {
   newsItem: NewsItem | undefined;
   safeUrl: SafeResourceUrl | null = null; // Initialize as null
-  currentUrl: string = ''; // For displaying the source URL
+  currentUrl: string | undefined;
   
   isLoading: boolean = true;
-  errorMessage: string | null = null;
+  errorMessage: string | undefined;
   
   isTranslating: boolean = false; // For the translation toggle
   selectedLanguage$: Observable<LanguagePreference>;
@@ -49,6 +54,7 @@ export class ArticleComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private location: Location,
     private apiService: ApiService,
     private sanitizer: DomSanitizer,
     private store: Store<AppState>
@@ -80,7 +86,7 @@ export class ArticleComponent implements OnInit, OnDestroy {
   
   loadArticle(id: string, targetLanguage?: string): void {
     this.isLoading = true;
-    this.errorMessage = null;
+    this.errorMessage = undefined;
     this.safeUrl = null;
 
     // Determine if we should request translated content
@@ -134,12 +140,12 @@ export class ArticleComponent implements OnInit, OnDestroy {
     }
   }
   
+  /**
+   * Navigate back to feed page
+   * Direct navigation to avoid browser history issues
+   */
   goBack(): void {
-    if (window.history.length > 1) {
-      window.history.back(); // Use browser history if available
-    } else {
-      this.router.navigate(['/feed']); // Fallback to feed
-    }
+    this.router.navigate(['/feed']);
   }
 
   openInNewTab(url: string): void {

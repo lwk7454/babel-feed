@@ -5,7 +5,6 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
-import { SocialLoginModule, SocialAuthServiceConfig, GoogleLoginProvider } from '@abacritt/angularx-social-login';
 import { providePrimeNG } from 'primeng/config';
 import Lara from '@primeng/themes/lara';
 
@@ -41,24 +40,6 @@ export const appConfig: ApplicationConfig = {
         menu: 1000,
         tooltip: 1100
       }
-    }),
-    importProvidersFrom(
-      SocialLoginModule
-    ),
-    {
-      provide: 'SocialAuthServiceConfig',
-      useValue: {
-        autoLogin: false,
-        providers: [
-          {
-            id: GoogleLoginProvider.PROVIDER_ID,
-            provider: new GoogleLoginProvider('placeholder-google-client-id') // This is a placeholder - you'd use a real client ID in production
-          }
-        ],
-        onError: (err) => {
-          console.error(err);
-        }
-      } as SocialAuthServiceConfig
-    }
+    })
   ]
 };

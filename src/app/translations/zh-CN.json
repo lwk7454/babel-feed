@@ -1,0 +1,140 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "search": "搜索",
+    "refresh": "刷新",
+    "settings": "设置",
+    "close": "关闭",
+    "open": "打开",
+    "yes": "是",
+    "no": "否"
+  },
+  "navigation": {
+    "feed": "新闻流",
+    "search": "搜索",
+    "settings": "设置",
+    "goBack": "返回"
+  },
+  "article": {
+    "loadingArticle": "加载文章中...",
+    "translate": "翻译",
+    "openOriginal": "在新标签页中打开原文",
+    "cannotDisplay": "文章链接有效，但内容无法在iframe中显示。请尝试直接打开。",
+    "openInNewTab": "在新标签页中打开"
+  },
+  "settings": {
+    "title": "设置与个人资料",
+    "preferences": "偏好设置",
+    "contentPreferences": "内容偏好",
+    "contentPreferencesDesc": "管理主题和屏蔽来源",
+    "translationModel": "翻译模型",
+    "translationModelDesc": "配置AI翻译设置",
+    "appearance": "外观",
+    "lightTheme": "浅色主题",
+    "darkTheme": "深色主题",
+    "themeDesc": "在浅色和深色主题之间切换",
+    "language": "语言",
+    "languageDesc": "更改应用显示和翻译语言",
+    "information": "信息",
+    "aboutApp": "关于巴别推送",
+    "aboutAppDesc": "了解更多关于应用的信息",
+    "privacyPolicy": "隐私政策",
+    "privacyPolicyDesc": "查看我们的隐私做法",
+    "termsOfService": "服务条款",
+    "termsOfServiceDesc": "阅读我们的条款和条件",
+    "signOut": "退出登录",
+    "themeChanged": "主题已更改",
+    "themeChangedDesc": "已切换到{{theme}}主题",
+    "comingSoon": "即将推出",
+    "comingSoonDesc": "{{feature}}信息即将推出",
+    "signedOut": "已退出登录",
+    "signedOutDesc": "您已成功退出登录",
+    "languageChanged": "语言已更改",
+    "languageChangedDesc": "应用语言已更改为{{language}}",
+    "emailVerified": "已验证",
+    "emailNotVerified": "未验证",
+    "verifyEmailButton": "验证邮箱",
+    "userEmailNotFound": "未找到用户邮箱。",
+    "otpRequestFailed": "OTP请求失败"
+  },
+  "feed": {
+    "title": "新闻流",
+    "loadingFeed": "正在加载您的个性化新闻流...",
+    "noArticles": "您的新闻流为空",
+    "noArticlesDesc": "目前没有文章可显示。请尝试刷新或调整您的内容偏好。",
+    "loadMore": "加载更多",
+    "refreshFeed": "刷新新闻流",
+    "errorLoading": "加载文章时出错",
+    "retry": "重试"
+  },
+  "search": {
+    "title": "搜索",
+    "placeholder": "搜索文章...",
+    "searchDesc": "查找文章、主题等内容。",
+    "noResults": "未找到结果",
+    "noResultsDesc": "请尝试使用不同的关键词或检查拼写。",
+    "searchResults": "搜索结果",
+    "clearSearch": "清除搜索"
+  },
+  "auth": {
+    "signIn": "登录",
+    "signOut": "退出登录",
+    "welcome": "欢迎",
+    "signInRequired": "请登录以继续",
+    "signInWith": "使用{{provider}}登录",
+    "signInSubtitle": "输入您的邮箱以继续",
+    "continueWithEmail": "使用邮箱继续",
+    "signingIn": "登录中...",
+    "emailPlaceholder": "邮箱地址",
+    "errorInvalidEmail": "请输入有效的邮箱地址。",
+    "errorSignInTitle": "登录错误",
+    "errorInvalidInputTitle": "输入无效"
+  },
+  "otp": {
+    "verifyTitle": "验证您的邮箱",
+    "sentTo": "OTP已发送至",
+    "yourEmailPlaceholder": "您的邮箱",
+    "enterBelow": "请输入下面的验证码。",
+    "placeholder": "输入4位OTP",
+    "errorInvalidOtp": "请输入有效的4位OTP。",
+    "verifyButton": "验证OTP",
+    "errorVerificationTitle": "验证错误",
+    "successMessage": "邮箱验证成功！",
+    "otpInputLabel": "OTP"
+  },
+  "contentPreferences": {
+    "title": "内容偏好",
+    "topics": "主题",
+    "sources": "来源",
+    "blockedSources": "屏蔽来源",
+    "addTopic": "添加主题",
+    "removeTopic": "移除主题"
+  },
+  "modelConfig": {
+    "title": "翻译模型配置",
+    "modelSettings": "模型设置",
+    "translationQuality": "翻译质量",
+    "processingSpeed": "处理速度"
+  },
+  "welcome": {
+    "title": "欢迎使用巴别推送",
+    "subtitle": "无语言障碍地发现全球新闻",
+    "getStarted": "开始使用",
+    "learnMore": "了解更多"
+  },
+  "errors": {
+    "networkError": "网络错误",
+    "serverError": "服务器错误",
+    "unknownError": "发生未知错误",
+    "tryAgain": "请重试"
+  }
+} 

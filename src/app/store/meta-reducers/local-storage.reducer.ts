@@ -15,7 +15,8 @@ export function localStorageSyncReducer(reducer: ActionReducer<AppState>): Actio
       const savedState = loadFromLocalStorage();
       
       // Merge with initial state if available
-      return reducer({ ...state, ...savedState } as AppState, action);
+      const mergedState = { ...state, ...savedState } as AppState;
+      return reducer(mergedState, action);
     }
     
     // Process the current action and get the next state
@@ -74,4 +75,4 @@ function loadFromLocalStorage(): Partial<AppState> {
     console.error('Error loading state from localStorage', e);
     return {};
   }
-} 
+}

@@ -31,7 +31,7 @@ alwaysApply: true
 
 **5. Design Philosophy & Aesthetic:**
     *   **Modern & Cutting-Edge:** The design should feel fresh, contemporary, and technologically advanced.
-    *   **Playful & Engaging (Optional, aligning with branding like "破巴别"):** While clean, it can incorporate subtle playful elements or a tone that resonates with a younger, digitally native audience, potentially drawing inspiration from modern app design trends or even a slight nod to tech-savvy/anime-adjacent cultures (without being overly niche or cluttered).
+    *   **Playful & Engaging (Optional):** While clean, it can incorporate subtle playful elements or a tone that resonates with a younger, digitally native audience, potentially drawing inspiration from modern app design trends or even a slight nod to tech-savvy/anime-adjacent cultures (without being overly niche or cluttered).
     *   **Intuitive & User-Friendly:** Easy to navigate, with clear calls to action. The translation feature should be easily discoverable and simple to activate/deactivate.
     *   **Developer-Friendly & Minimalist:** Prioritize designs that are achievable with standard UI components and frameworks (e.g., for Tauri). Avoid overly complex artistic elements requiring specialized design skills to implement. Focus on clean lines, good typography, and effective use of space. Consider neumorphism, glassmorphism, or refined minimalism.
     *   **Performance-Minded:** UI should be lightweight and responsive, especially considering on-device processing.

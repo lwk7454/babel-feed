@@ -7,6 +7,7 @@ export interface UserData {
   displayName?: string;
   photoURL?: string;
   provider?: string;
+  isEmailVerified?: boolean;
 }
 
 export interface State {
@@ -35,7 +36,10 @@ export const reducer = createReducer(
   
   on(UserActions.signInSuccess, (state, { userData }) => ({
     ...state,
-    userData,
+    userData: {
+      ...userData,
+      isEmailVerified: userData.isEmailVerified || false
+    },
     isAuthenticated: true,
     loading: false,
     error: null
@@ -62,7 +66,19 @@ export const reducer = createReducer(
     ...state,
     loading: false,
     error
-  }))
+  })),
+
+  // Handle email verification update
+  on(UserActions.updateUserEmailVerificationStatus, (state, { isEmailVerified }) => {
+    if (!state.userData) return state; // Should not happen if user is logged in
+    return {
+      ...state,
+      userData: {
+        ...state.userData,
+        isEmailVerified
+      }
+    };
+  })
 );
 
 // Feature Selector for the user state

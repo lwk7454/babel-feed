@@ -26,8 +26,18 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'settings/content-preferences',
+    path: 'content-preferences',
     loadComponent: () => import('./pages/content-preferences/content-preferences.component').then(m => m.ContentPreferencesComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'model-config',
+    loadComponent: () => import('./pages/model-config/model-config.component').then(m => m.ModelConfigComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'verify-otp',
+    loadComponent: () => import('./pages/verify-otp/verify-otp.component').then(m => m.VerifyOtpComponent),
     canActivate: [authGuard]
   },
   { path: '**', redirectTo: 'welcome' }

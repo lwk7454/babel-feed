@@ -40,15 +40,15 @@ export const initialState: State = {
   availableLanguages: [
     defaultLanguage,
     {
-      id: 'zh-Hans',
+      id: 'zh-CN',
       name: 'Chinese (Simplified)',
-      code: 'zh-Hans',
+      code: 'zh-CN',
       native: '简体中文'
     },
     {
-      id: 'zh-Hant',
+      id: 'zh-TW',
       name: 'Chinese (Traditional)',
-      code: 'zh-Hant',
+      code: 'zh-TW',
       native: '繁體中文'
     },
     {
@@ -116,7 +116,10 @@ export const reducer = createReducer(
     ...state,
     loading: false,
     error
-  }))
+  })),
+
+  // Clear all preferences
+  on(PreferencesActions.clearAllPreferences, () => initialState)
 );
 
 // Feature Selector
@@ -125,12 +128,12 @@ export const selectPreferencesState = createFeatureSelector<State>('preferences'
 // Selectors
 export const selectSelectedLanguage = createSelector(
   selectPreferencesState,
-  (state: State) => state.selectedLanguage
+  (state: State) => state?.selectedLanguage || null
 );
 
 export const selectAvailableLanguages = createSelector(
   selectPreferencesState,
-  (state: State) => state.availableLanguages
+  (state: State) => state?.availableLanguages || []
 );
 
 export const selectTopics = createSelector(

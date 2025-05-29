@@ -1,14 +1,10 @@
-/* Assuming global dark theme variables are available from styles.scss */
-/* Example variables:
-  --background-color: #121212;
-  --text-color: #e0e0e0;
-  --card-background: #1e1e1e;
-  --surface-border: #2a2a2a;
-  --primary-color: #3498db; // General primary color
-  --google-red: #DB4437; // Google's brand color
-  --apple-black: #000000; // Apple's typical button color
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-*/
+/* Signin component specific styles */
+/* Uses shared design tokens and components from global styles */
+
+@use "../../styles/tokens";
+@use "../../styles/layouts";
+@use "../../styles/typography";
+@use "../../styles/components";
 
 :host {
   display: block;
@@ -16,59 +12,66 @@
 
 /* Signin page styles - Full screen design following welcome page patterns */
 .signin-container {
-  min-height: 100vh;
-  background-color: var(--background-color);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
-  font-family: var(--font-family);
+  @extend .page-container;
+  @extend .container-centered;
   position: relative;
+}
+
+/* Back button - positioned top-left */
+.back-button-container {
+  position: absolute;
+  top: var(--spacing-4xl);
+  left: var(--spacing-4xl);
+
+  :host ::ng-deep .back-btn {
+    @extend .btn-secondary;
+    width: 48px;
+    height: 48px;
+    box-shadow: var(--shadow-sm);
+
+    &:hover {
+      color: var(--primary-color) !important;
+      box-shadow: var(--shadow-md);
+    }
+
+    .p-button-icon {
+      font-size: var(--font-size-lg) !important;
+    }
+  }
 }
 
 /* Header section - following welcome page styling */
 .signin-header {
-  text-align: center;
-  margin-bottom: 60px;
+  @extend .header;
+  margin-bottom: var(--spacing-6xl);
 
   .logo-placeholder {
-    font-size: 64px;
-    margin-bottom: 20px;
-    display: block;
+    @extend .header-icon;
   }
 
   .app-title {
-    font-size: 40px;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0 0 12px 0;
-    letter-spacing: -0.02em;
+    @extend .header-title;
   }
 
   .signin-subtitle {
-    font-size: 18px;
-    color: var(--text-color-secondary);
-    margin: 0;
-    font-weight: 400;
+    @extend .header-subtitle;
   }
 }
 
 /* Messages section */
 .messages-section {
-  width: 100%;
-  max-width: 400px;
-  margin-bottom: 24px;
+  @extend .section;
+  margin-bottom: var(--spacing-2xl);
 
   :host ::ng-deep .auth-messages {
     .p-message {
       background-color: rgba(229, 62, 62, 0.1);
       border: 1px solid rgba(229, 62, 62, 0.3);
-      border-radius: 12px;
+      border-radius: var(--border-radius-lg);
       color: var(--text-color);
       
       .p-message-text {
-        font-size: 14px;
+        font-size: var(--font-size-sm);
       }
       
       .p-message-close {
@@ -271,6 +274,20 @@
     }
   }
 
+  .back-button-container {
+    top: 32px;
+    left: 32px;
+
+    :host ::ng-deep .back-btn {
+      width: 44px;
+      height: 44px;
+
+      .p-button-icon {
+        font-size: 16px !important;
+      }
+    }
+  }
+
   .dev-skip-toggle {
     bottom: 32px;
     left: 32px;
@@ -314,6 +331,20 @@
   .messages-section,
   .signin-section {
     max-width: 100%;
+  }
+
+  .back-button-container {
+    top: 24px;
+    left: 24px;
+
+    :host ::ng-deep .back-btn {
+      width: 40px;
+      height: 40px;
+
+      .p-button-icon {
+        font-size: 14px !important;
+      }
+    }
   }
 
   .dev-skip-toggle {

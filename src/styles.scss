@@ -1,3 +1,9 @@
+/* Import shared styles using modern @use syntax - must come first */
+@use "app/styles/tokens";
+@use "app/styles/layouts";
+@use "app/styles/typography";
+@use "app/styles/components";
+
 /* PrimeNG icons import - theme is now managed through providePrimeNG */
 @import "primeicons/primeicons.css";
 
@@ -67,49 +73,7 @@ app-root {
   overflow-x: hidden;
 }
 
-/* Header styling */
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-  background-color: var(--surface-card);
-  border-bottom: 1px solid var(--surface-border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.app-header h1 {
-  font-size: 20px;
-  font-weight: bold;
-  color: var(--text-color);
-  margin: 0;
-}
-
-.app-header .back-button {
-  background: none;
-  border: none;
-  padding: 8px;
-  font-size: 20px;
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-/* Bottom navigation */
-.bottom-nav {
-  display: flex;
-  justify-content: space-around;
-  padding: 10px 0;
-  background-color: var(--surface-card);
-  border-top: 1px solid var(--surface-border);
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  z-index: 10;
-}
-
-/* Translation button */
+/* Translation button - specific to app functionality */
 .translate-button {
   position: fixed;
   bottom: 70px;
@@ -211,13 +175,4 @@ app-root {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-600); 
-}
-
-/* List items */
-.list-item {
-  padding: 15px;
-  border-bottom: 1px solid var(--surface-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 } 

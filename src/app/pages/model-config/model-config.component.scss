@@ -1,12 +1,10 @@
-/* Assuming global dark theme variables are available from styles.scss */
-/* Example variables:
-  --background-color: #121212;
-  --text-color: #e0e0e0;
-  --card-background: #1e1e1e;
-  --surface-border: #2a2a2a;
-  --primary-color: #3498db;
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-*/
+/* Model config component specific styles */
+/* Uses shared design tokens and components from global styles */
+
+@use "../../styles/tokens";
+@use "../../styles/layouts";
+@use "../../styles/typography";
+@use "../../styles/components";
 
 :host {
   display: flex;
@@ -24,15 +22,14 @@
 }
 
 .config-toolbar {
-  background-color: var(--card-background);
+  background-color: var(--surface-card);
   border-bottom: 1px solid var(--surface-border);
-  padding: 0.5rem 0.75rem;
+  padding: var(--spacing-sm) var(--spacing-md);
 
   .page-title {
-    font-size: 1.25rem;
-    font-weight: 500;
-    margin-left: 1rem;
-    color: var(--text-color);
+    @extend .heading-5;
+    margin-left: var(--spacing-lg);
+    margin-bottom: 0;
   }
 
   :host ::ng-deep .p-toolbar-group-left,
@@ -45,74 +42,64 @@
 .config-content {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: var(--spacing-2xl);
   max-width: 800px;
   margin: 0 auto;
 }
 
 .config-panel {
-  margin-bottom: 2rem;
-  background-color: var(--card-background);
+  margin-bottom: var(--spacing-3xl);
+  background-color: var(--surface-card);
   border: 1px solid var(--surface-border);
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
 
   :host ::ng-deep .p-panel-header {
-    background-color: var(--card-background);
+    background-color: var(--surface-card);
     border-bottom: 1px solid var(--surface-border);
     color: var(--text-color);
-    font-weight: 500;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
+    font-weight: var(--font-weight-medium);
+    border-top-left-radius: var(--border-radius-md);
+    border-top-right-radius: var(--border-radius-md);
   }
 
   :host ::ng-deep .p-panel-content {
-    background-color: var(--card-background);
-    padding: 1.25rem;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    background-color: var(--surface-card);
+    padding: var(--spacing-xl);
+    border-bottom-left-radius: var(--border-radius-md);
+    border-bottom-right-radius: var(--border-radius-md);
   }
 
   .panel-description {
-    font-size: 0.9rem;
-    color: var(--text-color-secondary, #b0b0b0);
-    margin-bottom: 1.5rem;
-    line-height: 1.5;
+    @extend .body-small;
+    margin-bottom: var(--spacing-2xl);
   }
   
-  // Styling for PrimeNG form elements (example)
+  /* PrimeNG form elements styling */
   :host ::ng-deep .p-dropdown {
     width: 100%;
   }
+  
   :host ::ng-deep .p-slider {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-top: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
   }
-   :host ::ng-deep .p-checkbox .p-checkbox-label {
+  
+  :host ::ng-deep .p-checkbox .p-checkbox-label {
     color: var(--text-color);
   }
 }
 
 .no-content-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 2rem;
-  margin-top: 1rem;
-  color: var(--text-color-secondary, #b0b0b0);
+  @extend .empty-state;
+  padding: var(--spacing-3xl);
+  margin-top: var(--spacing-lg);
   
-  i {
-    font-size: 2rem;
-    margin-bottom: 1rem;
+  .state-icon {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--spacing-lg);
   }
-  p {
+  
+  .state-description {
     font-style: italic;
   }
 }
-
-// Import PrimeNG modules used in the template if not already globally available
-// For example, if p-dropdown, p-slider, p-checkbox are used:
-// @import "primeng/resources/themes/saga-blue/theme.css"; // Or your chosen theme
-// @import "primeng/resources/primeng.min.css";
-// These are typically handled in angular.json or main styles.scss

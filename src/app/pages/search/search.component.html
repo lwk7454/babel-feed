@@ -10,8 +10,8 @@
           [(ngModel)]="searchQuery" 
           (ngModelChange)="onSearchQueryChange($event)"
           (keyup.enter)="performSearch()" 
-          placeholder="Search news, topics, sources..." 
-          aria-label="Search query"
+          [placeholder]="'search.placeholder' | translate" 
+          [attr.aria-label]="'search.placeholder' | translate"
           class="search-input-field"/>
       </span>
       @if (searchQuery) {
@@ -29,7 +29,7 @@
     @if (isLoading) {
       <div class="loading-indicator">
         <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-        <p>Searching...</p>
+        <p>{{ 'common.loading' | translate }}</p>
       </div>
     }
 
@@ -39,25 +39,25 @@
       </div>
     }
 
-    @if (!isLoading && !errorMessage && hasSearched && results.length === 0 && searchQuery.trim()) {
+    @if (!isLoading && !errorMessage && hasSearched && searchResults.length === 0 && searchQuery.trim()) {
       <div class="no-results-display">
         <i class="pi pi-search-minus"></i>
-        <h3>No Results Found</h3>
-        <p>Try using different keywords or check your spelling.</p>
+        <h3>{{ 'search.noResults' | translate }}</h3>
+        <p>{{ 'search.noResultsDesc' | translate }}</p>
       </div>
     }
     
     @if (!isLoading && !errorMessage && !hasSearched && !searchQuery.trim()) {
       <div class="initial-search-prompt">
           <i class="pi pi-search"></i>
-          <h3>Search the News</h3>
-          <p>Find articles, topics, and more.</p>
+          <h3>{{ 'search.title' | translate }}</h3>
+          <p>{{ 'search.searchDesc' | translate }}</p>
       </div>
     }
 
-    @if (!isLoading && !errorMessage && results.length > 0) {
+    @if (!isLoading && !errorMessage && searchResults.length > 0) {
       <div class="search-results-list">
-        @for (item of results; track item.id) {
+        @for (item of searchResults; track trackById($index, item)) {
           <p-card 
             (click)="openNewsItem(item)" 
             styleClass="search-result-item p-mb-3" 

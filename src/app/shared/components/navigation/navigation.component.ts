@@ -6,8 +6,10 @@ import { Observable, Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
 import { AppState } from '../../../store';
-import * as UserActions from '../../../store/actions/user.actions';
 import { selectUserData, UserData } from '../../../store/reducers/user.reducer';
+
+// Translation
+import { TranslatePipe } from '../../pipes';
 
 // PrimeNG Modules
 import { ButtonModule } from 'primeng/button';
@@ -20,6 +22,7 @@ import { RippleModule } from 'primeng/ripple';
     CommonModule,
     ButtonModule,
     RippleModule,
+    TranslatePipe,
     AsyncPipe
   ],
   templateUrl: './navigation.component.html',
@@ -99,14 +102,6 @@ export class NavigationComponent implements OnInit, OnDestroy {
   navigateTo(route: string): void {
     this.closeMenu();
     this.router.navigate([route]);
-  }
-
-  /**
-   * Sign out the user
-   */
-  signOut(): void {
-    this.closeMenu();
-    this.store.dispatch(UserActions.signOutStart());
   }
 
   ngOnDestroy(): void {
