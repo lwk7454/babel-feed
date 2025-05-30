@@ -9,13 +9,13 @@ Try to build all UI components with PrimeNG, if the library doesn't have suitabl
 
 Never use `any` in types, fix them. Also run `bun run build` to confirm your code works.
 
-Build API services for an imaginary web service for back end. 
-Don't hard code any dynamic data in the UI, you can mock service responses, but the app itself should be feature-complete. 
+When working in the Angular app and calling a backend service, is the service is not created yet, make assumptions with placeholders. 
+Don't hard code any dynamic data in the UI, you can mock service responses, while the Angular components should be feature-complete. 
 
 Follow best practices for project strucure. Don't embed HTML and SCSS into TS files, separate them into their own files. 
 
-If you failed to update any files (writing error), delete the file then create with original content with your changes.
+If you failed to update any files (writing error), delete the file then create with original content plus your changes.
 
-Be DRY with SCSS code. Always search for shared styles that can be reused before writing new styles.
+Be DRY with SCSS code. Always search and reuse shared styles before writing new styles.
 
 When working with user interface, make sure all text/copy support translation. Add translations for new text to all supported languages. 

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Babel Mobile",
+  "version": "0.1.0",
+  "identifier": "com.babelmobile.app",
+  "build": {
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../../dist/babel-mobile-ng",
+    "beforeDevCommand": "nx serve babel-mobile",
+    "beforeBuildCommand": "nx build babel-mobile"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Babel Mobile",
+        "width": 800,
+        "height": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "News",
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
 # Compiled output
-/dist
+dist
 /tmp
 /out-tsc
 /bazel-out
@@ -31,7 +31,7 @@ yarn-error.log
 .zed
 
 # Miscellaneous
-/.angular/cache
+.angular
 .sass-cache/
 /connect.lock
 /coverage
@@ -42,3 +42,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+
+
+.nx
+.github/instructions/nx.instructions.md
+.github/instructions/nx.instructions.md

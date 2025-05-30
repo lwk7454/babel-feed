@@ -48,17 +48,19 @@ alwaysApply: true
     *   Over-reliance on custom artistic assets that are hard to create/maintain.
 
 # Tech stack
-* This is a mobile app based on Tauri (a cross platform framework). 
-* Front-end is build in Angular 19. 
-* This project is app-only, there will be separate web service project that provides service back-end, provide API endpoint for things like user authentication, retrieve news feed, content personalisation, etc. 
-* Use Bun as JS/TS run time and dependency manager. Don't use npm. 
-* Authentication is social login only for now with JWTs, achieved via Auth.js, assume there is a serverless backend for provider callbacks. 
+* This is a Nx monorepo contains a mobile app and backend API services. 
+* The mobile app is based on Tauri (a cross platform framework) with front-end built in Angular 19 and FrameNG components.  
+* Always use Bun as JS/TS run time and dependency manager. Don't use npm. 
 
-# Architecture
-## Main features
+# Main features
+
+## Mobile App
 * News feed display
 * News content summary page
 * News original source webview
 * Tauri plugin that handles the translation logic and communicates with the webview. It loads the on-device LLM and translate the text contents in a whole HTML, then communicate with the webview to inject the translated content.
 * App design should follow wireframes in ./src/wireframes
 
+## Backend API
+* Using ElysiaJS framework
+* Shares API schema with mobile app via Eden from Elysia
