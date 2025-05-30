@@ -39,6 +39,13 @@
       },
       "defaultConfiguration": "development"
     },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tauri android dev",
+        "cwd": "apps/babel-mobile"
+      }
+    },
     "watch": {
       "executor": "nx:run-commands",
       "options": {

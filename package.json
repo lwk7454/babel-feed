@@ -3,13 +3,12 @@
   "version": "0.1.0",
   "scripts": {
     "ng": "ng",
-    "start:mobile": "nx serve babel-mobile",
+    "tauri": "tauri",
+    "dev:mobile": "nx dev babel-mobile",
     "build:mobile": "nx build babel-mobile",
-    "watch:mobile": "nx watch babel-mobile",
-    "start:api": "nx serve babel-api",
+    "dev:api": "nx dev babel-api",
     "build:api": "nx build babel-api",
-    "dev:android": "tauri android dev",
-    "tauri": "tauri"
+    "dev": "nx run-many --target=dev --projects=babel-mobile,babel-api --parallel"
   },
   "private": true,
   "dependencies": {
