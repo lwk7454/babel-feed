@@ -11,9 +11,9 @@
     </div>
     <div class="p-toolbar-group-right">
       @if (!isLoading && !errorMessage && newsItem) {
-        <div class="translate-control">
-          <label for="translate-switch" class="p-mr-2">{{ 'article.translate' | translate }}</label>
-          <p-inputSwitch inputId="translate-switch" [(ngModel)]="isTranslating" (onChange)="onToggleTranslate($event)"></p-inputSwitch>
+        <div class="article-actions">
+          <p-button type="button" icon="pi pi-ellipsis-v" (click)="menu.toggle($event)" styleClass="p-button-text p-button-rounded" aria-label="Article Options"></p-button>
+          <p-menu #menu [model]="functionMenuItems" [popup]="true"></p-menu>
         </div>
       }
     </div>
@@ -34,29 +34,16 @@
       </div>
     }
 
-    @if (!isLoading && !errorMessage && safeUrl) {
-      <div id="webview-container" class="webview-container">
-        <!-- 
-          The iframe will display the external content.
-          Security considerations (like X-Frame-Options) might prevent some URLs from being iframed.
-          A backend proxy or fetching content server-side could be a more robust solution for production.
-        -->
-        <iframe 
-          [src]="safeUrl" 
-          class="article-iframe" 
-          frameborder="0" 
-          title="External Content View"
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms" 
-          (load)="onIframeLoad()"
-          aria-label="Content from external source">
-        </iframe>
+    @if (!isLoading && !errorMessage && currentUrl) { // Condition changed from safeUrl to currentUrl
+      <div id="wry-webview-container" class="webview-container">
+        <!-- WRY WebView will be attached here by the component's TypeScript -->
       </div>
     }
     
-    @if (!isLoading && !errorMessage && !safeUrl && newsItem && currentUrl) {
+    @if (!isLoading && !errorMessage && !newsItem?.url && newsItem) { // Condition updated
       <div class="no-content-display">
          <p-message severity="warn" [text]="'article.cannotDisplay' | translate"></p-message>
-         <p-button [label]="'article.openInNewTab' | translate" icon="pi pi-external-link" (click)="openInNewTab(currentUrl)" styleClass="p-mt-2"></p-button>
+         <p-button [label]="'article.openInNewTab' | translate" icon="pi pi-external-link" (click)="openInNewTab(currentUrl!)" styleClass="p-mt-2"></p-button>
       </div>
     }
 
