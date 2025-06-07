@@ -14,7 +14,6 @@ import {
   TopicPreference,
   BlockedSource
 } from '../../store/reducers/preferences.reducer';
-import { NavigationComponent } from '../../shared/components';
 
 // PrimeNG Modules
 import { CheckboxModule } from 'primeng/checkbox';
@@ -41,7 +40,6 @@ export interface SourceVM {
     PanelModule,
     DividerModule,
     ToastModule,
-    NavigationComponent,
     AsyncPipe
   ],
   providers: [MessageService],

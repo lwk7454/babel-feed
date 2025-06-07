@@ -19,9 +19,11 @@
       </p>
     </div>
 
-    <div class="messages-section mb-lg" *ngIf="messages.length > 0">
-      <p-messages [(value)]="messages" [enableService]="false" [closable]="true"></p-messages>
-    </div>
+    @if (messages.length > 0) {
+      <div class="messages-section mb-lg">
+        <p-messages [(value)]="messages" [enableService]="false" [closable]="true"></p-messages>
+      </div>
+    }
 
     <form [formGroup]="otpForm" (ngSubmit)="onVerifyOtp()" class="otp-form">
       <div class="p-fluid form-group mb-lg">
@@ -30,25 +32,27 @@
           <i class="pi pi-key"></i>
           <input id="otp-input" type="text" pInputText formControlName="otp" [placeholder]="'otp.placeholder' | translate" maxlength="4" />
         </span>
-        <small 
-          *ngIf="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched" 
-          class="p-error block mt-1">
-          {{ 'otp.errorInvalidOtp' | translate }}
-        </small>
+        @if (otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched) {
+          <small class="p-error block mt-1">
+            {{ 'otp.errorInvalidOtp' | translate }}
+          </small>
+        }
       </div>
 
-      <div *ngIf="loading$ | async" class="loading-container">
-        <p-progressSpinner strokeWidth="4" animationDuration="1s"></p-progressSpinner>
-      </div>
-
-      <p-button 
-        *ngIf="!(loading$ | async)"
-        [label]="'otp.verifyButton' | translate"
-        icon="pi pi-check"
-        type="submit"
-        styleClass="verify-otp-btn mt-3"
-        [disabled]="otpForm.invalid">
-      </p-button>
+      @if (loading$ | async) {
+        <div class="loading-container">
+          <p-progressSpinner strokeWidth="4" animationDuration="1s"></p-progressSpinner>
+        </div>
+      }
+      @if (!(loading$ | async)) {
+        <p-button
+          [label]="'otp.verifyButton' | translate"
+          icon="pi pi-check"
+          type="submit"
+          styleClass="verify-otp-btn mt-3"
+          [disabled]="otpForm.invalid">
+        </p-button>
+      }
     </form>
   </div>
 </div> 

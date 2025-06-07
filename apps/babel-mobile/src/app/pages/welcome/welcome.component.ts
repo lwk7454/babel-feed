@@ -69,7 +69,9 @@ export class WelcomeComponent implements OnInit, OnDestroy {
   }
   
   goToSignIn(): void {
+    console.log('Attempting to navigate to signin...');
     if (this.currentSelectedLanguage) {
+      console.log('Language selected, proceeding with navigation.');
       this.router.navigate(['/signin']);
     } else {
       console.warn('No language selected. Please select a language to proceed.');

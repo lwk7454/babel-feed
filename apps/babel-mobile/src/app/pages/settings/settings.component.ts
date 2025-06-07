@@ -12,7 +12,6 @@ import { selectUserData, UserData, selectUserIsAuthenticated } from '../../store
 import { selectSelectedLanguage, selectAvailableLanguages, LanguagePreference } from '../../store/reducers/preferences.reducer';
 import { ThemeService } from '../../services/theme.service';
 import { TranslationService } from '../../services/translation.service';
-import { NavigationComponent } from '../../shared/components';
 import { TranslatePipe } from '../../shared/pipes';
 
 // PrimeNG Modules
@@ -40,7 +39,6 @@ import { TagModule } from 'primeng/tag';
     DropdownModule,
     FormsModule,
     TagModule,
-    NavigationComponent,
     TranslatePipe,
     AsyncPipe
   ],

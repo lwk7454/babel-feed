@@ -1,80 +1,89 @@
 <div class="feed-page-container">
-  <!-- Navigation Component -->
-  <app-navigation 
-    [showSearch]="true" 
-    [showRefresh]="true"
-    [onSearch]="handleSearch.bind(this)"
-    [onRefresh]="refreshFeed.bind(this)">
-  </app-navigation>
-
   <!-- Feed Content -->
   <div class="feed-content overflow-y-auto">
     <!-- Loading state -->
-    <div *ngIf="(loading$ | async) === true && !(newsItems$ | async)?.length" class="loading-state">
-      <p-progressSpinner styleClass="custom-spinner" strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
-      <p class="state-description">{{ 'feed.loadingFeed' | translate }}</p>
-    </div>
+    @if ((loading$ | async) === true && !(newsItems$ | async)?.length) {
+      <div class="loading-state">
+        <p-progressSpinner styleClass="custom-spinner" strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
+        <p class="state-description">{{ 'feed.loadingFeed' | translate }}</p>
+      </div>
+    }
 
     <!-- Error state -->
-    <div *ngIf="currentError" class="error-state">
-      <i class="pi pi-exclamation-circle state-icon"></i>
-      <h3 class="state-title">{{ 'common.error' | translate }}</h3>
-      <p class="state-description">{{ currentError }}</p>
-      <p-button 
-        [label]="'feed.retry' | translate" 
-        (click)="refreshFeed()" 
-        styleClass="p-button-outlined">
-      </p-button>
-    </div>
+    @if (currentError) {
+      <div class="error-state">
+        <i class="pi pi-exclamation-circle state-icon"></i>
+        <h3 class="state-title">{{ 'common.error' | translate }}</h3>
+        <p class="state-description">{{ currentError }}</p>
+        <p-button 
+          [label]="'feed.retry' | translate" 
+          (click)="refreshFeed()" 
+          styleClass="p-button-outlined">
+        </p-button>
+      </div>
+    }
 
     <!-- Empty state -->
-    <div *ngIf="!(loading$ | async) && !(currentError) && (newsItems$ | async)?.length === 0" class="empty-state">
-      <i class="pi pi-objects-column state-icon"></i>
-      <h3 class="state-title">{{ 'feed.noArticles' | translate }}</h3>
-      <p class="state-description">{{ 'feed.noArticlesDesc' | translate }}</p>
-      <p-button 
-        [label]="'feed.refreshFeed' | translate" 
-        icon="pi pi-refresh"
-        (click)="refreshFeed()" 
-        styleClass="btn-primary">
-      </p-button>
-    </div>
+    @if (!(loading$ | async) && !(currentError) && (newsItems$ | async)?.length === 0) {
+      <div class="empty-state">
+        <i class="pi pi-objects-column state-icon"></i>
+        <h3 class="state-title">{{ 'feed.noArticles' | translate }}</h3>
+        <p class="state-description">{{ 'feed.noArticlesDesc' | translate }}</p>
+        <p-button 
+          [label]="'feed.refreshFeed' | translate" 
+          icon="pi pi-refresh"
+          (click)="refreshFeed()" 
+          styleClass="btn-primary">
+        </p-button>
+      </div>
+    }
 
     <!-- Feed Items -->
-    <div *ngIf="newsItems$ | async as items" class="container p-xl">
-      <div *ngFor="let item of items; trackBy: trackById" 
-           class="card card-interactive mb-xl feed-item" 
-           [ngClass]="{
-             'article-item': item.type === 'article', 
-             'video-item': item.type === 'video',
-             'no-image': !item.imageUrl
-           }"
-           (click)="openNewsItem(item)"
-           tabindex="0" 
-           role="article"
-           [attr.aria-label]="item.title + ' from ' + item.source">
+    @if (newsItems$ | async; as items) {
+      <div class="container p-xl">
+        @for (item of items; track trackById(item)) {
+          <div class="card card-interactive mb-xl feed-item"
+               [ngClass]="{
+                 'article-item': item.type === 'article',
+                 'video-item': item.type === 'video',
+                 'no-image': !item.imageUrl
+               }"
+               (click)="openNewsItem(item)"
+               tabindex="0"
+               role="article"
+               [attr.aria-label]="item.title + ' from ' + item.source">
 
-        <div *ngIf="item.imageUrl" class="item-image-wrapper">
-          <img [src]="item.imageUrl" [alt]="'Image for ' + item.title" class="item-image"/>
-          <div *ngIf="item.type === 'video'" class="video-play-overlay">
-            <i class="pi pi-play-circle"></i>
+            @if (item.imageUrl) {
+              <div class="item-image-wrapper">
+                <img [src]="item.imageUrl" [alt]="'Image for ' + item.title" class="item-image"/>
+                @if (item.type === 'video') {
+                  <div class="video-play-overlay">
+                    <i class="pi pi-play-circle"></i>
+                  </div>
+                }
+                @if (item.type === 'video' && item.duration) {
+                  <span class="video-duration-badge">{{ item.duration }}</span>
+                }
+              </div>
+            }
+
+            <div class="item-content-wrapper">
+              <h3 class="item-title">{{ item.title }}</h3>
+
+              @if (item.type === 'article' && item.summary) {
+                <p class="item-summary">
+                  {{ item.summary }}
+                </p>
+              }
+
+              <div class="item-meta">
+                <span class="item-source">{{ item.source }}</span>
+                <span class="item-published-date">{{ item.publishedAt | date:'short' }}</span>
+              </div>
+            </div>
           </div>
-          <span *ngIf="item.type === 'video' && item.duration" class="video-duration-badge">{{ item.duration }}</span>
-        </div>
-        
-        <div class="item-content-wrapper">
-          <h3 class="item-title">{{ item.title }}</h3>
-          
-          <p *ngIf="item.type === 'article' && item.summary" class="item-summary">
-            {{ item.summary }}
-          </p>
-          
-          <div class="item-meta">
-            <span class="item-source">{{ item.source }}</span>
-            <span class="item-published-date">{{ item.publishedAt | date:'short' }}</span>
-          </div>
-        </div>
+        }
       </div>
-    </div>
+    }
   </div>
 </div>

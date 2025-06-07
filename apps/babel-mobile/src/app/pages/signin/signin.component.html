@@ -17,41 +17,48 @@
   </div>
 
   <!-- Error messages -->
-  <div class="messages-section mb-lg" *ngIf="messages.length > 0">
-    <p-messages [(value)]="messages" [enableService]="false" [closable]="true" styleClass="auth-messages"></p-messages>
-  </div>
+  @if (messages.length > 0) {
+    <div class="messages-section mb-lg">
+      @for (message of messages; track message) {
+        <p-message [severity]="message.severity" [text]="message.text"></p-message>
+      }
+    </div>
+  }
 
   <!-- Sign in section -->
-  <div class="signin-section" [formGroup]="signInForm">
-    <!-- Loading state -->
-    <div *ngIf="loading$ | async" class="loading-container">
+  @if (loading$ | async) {
+    <div class="loading-container">
       <p-progressSpinner strokeWidth="3" animationDuration=".8s"></p-progressSpinner>
       <p class="loading-text">{{ 'auth.signingIn' | translate }}</p>
     </div>
+  }
 
-    <!-- Sign in form -->
-    <div *ngIf="!(loading$ | async)" class="signin-actions">
-      <div class="p-fluid form-group mb-lg">
-        <span class="p-input-icon-left">
-          <i class="pi pi-envelope"></i>
-          <input type="email" pInputText formControlName="email" [placeholder]="'auth.emailPlaceholder' | translate" />
-        </span>
-        <small 
-          *ngIf="signInForm.get('email')?.invalid && signInForm.get('email')?.touched" 
-          class="p-error block mt-1">
-          {{ 'auth.errorInvalidEmail' | translate }}
-        </small>
+  @if (!(loading$ | async)) {
+    <div class="signin-section" [formGroup]="signInForm">
+      <!-- Sign in form -->
+      <div class="signin-actions">
+        <div class="p-fluid form-group mb-lg">
+          <span class="p-input-icon-left">
+            <i class="pi pi-envelope"></i>
+            <input type="email" pInputText formControlName="email" [placeholder]="'auth.emailPlaceholder' | translate" />
+          </span>
+          @if (signInForm.get('email')?.invalid && signInForm.get('email')?.touched) {
+            <small class="p-error block mt-1">
+              {{ 'auth.errorInvalidEmail' | translate }}
+            </small>
+          }
+        </div>
+        <p-button 
+          [label]="'auth.continueWithEmail' | translate"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          (onClick)="signInWithEmail()"
+          styleClass="email-signin-btn"
+          [disabled]="signInForm.invalid">
+        </p-button>
       </div>
-      <p-button 
-        [label]="'auth.continueWithEmail' | translate"
-        icon="pi pi-arrow-right"
-        iconPos="right"
-        (onClick)="signInWithEmail()"
-        styleClass="email-signin-btn"
-        [disabled]="signInForm.invalid">
-      </p-button>
     </div>
-  </div>
+  }
 
   <!-- Theme toggle button -->
   <div class="theme-toggle mt-xl">

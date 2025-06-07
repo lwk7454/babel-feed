@@ -9,7 +9,6 @@ import { ApiService, NewsItem } from '../../services/api.service'; // Assuming N
 import { AppState } from '../../store'; // Assuming AppState is correctly defined
 import * as FeedActions from '../../store/actions/feed.actions';
 import { LanguagePreference, selectSelectedLanguage } from '../../store/reducers/preferences.reducer';
-import { NavigationComponent } from '../../shared/components';
 import { TranslatePipe } from '../../shared/pipes';
 
 // PrimeNG Modules for basic UI elements (e.g., button, ripple for interaction)
@@ -31,7 +30,6 @@ export type FeedDisplayItem = NewsItem;
     DatePipe, // For formatting dates in the template
     AsyncPipe, // For async pipe
     NgClass, // For ngClass directive
-    NavigationComponent, // Navigation component
     TranslatePipe // Translation pipe
   ],
   templateUrl: './feed.component.html',

@@ -1,1 +1,15 @@
+@if (isAuthenticated$ | async) {
+  <p-tabs styleClass="bottom-nav">
+    <p-tablist>
+      @for (item of navItems; track item.routerLink) {
+        <p-tab [value]="item.routerLink" [routerLink]="item.routerLink" routerLinkActive="p-highlight active-link-custom">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </p-tab>
+      }
+    </p-tablist>
+    <!-- No p-tabpanels needed as content is handled by the main router-outlet -->
+  </p-tabs>
+}
+
 <router-outlet></router-outlet>

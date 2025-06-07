@@ -15,22 +15,24 @@
 
   <div class="header-right">
     <!-- Search button - conditionally shown -->
-    <p-button 
-      *ngIf="showSearch"
-      icon="pi pi-search"
-      (click)="openSearch()"
-      styleClass="p-button-rounded p-button-text search-btn"
-      aria-label="Search">
-    </p-button>
+    @if (showSearch) {
+      <p-button 
+        icon="pi pi-search"
+        (click)="openSearch()"
+        styleClass="p-button-rounded p-button-text search-btn"
+        aria-label="Search">
+      </p-button>
+    }
     
     <!-- Refresh button - conditionally shown -->
-    <p-button 
-      *ngIf="showRefresh"
-      icon="pi pi-refresh"
-      (click)="handleRefresh()"
-      styleClass="p-button-rounded p-button-text refresh-btn"
-      aria-label="Refresh">
-    </p-button>
+    @if (showRefresh) {
+      <p-button 
+        icon="pi pi-refresh"
+        (click)="handleRefresh()"
+        styleClass="p-button-rounded p-button-text refresh-btn"
+        aria-label="Refresh">
+      </p-button>
+    }
   </div>
 </div>
 

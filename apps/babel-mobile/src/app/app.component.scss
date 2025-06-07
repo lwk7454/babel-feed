@@ -1,6 +1,51 @@
 /* Styles for AppComponent. Will be minimal as layout is delegated. */
 :host {
-  display: block; /* Or flex, depending on whether it needs to fill height */
+  display: block; /* THIS IS IMPORTANT for padding-bottom to work */
   height: 100%;
   position: relative; /* Needed for route animations if they affect host */
+}
+
+:host.auth-padding {
+  padding-bottom: 70px; /* Adjust this value based on the height of your bottom-nav */
+}
+
+:host ::ng-deep .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000; /* Ensure it's above other content */
+    background-color: var(--surface-ground); /* Explicitly use a theme variable for background */
+    border-top: 1px solid var(--surface-border); /* Add a border for better visibility */
+
+    .p-tablist {
+        display: flex;
+        justify-content: space-around; /* Distribute items evenly */
+    }
+
+    p-tab {
+        display: flex; /* Make p-tab a flex container for its icon and span */
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem;
+        text-decoration: none;
+        color: var(--text-color); /* Use theme variable */
+        cursor: pointer;
+
+        i {
+            font-size: 1.5rem; /* Adjust icon size as needed */
+            margin-bottom: 0.25rem;
+        }
+
+        span {
+            font-size: 0.75rem; /* Adjust text size as needed */
+        }
+    }
+
+    /* Handles the active state. 
+    * PrimeNG's routerLinkActive often adds p-highlight. We also add our custom class. */
+    p-tab.active-link-custom, p-tab.p-highlight {
+        color: var(--primary-color); /* Use theme variable for active state */
+        /* Add any other distinct styling for active tabs if needed */
+    }
 }

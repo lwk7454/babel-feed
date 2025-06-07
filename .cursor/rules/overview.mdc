@@ -59,7 +59,7 @@ alwaysApply: true
 * News content summary page
 * News original source webview
 * Tauri plugin that handles the translation logic and communicates with the webview. It loads the on-device LLM and translate the text contents in a whole HTML, then communicate with the webview to inject the translated content.
-* App design should follow wireframes in ./src/wireframes
+* App design should follow wireframes in ./apps/babel-mobile/wireframes
 
 ## Backend API
 * Using ElysiaJS framework
