@@ -6,7 +6,7 @@ import { ApiService, NewsItem } from '../../services/api.service'; // Assuming N
 // import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser'; // Removed
 import { Store } from '@ngrx/store';
 import { Observable, Subject, combineLatest } from 'rxjs';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/tauri';
 import { takeUntil, switchMap, distinctUntilChanged } from 'rxjs/operators';
 
 // State management
@@ -27,7 +27,7 @@ import { MenuItem } from 'primeng/api';
 
 // Placeholder for WRY WebView class/object
 // declare var WebView: any; // Removed
-import { Webview as TauriWebview } from '@tauri-apps/api/webview';
+import { WebviewWindow } from '@tauri-apps/api/window';
 
 @Component({
   selector: 'app-article',
@@ -49,7 +49,7 @@ export class ArticleComponent implements OnInit, OnDestroy, AfterViewInit {
   newsItem: NewsItem | undefined;
   // safeUrl: SafeResourceUrl | null = null; // Removed
   currentUrl: string | undefined;
-  private webview: TauriWebview | null = null;
+  private webview: WebviewWindow | null = null;
   
   isLoading: boolean = true;
   errorMessage: string | undefined;
@@ -332,7 +332,7 @@ export class ArticleComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       console.log(`Initializing WRY WebView for URL: ${this.currentUrl || 'about:blank'}`);
 
-      this.webview = new TauriWebview(container, {
+      this.webview = new WebviewWindow('articleWebview', {
         url: this.currentUrl || 'about:blank',
         // Actual event handling would be more complex, e.g., using `listen` from `@tauri-apps/api/event`
         // on specific events emitted by this webview instance if it's a separate window,

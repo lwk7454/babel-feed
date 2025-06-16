@@ -5,7 +5,7 @@
   "identifier": "com.babelmobile.app",
   "build": {
     "devUrl": "http://localhost:1420",
-    "frontendDist": "../../dist/babel-mobile-ng",
+    "frontendDist": "../../../dist/babel-mobile-ng/browser",
     "beforeDevCommand": "nx serve babel-mobile",
     "beforeBuildCommand": "nx build babel-mobile"
   },

@@ -41,7 +41,7 @@
     <!-- Feed Items -->
     @if (newsItems$ | async; as items) {
       <div class="container p-xl">
-        @for (item of items; track trackById(item)) {
+        @for (item of items; track trackById($index, item)) {
           <div class="card card-interactive mb-xl feed-item"
                [ngClass]="{
                  'article-item': item.type === 'article',

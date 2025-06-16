@@ -1,18 +1,24 @@
+import path from 'path';
+import os from 'os';
+import { spawn, spawnSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// keep track of the `tauri-driver` child process
+let tauriDriver;
+
 const capabilities = [{
     maxInstances: 1,
-    browserName: 'chrome',
-    'goog:chromeOptions': {
-        binary: '/opt/google/chrome/chrome' // Adjust if necessary
-    },
     'tauri:options': {
-        application: '../../target/release/babel-mobile' // Adjust to your Tauri app path
+        application: path.resolve(__dirname, './src-tauri/target/release/babel-mobile')
     }
 }];
 
 if (process.env.CI) {
-    capabilities[0]['goog:chromeOptions'].args = ['headless', 'disable-gpu'];
+    capabilities[0].args = ['--headless', '--disable-gpu'];
 }
-
 
 export const config = {
     runner: 'local',
@@ -22,32 +28,44 @@ export const config = {
     exclude: [
         './e2e/specs/mobile/**/*.spec.js'
     ],
-    maxInstances: 10,
+    maxInstances: 1,
     capabilities: capabilities,
     logLevel: 'info',
     bail: 0,
-    baseUrl: 'http://localhost',
     waitforTimeout: 10000,
     connectionRetryTimeout: 120000,
     connectionRetryCount: 3,
-    services: ['tauri'],
     framework: 'mocha',
     reporters: ['spec'],
     mochaOpts: {
         ui: 'bdd',
         timeout: 60000
     },
-    async beforeSession(config, capabilities, specs, cid) {
-        // Start tauri-driver
-        // You might need to adjust the path to tauri-driver and your Tauri app
-        // Ensure tauri-driver is in your PATH or provide the full path
-        // Ensure your Tauri app is built in release mode for testing
-        console.log('Starting tauri-driver...');
-        // This is a placeholder, actual tauri-driver start might be handled by the service
+
+    // ensure the rust project is built since we expect this binary to exist for the webdriver sessions
+    onPrepare: () => {
+        console.log('Building Tauri application...');
+        spawnSync('tauri', ['build'], { 
+            cwd: path.resolve(__dirname), 
+            stdio: 'inherit' 
+        });
     },
-    async afterSession(config, capabilities, specs) {
-        // Stop tauri-driver
-        console.log('Stopping tauri-driver...');
-        // This is a placeholder, actual tauri-driver stop might be handled by the service
+
+    // ensure we are running `tauri-driver` before the session starts so that we can proxy the webdriver requests
+    beforeSession: () => {
+        console.log('Starting tauri-driver...');
+        tauriDriver = spawn(
+            path.resolve(os.homedir(), '.cargo', 'bin', 'tauri-driver'),
+            [],
+            { stdio: [null, process.stdout, process.stderr] }
+        );
+    },
+
+    // clean up the `tauri-driver` process we spawned at the start of the session
+    afterSession: () => {
+        if (tauriDriver) {
+            console.log('Stopping tauri-driver...');
+            tauriDriver.kill();
+        }
     }
 };

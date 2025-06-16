@@ -1,0 +1,23 @@
+---
+description: When working on the external website browsing feature, which is the page shown when a user selects an item in the feed.
+globs: 
+alwaysApply: false
+---
+# External website webview Feature Overview
+
+This page contains 2 major parts, preferably achieved with 2 webviews:
+- A narbar that aligns to the main app's theme. It contains a back button (goes back to the feed) and a menu dropdown. The dropdown list has translation toggle and read aloud features. More features are to be added in the future.
+- A main webview (not iframe) that opens an external URL. 
+
+## Navbar
+This should be part of the main app, meaning it manages the current page, states and route. 
+The menu button shows a dropdown as overlay over other parts of the page (so it overflows the navbar). We have a open mind of how to display this due to technology limitations, for example: when it's hard to overflow outside of navbar's webview, we could consider showing a full screen overlay with modal, or a drawer pops from the bottom of the screen. Given this page shows multiple webviews, the dropdown or overlay needs to show on top of everything.
+
+## External website webview
+This is a separate webview inside of this page. It could be dettached from the main app flow, meaning a separate Tauri webview in the window. 
+- It shows uncontrolled contents from arbitrary external websites. 
+- It filters network traffic from the displayed website, and potentially blocks ads. 
+- It can extract all HTML content from the website, then inject modified contents back, like a browser plugin. 
+- It does above features via a common interface to the webview across different system platforms. For example it should work the same way in both Android and iOS. 
+- All above features are controlled via the main app. For example, selecting "toggle translation" from the nav bar will extract the HTML content and trigger a tranlation command to the Tauri backend, then inject response back into this webview. 
+

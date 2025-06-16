@@ -66,16 +66,16 @@
     "e2e": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bunx wdio run apps/babel-mobile/wdio.conf.js",
-        "cwd": "{projectRoot}"
+        "command": "bunx wdio run wdio.conf.js",
+        "cwd": "apps/babel-mobile"
       },
       "outputs": ["{workspaceRoot}/coverage/apps/babel-mobile"]
     },
     "e2e:mobile": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bunx wdio run apps/babel-mobile/wdio.mobile.conf.js",
-        "cwd": "{projectRoot}"
+        "command": "bunx wdio run wdio.mobile.conf.js",
+        "cwd": "apps/babel-mobile"
       },
       "outputs": ["{workspaceRoot}/coverage/apps/babel-mobile"]
     }
