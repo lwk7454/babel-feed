@@ -26,46 +26,70 @@
 .article-toolbar {
   background-color: var(--surface-card);
   border-bottom: 1px solid var(--surface-border);
-  padding: var(--spacing-sm) var(--spacing-md);
+  // padding: var(--spacing-sm) var(--spacing-md); // Original padding
+  padding-top: 4px !important; // Reduced padding
+  padding-bottom: 4px !important; // Reduced padding
+  min-height: 48px; // Target height for a "thin" bar
 
   /* Ensure toolbar items are vertically centered */
   :host ::ng-deep .p-toolbar-group-left,
   :host ::ng-deep .p-toolbar-group-right {
     display: flex;
     align-items: center;
+    height: 100%; // Ensure groups take full height for alignment
   }
   
   .source-url-display {
     display: flex;
     align-items: center;
-    margin-left: var(--spacing-lg);
-    font-size: var(--font-size-xs);
+    margin-left: 8px; // Reduced margin
+    font-size: 0.8rem; // Make URL display smaller
     color: var(--text-color-secondary);
-    max-width: 300px;
+    max-width: 150px; // Constrain width
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 
     i {
       margin-right: var(--spacing-sm);
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-sm); // Keep or adjust icon size
     }
     
     a {
       @extend .link-subtle;
+      text-decoration: none; // Ensure no underline if not desired
+      &:hover {
+        text-decoration: underline; // Add underline on hover
+      }
     }
   }
 
-  .translate-control {
+  // Styles for the new function button and its container
+  .article-actions {
     display: flex;
     align-items: center;
+  }
+
+  // Common style for text buttons in the toolbar (back and options)
+  :host ::ng-deep .p-button.p-button-text {
+    width: 36px; // Fixed width for rounder buttons
+    height: 36px; // Fixed height
+    color: var(--text-color); // Ensure icon color matches text
     
-    label {
-      margin-right: var(--spacing-sm);
-      font-size: var(--font-size-sm);
-      color: var(--text-color);
+    &:hover {
+      background-color: var(--surface-hover); // Consistent hover
+    }
+    .p-button-icon {
+      font-size: 1.25rem; // Adjust icon size if needed
     }
   }
+   // Specific for rounded ellipsis button if needed
+  :host ::ng-deep .p-button.p-button-rounded.p-button-text {
+    // Potentially more specific styles if the general .p-button.p-button-text is not enough
+  }
+
+  // Remove styles for the old translate-control if it's fully replaced
+  // .translate-control { ... }
 }
 
 .content-area {

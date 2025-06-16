@@ -62,6 +62,22 @@
           "apps/babel-mobile/**/*.html"
         ]
       }
+    },
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bunx wdio run wdio.conf.js",
+        "cwd": "apps/babel-mobile"
+      },
+      "outputs": ["{workspaceRoot}/coverage/apps/babel-mobile"]
+    },
+    "e2e:mobile": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bunx wdio run wdio.mobile.conf.js",
+        "cwd": "apps/babel-mobile"
+      },
+      "outputs": ["{workspaceRoot}/coverage/apps/babel-mobile"]
     }
   },
   "implicitDependencies": []

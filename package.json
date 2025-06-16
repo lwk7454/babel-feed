@@ -1,6 +1,7 @@
 {
   "name": "babel-feed",
   "version": "0.1.0",
+  "type": "module",
   "scripts": {
     "ng": "ng",
     "tauri": "tauri",
@@ -8,7 +9,14 @@
     "build:mobile": "nx build babel-mobile",
     "dev:api": "nx dev babel-api",
     "build:api": "nx build babel-api",
-    "dev": "nx run-many --target=dev --projects=babel-mobile,babel-api --parallel"
+    "dev": "nx run-many --target=dev --projects=babel-mobile,babel-api --parallel",
+    "test:e2e": "nx run babel-mobile:e2e",
+    "test:e2e:mobile": "nx run babel-mobile:e2e:mobile",
+    "test:e2e:mobile:ci": "CI=true nx run babel-mobile:e2e:mobile",
+    "test:webview": "nx run babel-mobile:e2e --spec=**/webview-translation.spec.js",
+    "test:webview:mobile": "nx run babel-mobile:e2e:mobile --spec=**/webview-translation.spec.js",
+    "test:webview:ci": "CI=true nx run babel-mobile:e2e:mobile --spec=**/webview-translation.spec.js",
+    "test:ci:local": "cd apps/babel-mobile && ./scripts/setup-android-ci.sh && CI=true bun run test:webview:ci"
   },
   "private": true,
   "dependencies": {
@@ -48,7 +56,6 @@
     "@angular/build": "^19.2.12",
     "@angular/cli": "^19.2.12",
     "@angular/compiler-cli": "^19.2.10",
-    "bun-types": "latest",
     "@eslint/js": "^9.8.0",
     "@nx/angular": "^21.1.2",
     "@nx/esbuild": "21.1.2",
@@ -63,6 +70,14 @@
     "@tauri-apps/cli": "^2",
     "@types/jasmine": "~5.1.0",
     "@types/node": "~18.16.9",
+    "@wdio/appium-service": "^9.15.0",
+    "@wdio/cli": "^9.15.0",
+    "@wdio/local-runner": "^9.15.0",
+    "@wdio/mocha-framework": "^9.15.0",
+    "@wdio/spec-reporter": "^9.15.0",
+    "appium": "^2.19.0",
+    "appium-uiautomator2-driver": "^4.2.3",
+    "bun-types": "latest",
     "esbuild": "^0.19.2",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",

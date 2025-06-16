@@ -8,7 +8,7 @@ import { Store } from '@ngrx/store';
 // PrimeNG Modules
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { MessagesModule } from 'primeng/messages';
+import { MessageModule } from 'primeng/message';
 import { InputTextModule } from 'primeng/inputtext';
 
 import * as UserActions from '../../store/actions/user.actions';
@@ -27,7 +27,7 @@ import { TranslatePipe } from '../../shared/pipes';
     ReactiveFormsModule,
     ButtonModule,
     ProgressSpinnerModule,
-    MessagesModule,
+    MessageModule,
     InputTextModule,
     AsyncPipe,
     TranslatePipe
