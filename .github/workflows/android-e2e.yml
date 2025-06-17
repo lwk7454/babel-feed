@@ -100,7 +100,7 @@ jobs:
         cd apps/babel-mobile
         source .env.ci 2>/dev/null || true
         echo "Running tests on ARM64 Android emulator..."
-        bun run test:webview:ci
+        bun run test:e2e:ci
       env:
         CI: true
         ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}

@@ -11,6 +11,9 @@ dist
 npm-debug.log
 yarn-error.log
 
+**/debug-logs/*
+emulator.log
+
 # IDEs and editors
 .idea/
 .project
@@ -43,7 +46,8 @@ testem.log
 .DS_Store
 Thumbs.db
 
-
+# Tauri/Cargo system-specific configs
+apps/babel-mobile/.cargo/config.toml
 
 .nx
 .github/instructions/nx.instructions.md

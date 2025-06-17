@@ -53,30 +53,27 @@ bun tauri android build
 ### Option 1: Using npm scripts (Recommended)
 ```bash
 # Run all e2e tests on Android
-bun run test:e2e:android
+bun run test:e2e:
 
-# Run only webview translation tests on Android
-bun run test:webview:android
-```
 
 ### Option 2: Using nx directly
 ```bash
 # Run mobile e2e tests
-nx run babel-mobile:e2e:mobile
+nx run babel-mobile:e2e:
 
 # Run specific test file
-nx run babel-mobile:e2e:mobile --spec="**/webview-translation.spec.js"
+nx run babel-mobile:e2e --spec="**/webview-translation.spec.js"
 ```
 
 ### Option 3: Using WebDriverIO directly
 ```bash
 cd apps/babel-mobile
-bunx wdio run wdio.mobile.conf.js
+bunx wdio run wdio.conf.js
 ```
 
 ## Test Configuration
 
-### Mobile Configuration (`wdio.mobile.conf.js`)
+### Mobile Configuration (`wdio.conf.js`)
 - **Platform**: Android
 - **Automation**: UiAutomator2
 - **App Path**: `./src-tauri/target/release/bundle/android/babel-mobile.apk`
@@ -116,7 +113,7 @@ bunx wdio run wdio.mobile.conf.js
 ### Debug Mode
 To run tests with more verbose logging:
 ```bash
-WDIO_LOG_LEVEL=debug bun run test:webview:android
+WDIO_LOG_LEVEL=debug bun run test:e2e
 ```
 
 ## Test Development
@@ -150,7 +147,7 @@ The project supports headless Android testing for CI pipelines:
 ./scripts/setup-android-ci.sh
 
 # Run tests in CI mode (headless)
-CI=true bun run test:webview:ci
+CI=true bun run test:e2e:ci
 ```
 
 ### GitHub Actions
@@ -180,10 +177,44 @@ RUN curl -fsSL https://bun.sh/install | bash
 
 | Script | Description |
 |--------|-------------|
-| `bun run test:e2e:mobile` | Run all mobile e2e tests |
-| `bun run test:e2e:mobile:ci` | Run mobile tests in CI mode (headless) |
-| `bun run test:webview:mobile` | Run webview translation tests on mobile |
-| `bun run test:webview:ci` | Run webview tests in CI mode (headless) |
+| `bun run test:e2e` | Run all mobile e2e tests |
+| `bun run test:e2e:ci` | Run mobile tests in CI mode (headless) |
 | `bun run build:mobile` | Build Android APK |
-| `nx run babel-mobile:e2e:mobile` | Run mobile tests via nx |
+| `nx run babel-mobile:e2e` | Run mobile tests via nx |
 | `./scripts/setup-android-ci.sh` | Set up headless Android environment for CI |
+
+## Setup
+
+### Android Development Setup
+
+For Android builds, you need to configure Cargo with your system-specific NDK paths:
+
+1. Copy the template file:
+   ```bash
+   cp .cargo/config.toml.template .cargo/config.toml
+   ```
+
+2. Update the paths in `.cargo/config.toml`:
+   - Replace `$ANDROID_NDK_ROOT` with your actual NDK path
+   - For macOS: usually `~/Library/Android/sdk/ndk/[VERSION]` 
+   - For Linux: usually `~/Android/Sdk/ndk/[VERSION]`
+   - Update `darwin-x86_64` to `linux-x86_64` on Linux systems
+
+3. Example for macOS:
+   ```toml
+   [target.aarch64-linux-android]
+   linker = "/Users/yourname/Library/Android/sdk/ndk/29.0.13113456/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android21-clang"
+   ```
+
+## Build
+
+```bash
+# Smart incremental build (default)
+./scripts/build.sh
+
+# Clean build
+./scripts/build.sh --clean
+
+# Release build  
+./scripts/build.sh --release
+```

@@ -5,21 +5,22 @@
   "identifier": "com.babelmobile.app",
   "build": {
     "devUrl": "http://localhost:1420",
-    "frontendDist": "../../../dist/babel-mobile-ng/browser",
     "beforeDevCommand": "nx serve babel-mobile",
     "beforeBuildCommand": "nx build babel-mobile"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Babel Mobile",
-        "width": 800,
-        "height": 600
-      }
-    ],
     "security": {
       "csp": null
-    }
+    },
+    "windows": [
+      {
+        "label": "main",
+        "width": 400,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": true
+      }
+    ]
   },
   "bundle": {
     "active": true,
@@ -28,9 +29,12 @@
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/128x128@2x.png"
     ]
+  },
+  "plugins": {
+    "opener": {
+      "requireLiteralLeadingDot": false
+    }
   }
 }
