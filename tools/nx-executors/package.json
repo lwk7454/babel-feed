@@ -1,0 +1,11 @@
+{
+  "name": "@babel-feed/nx-executors",
+  "version": "1.0.0",
+  "description": "Custom Nx executors for Android builds",
+  "main": "index.js",
+  "executors": "./executors.json",
+  "dependencies": {},
+  "peerDependencies": {
+    "@nx/devkit": "^21.1.2"
+  }
+}

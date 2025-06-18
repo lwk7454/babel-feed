@@ -1,0 +1,60 @@
+{
+  "name": "babel-android",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/babel-android/app/src",
+  "targets": {
+    "build": {
+      "executor": "./tools/nx-executors:android-build",
+      "options": {
+        "buildType": "debug",
+        "outputPath": "dist/apps/babel-android",
+        "gradleOptions": []
+      },
+      "configurations": {
+        "production": {
+          "buildType": "release"
+        }
+      }
+    },
+    "assemble": {
+      "executor": "./tools/nx-executors:android-assemble",
+      "options": {
+        "buildType": "debug",
+        "outputPath": "dist/apps/babel-android",
+        "gradleOptions": []
+      },
+      "configurations": {
+        "production": {
+          "buildType": "release"
+        }
+      }
+    },
+    "install": {
+      "executor": "./tools/nx-executors:android-install",
+      "options": {
+        "buildType": "debug",
+        "gradleOptions": []
+      },
+      "configurations": {
+        "production": {
+          "buildType": "release"
+        }
+      }
+    },
+    "test": {
+      "executor": "./tools/nx-executors:android-test",
+      "options": {
+        "testType": "unit",
+        "gradleOptions": []
+      }
+    },
+    "lint": {
+      "executor": "./tools/nx-executors:android-lint",
+      "options": {
+        "gradleOptions": []
+      }
+    }
+  },
+  "tags": ["type:app", "platform:android"]
+}

@@ -1,0 +1,29 @@
+{
+  "executors": {
+    "android-build": {
+      "implementation": "./android-build/build.js",
+      "schema": "./android-build/schema.json",
+      "description": "Build Android application using Gradle"
+    },
+    "android-assemble": {
+      "implementation": "./android-build/assemble.js",
+      "schema": "./android-build/schema.json",
+      "description": "Assemble Android APK"
+    },
+    "android-install": {
+      "implementation": "./android-build/install.js",
+      "schema": "./android-build/schema.json",
+      "description": "Install APK to connected device"
+    },
+    "android-test": {
+      "implementation": "./android-test/test.js",
+      "schema": "./android-test/schema.json",
+      "description": "Run Android unit tests"
+    },
+    "android-lint": {
+      "implementation": "./android-test/lint.js",
+      "schema": "./android-test/schema.json",
+      "description": "Run Android Kotlin linting"
+    }
+  }
+}

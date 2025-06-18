@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Babel Feed</string>
+    <string name="news_feed">News Feed</string>
+    <string name="translate">Translate</string>
+    <string name="original">Original</string>
+    <string name="loading">Loading…</string>
+    <string name="error_loading">Error loading content</string>
+    <string name="retry">Retry</string>
+    <string name="article_summary">Article Summary</string>
+    <string name="read_full_article">Read Full Article</string>
+    <string name="translation_enabled">Translation Enabled</string>
+    <string name="translation_disabled">Translation Disabled</string>
+    <string name="source">Source: %1$s</string>
+    <string name="published_time">Published %1$s</string>
+</resources>

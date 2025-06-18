@@ -48,19 +48,27 @@ alwaysApply: true
     *   Over-reliance on custom artistic assets that are hard to create/maintain.
 
 # Tech stack
-* This is a Nx monorepo contains a mobile app and backend API services. 
-* The mobile app is based on Tauri (a cross platform framework) with front-end built in Angular 19 and FrameNG components.  
-* Always use Bun as JS/TS run time and dependency manager. Don't use npm. 
+* This is a Nx monorepo that contains a native Android app and backend API services. 
+* The mobile app is built as a native Kotlin Android application using Jetpack Compose for UI.
+* Backend services remain TypeScript-based with ElysiaJS.
+* Nx orchestrates builds and manages dependencies across TypeScript backend and Android projects.
+* Always use Bun as JS/TS runtime and dependency manager for the backend. Don't use npm.
 
 # Main features
 
-## Mobile App
-* News feed display
-* News content summary page
-* News original source webview
-* Tauri plugin that handles the translation logic and communicates with the webview. It loads the on-device LLM and translate the text contents in a whole HTML, then communicate with the webview to inject the translated content.
-* App design should follow wireframes in ./apps/babel-mobile/wireframes
+## Native Android App
+* News feed display using RecyclerView/LazyColumn with Jetpack Compose
+* News content summary pages with Material Design components
+* News original source WebView integration with custom JavaScript bridge
+* On-device translation system using Android ML Kit or TensorFlow Lite
+* Translation bridge communicates with WebView to extract HTML content, translate it locally, and inject translated content back
+* Dual WebView architecture: main app navigation + external content viewing
+* State management with MVVM pattern using ViewModels and StateFlow
+* Retrofit HTTP client for API communication
+* Hilt dependency injection
+* Support for multiple languages: English, Chinese (Simplified/Traditional), Japanese
 
 ## Backend API
-* Using ElysiaJS framework
-* Shares API schema with mobile app via Eden from Elysia
+* Using ElysiaJS framework (unchanged)
+* Shares API schema with Android app via generated TypeScript definitions
+* Nx custom executors handle Android build orchestration

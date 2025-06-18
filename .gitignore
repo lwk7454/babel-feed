@@ -13,6 +13,8 @@ yarn-error.log
 
 **/debug-logs/*
 emulator.log
+*.local.*
+local.*
 
 # IDEs and editors
 .idea/
@@ -34,7 +36,6 @@ emulator.log
 .zed
 
 # Miscellaneous
-.angular
 .sass-cache/
 /connect.lock
 /coverage
@@ -46,9 +47,39 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Tauri/Cargo system-specific configs
-apps/babel-mobile/.cargo/config.toml
+# Android
+*.iml
+.gradle
+apps/babel-android/.gradle/
+apps/babel-android/local.properties
+apps/babel-android/.idea/
+apps/babel-android/build/
+apps/babel-android/app/build/
+apps/babel-android/captures/
+apps/babel-android/.externalNativeBuild/
+apps/babel-android/.cxx/
+apps/babel-android/*.apk
+apps/babel-android/*.ap_
+apps/babel-android/*.aab
 
+# Android signing files
+apps/babel-android/app/release/
+apps/babel-android/app/debug/
+*.jks
+*.keystore
+
+# Android Studio generated files
+apps/babel-android/.navigation/
+apps/babel-android/captures/
+apps/babel-android/output.json
+
+# Android lint
+apps/babel-android/lint-results*.html
+apps/babel-android/lint-results*.xml
+
+# Kotlin
+apps/babel-android/app/src/main/kotlin/**/*.class
+
+# Nx
 .nx
-.github/instructions/nx.instructions.md
 .github/instructions/nx.instructions.md
