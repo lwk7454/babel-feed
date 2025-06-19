@@ -14,6 +14,11 @@
       "implementation": "./install.js",
       "schema": "./schema.json",
       "description": "Install APK to connected device"
+    },
+    "dev": {
+      "implementation": "./dev.js",
+      "schema": "./dev-schema.json",
+      "description": "Start Android development mode with hot reload"
     }
   }
 }

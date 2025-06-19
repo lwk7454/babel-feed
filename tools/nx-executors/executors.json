@@ -24,6 +24,11 @@
       "implementation": "./android-test/lint.js",
       "schema": "./android-test/schema.json",
       "description": "Run Android Kotlin linting"
+    },
+    "android-dev": {
+      "implementation": "./android-build/dev.js",
+      "schema": "./android-build/dev-schema.json",
+      "description": "Start Android development mode with hot reload"
     }
   }
 }

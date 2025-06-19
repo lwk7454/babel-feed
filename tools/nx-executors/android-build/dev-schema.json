@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "title": "Android Development Executor",
+  "description": "Start Android development mode with hot reload using Gradle continuous build",
+  "type": "object",
+  "properties": {
+    "gradleOptions": {
+      "type": "array",
+      "description": "Additional Gradle options for continuous build",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "autoLaunch": {
+      "type": "boolean",
+      "description": "Automatically launch the app after installation",
+      "default": true
+    }
+  },
+  "required": []
+}

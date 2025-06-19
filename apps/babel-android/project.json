@@ -54,6 +54,13 @@
       "options": {
         "gradleOptions": []
       }
+    },
+    "dev": {
+      "executor": "./tools/nx-executors:android-dev",
+      "options": {
+        "gradleOptions": [],
+        "autoLaunch": true
+      }
     }
   },
   "tags": ["type:app", "platform:android"]

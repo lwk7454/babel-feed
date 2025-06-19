@@ -23,6 +23,16 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            // Disable all optimizations for better hot reload support
+            proguardFiles.clear()
+            // Disable R8 code shrinking
+            isMinifyEnabled = false
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

@@ -39,10 +39,10 @@ Create a native mobile app that allows users to discover, consume, and understan
 # Install dependencies (ALWAYS use Bun, never npm)
 bun install
 
-# Run API backend for development
+# Run both API backend and Android with hot reload in parallel
 bun run dev
 
-# Install Android app to connected device/emulator
+# Android development with hot reload (requires device/emulator)
 bun run dev:android
 
 # API development only
@@ -77,6 +77,33 @@ bun run lint:android
 # Run all tests
 bun run test:all
 ```
+
+## Hot Reload Development
+
+### Android Hot Reload with Gradle Continuous Build
+The `bun run dev:android` command provides hot reload functionality:
+
+1. **Automatic Device Detection**: Checks for connected devices/emulators
+2. **Initial Build & Install**: Builds and installs debug APK
+3. **App Launch**: Automatically starts the app
+4. **Continuous Rebuild**: Uses `gradle installDebug --continuous` to watch files
+5. **Hot Reload**: Automatically rebuilds and reinstalls on file changes
+
+### Prerequisites
+```bash
+# Start an emulator first (one-time setup)
+emulator -list-avds                    # List available emulators
+emulator -avd Pixel_6_API_30 &         # Start emulator (replace with your AVD)
+
+# Or connect a physical device with USB debugging enabled
+```
+
+### Hot Reload Features
+- ✅ **File Watching**: Gradle monitors Kotlin, XML, and resource files
+- ✅ **Incremental Builds**: Only rebuilds changed components
+- ✅ **Auto Install**: Pushes updated APK to device automatically
+- ✅ **Jetpack Compose**: UI changes reflect immediately
+- ✅ **Graceful Shutdown**: Ctrl+C stops development mode cleanly
 
 ## Build System Specifications
 
@@ -209,6 +236,24 @@ tools/nx-executors/
 - **Translation errors**: Verify ML Kit Translation API setup and permissions
 - **WebView issues**: Check JavaScript bridge and WebView permissions
 - **Dependency injection**: Ensure proper Hilt annotations and modules
+
+### Android Studio Hot Reload Issues
+If "Apply Code Changes" fails with "R+ Device should have FULL debugger swap support":
+
+**Workaround Options:**
+1. **Use "Apply Changes and Restart Activity" instead of "Apply Code Changes"**
+2. **Manual restart**: Stop app and run again instead of hot reload
+3. **Check device compatibility**: Some emulators/devices don't support full hot reload
+4. **Gradle configuration**: Project has optimized debug build settings:
+   - `android.enableR8.fullMode=false` - Disables R8 full mode optimizations
+   - `android.useFullClasspathForDexingTransform=true` - Better dexing compatibility
+   - Debug build type disables minification and resource shrinking
+
+**Build Settings Applied:**
+- R8 optimizations disabled for debug builds
+- Resource shrinking disabled
+- ProGuard files cleared for debug
+- Explicit debug configuration in `gradle.properties`
 
 ### Environment Variables
 - **ANDROID_HOME**: Path to Android SDK (/Users/pooh/Library/Android/sdk)
