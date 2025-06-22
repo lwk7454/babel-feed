@@ -99,6 +99,21 @@ export const translationCache = pgTable('translation_cache', {
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
+/**
+ * Articles table - stores news articles and content
+ */
+export const articles = pgTable('articles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  summary: text('summary'),
+  url: varchar('url', { length: 500 }).unique().notNull(),
+  source: varchar('source', { length: 100 }).notNull(),
+  language: varchar('language', { length: 10 }).default('en').notNull(),
+  publishedAt: timestamp('published_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
 // Define relationships for better query performance and type safety
 export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(userSessions),
@@ -153,3 +168,5 @@ export type UserActivity = typeof userActivity.$inferSelect;
 export type NewUserActivity = typeof userActivity.$inferInsert;
 export type TranslationCache = typeof translationCache.$inferSelect;
 export type NewTranslationCache = typeof translationCache.$inferInsert;
+export type Article = typeof articles.$inferSelect;
+export type NewArticle = typeof articles.$inferInsert;

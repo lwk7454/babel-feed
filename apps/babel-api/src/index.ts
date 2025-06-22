@@ -3,6 +3,7 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { translationRoutes } from "./routes/translation.js";
 import { authRoutes } from "./routes/auth.routes.js";
+import { articleRoutes } from "./routes/article.routes.js";
 import { rateLimitMiddleware, contentValidationMiddleware, securityMiddleware } from "./middleware/rateLimit.js";
 import { cacheMiddleware, cacheStatsRoute } from "./middleware/cache.js";
 import { checkDatabaseHealth, runMigrations } from "./db/index.js";
@@ -43,6 +44,7 @@ const app = new Elysia()
       tags: [
         { name: "Translation", description: "Translation endpoints" },
         { name: "Authentication", description: "User authentication and profile management" },
+        { name: "Articles", description: "News articles and content management" },
         { name: "Health", description: "Health check endpoints" },
         { name: "Cache", description: "Cache management endpoints" }
       ],
@@ -71,7 +73,8 @@ const app = new Elysia()
       auth: "/api/auth",
       translate: "/api/translation/stream",
       languages: "/api/translation/languages",
-      models: "/api/translation/models"
+      models: "/api/translation/models",
+      articles: "/api/articles"
     }
   }))
 
@@ -111,6 +114,9 @@ const app = new Elysia()
   
   // Add translation routes
   .use(translationRoutes)
+  
+  // Add article routes
+  .use(articleRoutes)
   
   // Add cache management routes
   .use(cacheStatsRoute)
