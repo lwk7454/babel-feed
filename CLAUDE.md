@@ -107,7 +107,7 @@ tools/nx-executors/
 - **Put task result docs in ./outputs**: If your task end up with md files that relate to your work progress, put them into that fixed folder (which is git ignored), so you don't commit temporary docs into git. 
 - **Always keep tests up to date**: You use tests to confirm your work. When you make code changes, always check if there are related tests. If necessary add new tests for key features. That would include unit and Appium tests. 
 - **Always git commit your code at key points**: Use git proactively to record your progress when working on big changes. You are free to create branches, but remember to clean them off when done, I don't like dangling branches. You are welcome to squash commits when merging branches, I like clean, readable and relevant git history. 
-- **Do not stop working until all requests are done**: If the request is too big, create temporary docs to record your progress. Make sure you finish them, unless you found yourself stuck in endless loop. 
+- **Do not stop working until all requests are done**: If the request is too big, create temporary docs to record your progress. Make sure you finish them, unless you found yourself stuck in endless loop. That includes confirming your work with Appium tests, make sure your code work as intended. 
 
 ### Key Rule Files
 - `.cursor/rules/overview.mdc` - Project mission, architecture, and features

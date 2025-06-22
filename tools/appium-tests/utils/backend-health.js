@@ -509,3 +509,24 @@ export class BackendHealthChecker {
     this.healthHistory = [];
   }
 }
+
+/**
+ * Simple function to check backend health
+ */
+export async function checkBackendHealth() {
+  const checker = new BackendHealthChecker({
+    baseUrl: 'http://localhost:3000',
+    endpoints: {
+      health: '/health'
+    },
+    timeout: 10000
+  });
+  
+  try {
+    const health = await checker.checkHealth(false);
+    return health && health.overall.healthy;
+  } catch (error) {
+    console.warn('Backend health check failed:', error.message);
+    return false;
+  }
+}

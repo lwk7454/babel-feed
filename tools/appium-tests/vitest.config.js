@@ -2,6 +2,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Enable global test functions
+    globals: true,
+    
     // Test configuration
     testTimeout: 180000, // 3 minutes for mobile tests
     hookTimeout: 120000, // 2 minutes for setup/teardown (includes service startup)

@@ -33,7 +33,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://localhost:3000/api/") // Update with actual API URL
+            .baseUrl("http://10.0.2.2:3000/api/") // Use 10.0.2.2 for Android emulator to access host machine
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
