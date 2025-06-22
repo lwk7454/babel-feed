@@ -43,8 +43,8 @@ async function startDatabase(): Promise<void> {
   console.log('🚀 Starting development database...');
   
   try {
-    // Start the database using docker-compose
-    await $`docker-compose -f ${COMPOSE_FILE} up -d postgres`;
+    // Start the database using docker compose
+    await $`docker compose -f ${COMPOSE_FILE} up -d postgres`;
     console.log('📦 Database container started');
     
     // Wait for database to be healthy
@@ -72,7 +72,7 @@ async function stopDatabase(): Promise<void> {
   console.log('🛑 Stopping development database...');
   
   try {
-    await $`docker-compose -f ${COMPOSE_FILE} down`;
+    await $`docker compose -f ${COMPOSE_FILE} down`;
     console.log('✅ Database stopped');
   } catch (error) {
     console.error('❌ Failed to stop database:', error);
@@ -85,7 +85,7 @@ async function resetDatabase(): Promise<void> {
   
   try {
     // Stop and remove containers and volumes
-    await $`docker-compose -f ${COMPOSE_FILE} down -v`;
+    await $`docker compose -f ${COMPOSE_FILE} down -v`;
     console.log('🗑️  Database data cleared');
     
     // Start fresh database

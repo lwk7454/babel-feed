@@ -1,20 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { UserService } from '../services/user.service.js';
-import { db } from '../db/connection.js';
+import { testDb } from './test-database.js';
 import { users, userSessions } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import './setup.js';
 
 describe('UserService', () => {
   let userService: UserService;
 
   beforeEach(() => {
-    userService = new UserService();
+    userService = new UserService(testDb);
   });
 
   afterEach(async () => {
     // Clean up test data
-    await db.delete(userSessions);
-    await db.delete(users);
+    await testDb.delete(userSessions);
+    await testDb.delete(users);
   });
 
   describe('createGuestUser', () => {
@@ -108,14 +109,14 @@ describe('UserService', () => {
       const { user } = await userService.createAccountFromGuest(guestUser.guestId!, email);
 
       // Manually expire the token
-      await db
+      await testDb
         .update(users)
         .set({
           verificationTokenExpiry: new Date(Date.now() - 1000) // 1 second ago
         })
         .where(eq(users.id, user.id));
 
-      const [updatedUser] = await db.select().from(users).where(eq(users.id, user.id));
+      const [updatedUser] = await testDb.select().from(users).where(eq(users.id, user.id));
 
       await expect(
         userService.verifyEmail(updatedUser.verificationToken!)
@@ -131,6 +132,9 @@ describe('UserService', () => {
       const { verificationToken } = await userService.createAccountFromGuest(guestUser.guestId!, email);
       const { user } = await userService.verifyEmail(verificationToken);
 
+      // Clear existing sessions created during verification
+      await testDb.delete(userSessions).where(eq(userSessions.userId, user.id));
+
       const deviceInfo = { platform: 'test', version: '1.0' };
       const ipAddress = '127.0.0.1';
       const userAgent = 'test-agent';
@@ -141,7 +145,7 @@ describe('UserService', () => {
       expect(tokens.refreshToken).toBeTruthy();
 
       // Verify session was stored
-      const sessions = await db.select().from(userSessions).where(eq(userSessions.userId, user.id));
+      const sessions = await testDb.select().from(userSessions).where(eq(userSessions.userId, user.id));
       expect(sessions).toHaveLength(1);
       expect(sessions[0].ipAddress).toBe(ipAddress);
       expect(sessions[0].userAgent).toBe(userAgent);
@@ -155,6 +159,9 @@ describe('UserService', () => {
       const email = 'refresh@example.com';
       const { verificationToken } = await userService.createAccountFromGuest(guestUser.guestId!, email);
       const { user, tokens: initialTokens } = await userService.verifyEmail(verificationToken);
+
+      // Wait a moment to ensure timestamp difference
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const newTokens = await userService.refreshToken(initialTokens.refreshToken);
 
@@ -209,7 +216,7 @@ describe('UserService', () => {
     });
 
     it('should return null for non-existent user ID', async () => {
-      const nonExistentId = 'non-existent-id';
+      const nonExistentId = '00000000-0000-4000-8000-000000000000'; // Valid UUID format
 
       const result = await userService.getUserById(nonExistentId);
 
@@ -245,13 +252,13 @@ describe('UserService', () => {
       const { user, tokens } = await userService.verifyEmail(verificationToken);
 
       // Verify session exists
-      let sessions = await db.select().from(userSessions).where(eq(userSessions.userId, user.id));
+      let sessions = await testDb.select().from(userSessions).where(eq(userSessions.userId, user.id));
       expect(sessions).toHaveLength(1);
 
       await userService.logout(tokens.accessToken);
 
       // Verify session was deleted
-      sessions = await db.select().from(userSessions).where(eq(userSessions.userId, user.id));
+      sessions = await testDb.select().from(userSessions).where(eq(userSessions.userId, user.id));
       expect(sessions).toHaveLength(0);
     });
   });

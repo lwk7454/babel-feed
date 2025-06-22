@@ -1,5 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/connection.js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { users, userSessions, userPreferences, type User, type NewUser, type NewUserSession, type NewUserPreferences } from '../db/schema.js';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
@@ -12,12 +13,14 @@ export class UserService {
   private readonly jwtSecret: string;
   private readonly accessTokenExpiry = '30d'; // 30 days for news app
   private readonly refreshTokenExpiry = '365d'; // 1 year
+  private readonly db: PostgresJsDatabase<any>;
   
-  constructor() {
+  constructor(database?: PostgresJsDatabase<any>) {
     this.jwtSecret = process.env.JWT_SECRET || 'development-secret-key';
     if (this.jwtSecret === 'development-secret-key' && process.env.NODE_ENV === 'production') {
       throw new Error('JWT_SECRET must be set in production environment');
     }
+    this.db = database || db;
   }
 
   /**
@@ -32,7 +35,7 @@ export class UserService {
       emailVerified: false
     };
 
-    const [user] = await db.insert(users).values(newUser).returning();
+    const [user] = await this.db.insert(users).values(newUser).returning();
     
     // Create default preferences for guest user
     await this.createDefaultPreferences(user.id);
@@ -45,13 +48,13 @@ export class UserService {
    */
   async createAccountFromGuest(guestId: string, email: string): Promise<{ user: User; verificationToken: string }> {
     // Check if email already exists
-    const existingEmailUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const existingEmailUser = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existingEmailUser.length > 0) {
       throw new Error('Email already registered');
     }
 
     // Find guest user
-    const [guestUser] = await db.select().from(users).where(eq(users.guestId, guestId)).limit(1);
+    const [guestUser] = await this.db.select().from(users).where(eq(users.guestId, guestId)).limit(1);
     if (!guestUser) {
       throw new Error('Guest user not found');
     }
@@ -61,7 +64,7 @@ export class UserService {
     const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Update guest user with email and verification token
-    const [updatedUser] = await db
+    const [updatedUser] = await this.db
       .update(users)
       .set({
         email,
@@ -80,7 +83,7 @@ export class UserService {
    */
   async verifyEmail(verificationToken: string): Promise<{ user: User; tokens: { accessToken: string; refreshToken: string } }> {
     // Find user by verification token
-    const [user] = await db
+    const [user] = await this.db
       .select()
       .from(users)
       .where(and(
@@ -99,7 +102,7 @@ export class UserService {
     }
 
     // Mark email as verified and clear verification token
-    const [verifiedUser] = await db
+    const [verifiedUser] = await this.db
       .update(users)
       .set({
         emailVerified: true,
@@ -142,7 +145,7 @@ export class UserService {
       userAgent
     };
 
-    await db.insert(userSessions).values(newSession);
+    await this.db.insert(userSessions).values(newSession);
 
     return { accessToken, refreshToken };
   }
@@ -154,7 +157,7 @@ export class UserService {
     const refreshTokenHash = this.hashToken(refreshToken);
     
     // Find valid session
-    const [session] = await db
+    const [session] = await this.db
       .select()
       .from(userSessions)
       .where(and(
@@ -168,7 +171,7 @@ export class UserService {
     }
 
     // Get user
-    const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+    const [user] = await this.db.select().from(users).where(eq(users.id, session.userId)).limit(1);
     if (!user) {
       return null;
     }
@@ -181,7 +184,7 @@ export class UserService {
     const newAccessTokenHash = this.hashToken(newAccessToken);
     const newRefreshTokenHash = this.hashToken(newRefreshToken);
 
-    await db
+    await this.db
       .update(userSessions)
       .set({
         accessTokenHash: newAccessTokenHash,
@@ -201,7 +204,7 @@ export class UserService {
       const payload = jwt.verify(accessToken, this.jwtSecret) as any;
       
       // Get user from database
-      const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+      const [user] = await this.db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
       
       return user || null;
     } catch (error) {
@@ -216,14 +219,14 @@ export class UserService {
     const accessTokenHash = this.hashToken(accessToken);
     
     // Delete session
-    await db.delete(userSessions).where(eq(userSessions.accessTokenHash, accessTokenHash));
+    await this.db.delete(userSessions).where(eq(userSessions.accessTokenHash, accessTokenHash));
   }
 
   /**
    * Get user by ID
    */
   async getUserById(userId: string): Promise<User | null> {
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const [user] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1);
     return user || null;
   }
 
@@ -231,7 +234,7 @@ export class UserService {
    * Get user by guest ID
    */
   async getUserByGuestId(guestId: string): Promise<User | null> {
-    const [user] = await db.select().from(users).where(eq(users.guestId, guestId)).limit(1);
+    const [user] = await this.db.select().from(users).where(eq(users.guestId, guestId)).limit(1);
     return user || null;
   }
 
@@ -239,7 +242,7 @@ export class UserService {
    * Get user by email
    */
   async getUserByEmail(email: string): Promise<User | null> {
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const [user] = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
     return user || null;
   }
 
@@ -247,7 +250,7 @@ export class UserService {
    * Update user preferences
    */
   async updateUserPreferences(userId: string, preferences: Partial<NewUserPreferences>): Promise<void> {
-    await db
+    await this.db
       .update(userPreferences)
       .set({
         ...preferences,
@@ -260,7 +263,7 @@ export class UserService {
    * Get user preferences
    */
   async getUserPreferences(userId: string) {
-    const [prefs] = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+    const [prefs] = await this.db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
     return prefs;
   }
 
@@ -279,7 +282,8 @@ export class UserService {
       { 
         userId: user.id, 
         email: user.email, 
-        emailVerified: user.emailVerified 
+        emailVerified: user.emailVerified,
+        jti: randomBytes(8).toString('hex') // Unique token ID to ensure uniqueness
       },
       this.jwtSecret,
       { expiresIn: this.accessTokenExpiry }
@@ -314,7 +318,7 @@ export class UserService {
       }
     };
 
-    await db.insert(userPreferences).values(defaultPrefs);
+    await this.db.insert(userPreferences).values(defaultPrefs);
   }
 }
 
