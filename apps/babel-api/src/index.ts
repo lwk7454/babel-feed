@@ -2,14 +2,16 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { translationRoutes } from "./routes/translation.js";
+import { authRoutes } from "./routes/auth.routes.js";
 import { rateLimitMiddleware, contentValidationMiddleware, securityMiddleware } from "./middleware/rateLimit.js";
 import { cacheMiddleware, cacheStatsRoute } from "./middleware/cache.js";
+import { checkDatabaseHealth, runMigrations } from "./db/index.js";
 
 const app = new Elysia()
   // Add CORS support
   .use(cors({
     origin: true, // Allow all origins in development
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
   }))
@@ -40,6 +42,7 @@ const app = new Elysia()
       },
       tags: [
         { name: "Translation", description: "Translation endpoints" },
+        { name: "Authentication", description: "User authentication and profile management" },
         { name: "Health", description: "Health check endpoints" },
         { name: "Cache", description: "Cache management endpoints" }
       ],
@@ -64,7 +67,8 @@ const app = new Elysia()
     timestamp: new Date().toISOString(),
     endpoints: {
       docs: "/swagger",
-      health: "/api/translation/health",
+      health: "/health",
+      auth: "/api/auth",
       translate: "/api/translation/stream",
       languages: "/api/translation/languages",
       models: "/api/translation/models"
@@ -72,25 +76,39 @@ const app = new Elysia()
   }))
 
   // Health check with detailed info
-  .get("/health", () => ({
-    status: "healthy",
-    version: "1.0.0",
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    environment: {
-      nodeVersion: process.version,
-      platform: process.platform,
-      arch: process.arch
-    },
-    config: {
-      openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
-      cachingEnabled: process.env.ENABLE_CACHING === "true",
-      streamingEnabled: process.env.ENABLE_STREAMING !== "false",
-      rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== "false"
-    },
-    timestamp: new Date().toISOString()
-  }))
+  .get("/health", async () => {
+    const dbHealth = await checkDatabaseHealth();
+    
+    return {
+      status: dbHealth.healthy ? "healthy" : "degraded",
+      version: "1.0.0",
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      environment: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch
+      },
+      services: {
+        database: {
+          status: dbHealth.healthy ? "healthy" : "unhealthy",
+          error: dbHealth.error || null
+        }
+      },
+      config: {
+        openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
+        cachingEnabled: process.env.ENABLE_CACHING === "true",
+        streamingEnabled: process.env.ENABLE_STREAMING !== "false",
+        rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== "false",
+        databaseConfigured: dbHealth.healthy
+      },
+      timestamp: new Date().toISOString()
+    };
+  })
 
+  // Add authentication routes
+  .use(authRoutes)
+  
   // Add translation routes
   .use(translationRoutes)
   
@@ -141,6 +159,21 @@ const app = new Elysia()
     port: process.env.PORT || 3000,
     hostname: process.env.HOST || "0.0.0.0"
   });
+
+// Initialize database on startup
+async function initializeApp() {
+  try {
+    console.log('🗄️  Initializing database...');
+    await runMigrations();
+    console.log('✅ Database initialized successfully');
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+    console.log('⚠️  API will continue without database functionality');
+  }
+}
+
+// Run initialization
+initializeApp();
 
 console.log(
   `🦊 Babel Feed Translation API is running at ${app.server?.hostname}:${app.server?.port}`

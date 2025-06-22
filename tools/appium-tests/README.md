@@ -34,7 +34,7 @@ bun run setup
 bun run doctor
 
 # 4. Start Android emulator (if not already running)
-emulator -avd Pixel_6_API_30 &
+emulator -avd Pixel_6a_API_33 &
 
 # 5. Build and install Babel Feed app
 cd ../..
@@ -154,7 +154,7 @@ Key configuration options:
 {
   capabilities: {
     'appium:platformName': 'Android',
-    'appium:deviceName': 'Pixel_6_API_30',
+    'appium:deviceName': 'Pixel_6a_API_33',
     'appium:appPackage': 'com.babelfeed.app.debug',
     'appium:autoWebview': false,        // Manual WebView control
     'appium:newCommandTimeout': 600000  // 10 minute timeout
@@ -263,7 +263,7 @@ appium --port 4723 &
 emulator -list-avds
 
 # Start specific emulator
-emulator -avd Pixel_6_API_30 &
+emulator -avd Pixel_6a_API_33 &
 
 # Check connected devices
 adb devices

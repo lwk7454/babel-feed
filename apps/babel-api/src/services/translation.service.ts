@@ -1,18 +1,18 @@
 import { OpenAI } from "openai";
 import { TranslationRequest, StreamingTranslationResult, ComplexityLevel } from "../types/translation.js";
-import { selectModelForComplexity, CONFIG, isLanguagePairSupported } from "../config/models.js";
+import { selectModelForComplexity, getFallbackModel, CONFIG, isLanguagePairSupported } from "../config/models.js";
 
 export class TranslationService {
   private openaiClient: OpenAI;
   
   constructor() {
-    // Configure OpenAI client for OpenRouter
+    // Configure OpenAI client for OpenRouter - USING ONLY FREE MODELS
     this.openaiClient = new OpenAI({
       apiKey: CONFIG.OPENROUTER_API_KEY,
       baseURL: CONFIG.OPENROUTER_BASE_URL,
       defaultHeaders: {
         "HTTP-Referer": "https://babel-feed.com",
-        "X-Title": "Babel Feed Translation",
+        "X-Title": "Babel Feed Translation - Free Models Only",
       },
     });
   }
@@ -106,7 +106,7 @@ export class TranslationService {
   }
 
   /**
-   * Stream translation from OpenRouter
+   * Stream translation from OpenRouter with fallback support
    */
   async* streamTranslation(request: TranslationRequest): AsyncGenerator<StreamingTranslationResult> {
     const startTime = Date.now();
@@ -121,122 +121,156 @@ export class TranslationService {
       throw new Error(`Content too large: ${request.content.length} characters (max: ${CONFIG.MAX_CONTENT_LENGTH})`);
     }
     
-    // Select model based on complexity
-    const modelConfig = selectModelForComplexity(request.complexity);
+    // Try primary model first, then fallback if needed
+    const primaryModel = selectModelForComplexity(request.complexity);
+    const fallbackModel = getFallbackModel(request.complexity);
+    const modelsToTry = [primaryModel];
+    
+    // Add fallback model if different from primary
+    if (fallbackModel.modelId !== primaryModel.modelId) {
+      modelsToTry.push(fallbackModel);
+    }
+    
+    let lastError: Error | null = null;
+    
+    for (const modelConfig of modelsToTry) {
+      try {
+        yield* this.attemptTranslation(request, modelConfig, startTime);
+        return; // Success, exit the loop
+      } catch (error) {
+        console.warn(`Model ${modelConfig.name} failed:`, error);
+        lastError = error as Error;
+        // Continue to next model
+      }
+    }
+    
+    // All models failed, throw the last error
+    throw lastError || new Error("All translation models failed");
+  }
+
+  /**
+   * Attempt translation with a specific model
+   */
+  private async* attemptTranslation(
+    request: TranslationRequest, 
+    modelConfig: any, 
+    startTime: number
+  ): AsyncGenerator<StreamingTranslationResult> {
     const prompt = this.generateTranslationPrompt(request);
     
-    try {
-      const stream = await this.openaiClient.chat.completions.create({
-        model: modelConfig.modelId,
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional translator. Provide accurate, contextually appropriate translations."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: modelConfig.maxTokens,
-        temperature: modelConfig.temperature,
-        stream: true,
-      });
+    const stream = await this.openaiClient.chat.completions.create({
+      model: modelConfig.modelId,
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional translator specializing in accurate, contextually appropriate translations. Focus on preserving meaning and cultural nuances."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: modelConfig.maxTokens,
+      temperature: modelConfig.temperature,
+      stream: true,
+    });
 
-      let accumulatedContent = "";
-      let chunkNumber = 0;
-      let totalTokens = 0;
+    let accumulatedContent = "";
+    let chunkNumber = 0;
+    let totalTokens = 0;
+    
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      const finishReason = chunk.choices[0]?.finish_reason;
       
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta;
-        const finishReason = chunk.choices[0]?.finish_reason;
+      if (delta?.content) {
+        accumulatedContent += delta.content;
+        chunkNumber++;
         
-        if (delta?.content) {
-          accumulatedContent += delta.content;
-          chunkNumber++;
-          
-          // Estimate token count (rough approximation)
-          totalTokens = Math.ceil(accumulatedContent.length / 4);
-          
-          const isComplete = finishReason === "stop" || finishReason === "length";
-          const processingTime = Date.now() - startTime;
-          
-          // Calculate confidence based on model and content
-          const baseConfidence = modelConfig.name.includes("GPT-4") ? 0.95 : 
-                               modelConfig.name.includes("Claude") ? 0.92 :
-                               modelConfig.name.includes("LLaMA") ? 0.88 : 0.85;
-          
-          const confidence = this.calculateQualityScore(
-            accumulatedContent,
-            request.content,
-            baseConfidence,
-            request.complexity
-          );
-          
-          const result: StreamingTranslationResult = {
-            requestId: request.requestId,
-            translatedContent: accumulatedContent,
-            isComplete,
-            confidence: parseFloat(confidence.toFixed(3)),
-            tokensUsed: totalTokens,
-            cacheHit: false, // TODO: Implement caching
-            qualityScore: confidence,
-            modelUsed: modelConfig.name,
-            backendVersion: CONFIG.BACKEND_VERSION,
-            backendProcessingTime: processingTime,
-            chunk: chunkNumber,
-            totalChunks: isComplete ? chunkNumber : -1, // -1 indicates unknown total
-          };
-          
-          yield result;
-          
-          if (isComplete) {
-            break;
-          }
-        }
+        // Estimate token count (rough approximation)
+        totalTokens = Math.ceil(accumulatedContent.length / 4);
         
-        // Handle completion without content (edge case)
-        if (finishReason === "stop" && accumulatedContent === "") {
-          const result: StreamingTranslationResult = {
-            requestId: request.requestId,
-            translatedContent: request.content, // Fallback to original content
-            isComplete: true,
-            confidence: 0.1,
-            tokensUsed: 1,
-            cacheHit: false,
-            qualityScore: 0.1,
-            modelUsed: modelConfig.name,
-            backendVersion: CONFIG.BACKEND_VERSION,
-            backendProcessingTime: Date.now() - startTime,
-            chunk: 1,
-            totalChunks: 1,
-          };
-          
-          yield result;
-          break;
-        }
+        const processingTime = Date.now() - startTime;
+        
+        // Calculate confidence based on free model capabilities
+        const baseConfidence = modelConfig.name.includes("DeepSeek V3") ? 0.92 : 
+                             modelConfig.name.includes("Llama 3.3 70B") ? 0.90 :
+                             modelConfig.name.includes("Qwen 2.5 72B") ? 0.89 :
+                             modelConfig.name.includes("DeepSeek R1") ? 0.91 :
+                             modelConfig.name.includes("Qwen QwQ 32B") ? 0.87 :
+                             modelConfig.name.includes("Qwen 2.5 Coder") ? 0.88 :
+                             modelConfig.name.includes("DeepHermes 3") ? 0.86 :
+                             modelConfig.name.includes("Llama 3.1 8B") ? 0.84 :
+                             modelConfig.name.includes("Mistral 7B") ? 0.83 :
+                             modelConfig.name.includes("Gemma 2 9B") ? 0.82 : 0.80;
+        
+        const confidence = this.calculateQualityScore(
+          accumulatedContent,
+          request.content,
+          baseConfidence,
+          request.complexity
+        );
+        
+        const result: StreamingTranslationResult = {
+          requestId: request.requestId,
+          translatedContent: accumulatedContent,
+          isComplete: false, // Will be set to true in the final chunk
+          confidence: parseFloat(confidence.toFixed(3)),
+          tokensUsed: totalTokens,
+          cacheHit: false, // TODO: Implement caching
+          qualityScore: confidence,
+          modelUsed: modelConfig.name,
+          backendVersion: CONFIG.BACKEND_VERSION,
+          backendProcessingTime: processingTime,
+          chunk: chunkNumber,
+          totalChunks: -1, // -1 indicates unknown total
+        };
+        
+        yield result;
       }
       
-    } catch (error) {
-      console.error("Translation error:", error);
-      
-      // Provide fallback result
-      const fallbackResult: StreamingTranslationResult = {
-        requestId: request.requestId,
-        translatedContent: request.content, // Return original content as fallback
-        isComplete: true,
-        confidence: 0.0,
-        tokensUsed: 0,
-        cacheHit: false,
-        qualityScore: 0.0,
-        modelUsed: "fallback",
-        backendVersion: CONFIG.BACKEND_VERSION,
-        backendProcessingTime: Date.now() - startTime,
-        chunk: 1,
-        totalChunks: 1,
-      };
-      
-      yield fallbackResult;
+      // Handle stream completion
+      if (finishReason === "stop" || finishReason === "length") {
+        // Send final completion chunk
+        const processingTime = Date.now() - startTime;
+        
+        // Calculate final confidence
+        const baseConfidence = modelConfig.name.includes("DeepSeek V3") ? 0.92 : 
+                             modelConfig.name.includes("Llama 3.3 70B") ? 0.90 :
+                             modelConfig.name.includes("Qwen 2.5 72B") ? 0.89 :
+                             modelConfig.name.includes("DeepSeek R1") ? 0.91 :
+                             modelConfig.name.includes("Qwen QwQ 32B") ? 0.87 :
+                             modelConfig.name.includes("Qwen 2.5 Coder") ? 0.88 :
+                             modelConfig.name.includes("DeepHermes 3") ? 0.86 :
+                             modelConfig.name.includes("Llama 3.1 8B") ? 0.84 :
+                             modelConfig.name.includes("Mistral 7B") ? 0.83 :
+                             modelConfig.name.includes("Gemma 2 9B") ? 0.82 : 0.80;
+        
+        const confidence = this.calculateQualityScore(
+          accumulatedContent || request.content,
+          request.content,
+          baseConfidence,
+          request.complexity
+        );
+        
+        const finalResult: StreamingTranslationResult = {
+          requestId: request.requestId,
+          translatedContent: accumulatedContent || request.content, // Fallback if no content
+          isComplete: true,
+          confidence: parseFloat(confidence.toFixed(3)),
+          tokensUsed: totalTokens || 1,
+          cacheHit: false,
+          qualityScore: confidence,
+          modelUsed: modelConfig.name,
+          backendVersion: CONFIG.BACKEND_VERSION,
+          backendProcessingTime: processingTime,
+          chunk: chunkNumber || 1,
+          totalChunks: chunkNumber || 1,
+        };
+        
+        yield finalResult;
+        return;
+      }
     }
   }
 

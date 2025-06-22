@@ -13,7 +13,7 @@ const execAsync = promisify(exec);
 export class EmulatorManager {
   constructor(config) {
     this.config = config;
-    this.emulatorName = config.name || 'Pixel_6_API_30';
+    this.emulatorName = config.name || 'Pixel_6a_API_33';
     this.emulatorPort = config.port || 5554;
     this.bootTimeout = config.bootTimeout || 120000; // 2 minutes
     this.emulatorProcess = null;

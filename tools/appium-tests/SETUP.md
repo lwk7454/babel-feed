@@ -193,7 +193,7 @@ Solution: appium --port 4723
 Error: No devices found
 Solution: 
   emulator -list-avds
-  emulator -avd Pixel_6_API_30 &
+  emulator -avd Pixel_6a_API_33 &
 ```
 
 #### App Not Installed

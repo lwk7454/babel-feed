@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.babelfeed.app.ui.screens.feed.FeedScreen
 import com.babelfeed.app.ui.screens.article.ArticleScreen
 import com.babelfeed.app.ui.screens.webview.WebViewScreen
+import com.babelfeed.app.ui.screens.profile.ProfileScreen
 
 @Composable
 fun BabelFeedNavigation(
@@ -27,6 +28,9 @@ fun BabelFeedNavigation(
                 },
                 onReadFullArticle = { url ->
                     navController.navigate("webview?url=$url")
+                },
+                onProfileClick = {
+                    navController.navigate("profile")
                 }
             )
         }
@@ -48,6 +52,10 @@ fun BabelFeedNavigation(
                 url = url,
                 onBackClick = { navController.popBackStack() }
             )
+        }
+        
+        composable("profile") {
+            ProfileScreen()
         }
     }
 }

@@ -45,6 +45,41 @@
         "cwd": "apps/babel-api"
       }
     },
+    "db:generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun drizzle-kit generate",
+        "cwd": "apps/babel-api"
+      }
+    },
+    "db:migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun drizzle-kit migrate",
+        "cwd": "apps/babel-api"
+      }
+    },
+    "db:studio": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun drizzle-kit studio",
+        "cwd": "apps/babel-api"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test",
+        "cwd": "apps/babel-api"
+      }
+    },
+    "test:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test --watch",
+        "cwd": "apps/babel-api"
+      }
+    },
     "docker-build": {
       "dependsOn": ["build"],
       "command": "docker build -f apps/babel-api/Dockerfile . -t babel-api"

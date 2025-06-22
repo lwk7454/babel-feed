@@ -15,7 +15,7 @@ echo "📱 Checking if Android emulator is running..."
 if ! adb devices | grep -q "device"; then
     echo "❌ No Android devices found. Please start an emulator first:"
     echo "   emulator -list-avds                   # List available AVDs"
-    echo "   emulator -avd Pixel_6_API_30 &        # Start emulator"
+    echo "   emulator -avd Pixel_6a_API_33 &        # Start emulator"
     exit 1
 fi
 

@@ -102,7 +102,7 @@ HEADLESS=false VERBOSE=true ./scripts/run-webview-translation-tests.sh
 #### Method 2: Manual Test Execution
 ```bash
 # 1. Start emulator
-emulator -avd Pixel_6_API_30 &
+emulator -avd Pixel_6a_API_33 &
 
 # 2. Start backend API (from project root)
 cd ../../
@@ -139,7 +139,7 @@ export VERBOSE=true            # Verbose logging (default: false)
 export TEST_TIMEOUT=600        # Test timeout in seconds (default: 600)
 
 # Emulator settings
-export EMULATOR_NAME=Pixel_6_API_30  # AVD name (default: Pixel_6_API_30)
+export EMULATOR_NAME=Pixel_6a_API_33  # AVD name (default: Pixel_6a_API_33)
 
 # API settings
 export BACKEND_URL=http://localhost:3000  # Backend API URL

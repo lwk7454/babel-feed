@@ -4,7 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "nx run-many --target=dev --projects=babel-api,babel-android --parallel",
-    "dev:api": "nx dev babel-api",
+    "dev:api": "bun scripts/start-dev-db.ts && nx dev babel-api",
+    "db:start": "bun scripts/start-dev-db.ts start",
+    "db:stop": "bun scripts/start-dev-db.ts stop",
+    "db:reset": "bun scripts/start-dev-db.ts reset",
+    "db:status": "bun scripts/start-dev-db.ts status",
+    "db:generate": "nx db:generate babel-api",
+    "db:migrate": "nx db:migrate babel-api",
+    "db:studio": "nx db:studio babel-api",
     "dev:android": "nx dev babel-android",
     "build": "nx run-many --target=build --projects=babel-api,babel-android --parallel",
     "build:api": "nx build babel-api",
@@ -22,15 +29,23 @@
     "test:appium:debug": "cd tools/appium-tests && bun run test:debug",
     "test:e2e": "bun run build:android && bun run install:android && bun run test:appium",
     "test:e2e:dev": "bun run dev:android & sleep 30 && bun run test:appium",
-    "test:e2e:local": "bun run build:android && bun run install:android && bun run test:appium:local"
+    "test:e2e:local": "bun run build:android && bun run install:android && bun run test:appium:local",
+    "test:api": "nx test babel-api",
+    "test:api:watch": "nx test:watch babel-api",
+    "test:profile": "cd tools/appium-tests && bun test tests/user-profile-authentication.test.js"
   },
   "private": true,
   "dependencies": {
     "@elysiajs/cors": "^1.3.3",
     "@elysiajs/stream": "^1.1.0",
     "@elysiajs/swagger": "^1.3.0",
+    "bcryptjs": "^3.0.2",
+    "drizzle-kit": "^0.31.1",
+    "drizzle-orm": "^0.44.2",
     "elysia": "^1.3.3",
-    "openai": "^5.6.0"
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^5.6.0",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
@@ -44,6 +59,8 @@
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "~18.16.9",
     "appium": "^2.11.1",
     "appium-flutter-driver": "^2.4.0",

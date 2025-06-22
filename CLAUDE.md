@@ -31,7 +31,7 @@ The `bun run dev:android` command provides hot reload functionality:
 ```bash
 # Start an emulator first (one-time setup)
 emulator -list-avds                    # List available emulators
-emulator -avd Pixel_6_API_30 &         # Start emulator (replace with your AVD)
+emulator -avd Pixel_6a_API_33 &         # Start emulator (replace with your AVD)
 
 # Or connect a physical device with USB debugging enabled
 ```

@@ -1,44 +1,64 @@
 import { ComplexityLevel, ModelConfig } from "../types/translation.js";
 
-// Model configuration based on complexity levels
+// Model configuration based on complexity levels - ALL FREE MODELS FROM OPENROUTER
 export const MODEL_CONFIGS: Record<ComplexityLevel, ModelConfig[]> = {
   simple: [
     {
-      name: "WizardLM-2-7B",
+      name: "Mistral 7B Instruct Free",
       provider: "openrouter",
-      modelId: "microsoft/wizardlm-2-7b",
+      modelId: "mistralai/mistral-7b-instruct:free",
       maxTokens: 2048,
       temperature: 0.3,
-      targetLatency: 500,
-      costPer1kTokens: 0.0007,
+      targetLatency: 800,
+      costPer1kTokens: 0.0,
       complexityTypes: ["simple"]
     },
     {
-      name: "Qwen2-7B-Instruct",
-      provider: "openrouter", 
-      modelId: "qwen/qwen-2-7b-instruct",
+      name: "Llama 3.1 8B Instruct Free",
+      provider: "openrouter",
+      modelId: "meta-llama/llama-3.1-8b-instruct:free",
       maxTokens: 2048,
       temperature: 0.3,
       targetLatency: 600,
-      costPer1kTokens: 0.0009,
+      costPer1kTokens: 0.0,
+      complexityTypes: ["simple"]
+    },
+    {
+      name: "Gemma 2 9B Instruct Free",
+      provider: "openrouter",
+      modelId: "google/gemma-2-9b-it:free",
+      maxTokens: 2048,
+      temperature: 0.3,
+      targetLatency: 700,
+      costPer1kTokens: 0.0,
       complexityTypes: ["simple"]
     }
   ],
   contextual: [
     {
-      name: "LLaMA-3.1-8B-Instruct",
+      name: "Llama 3.3 70B Instruct Free",
       provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct",
+      modelId: "meta-llama/llama-3.3-70b-instruct:free",
       maxTokens: 4096,
       temperature: 0.5,
       targetLatency: 2000,
-      costPer1kTokens: 0.0015,
+      costPer1kTokens: 0.0,
       complexityTypes: ["contextual"]
     },
     {
-      name: "Mistral-7B-Instruct",
+      name: "Qwen 2.5 72B Instruct Free",
       provider: "openrouter",
-      modelId: "mistralai/mistral-7b-instruct:free",
+      modelId: "qwen/qwen-2.5-72b-instruct:free",
+      maxTokens: 4096,
+      temperature: 0.5,
+      targetLatency: 2200,
+      costPer1kTokens: 0.0,
+      complexityTypes: ["contextual"]
+    },
+    {
+      name: "DeepSeek R1 Free",
+      provider: "openrouter",
+      modelId: "deepseek/deepseek-r1:free",
       maxTokens: 4096,
       temperature: 0.5,
       targetLatency: 1800,
@@ -48,61 +68,71 @@ export const MODEL_CONFIGS: Record<ComplexityLevel, ModelConfig[]> = {
   ],
   creative: [
     {
-      name: "Claude-3-Haiku",
+      name: "DeepSeek V3 Free",
       provider: "openrouter",
-      modelId: "anthropic/claude-3-haiku",
-      maxTokens: 4096,
-      temperature: 0.7,
-      targetLatency: 3000,
-      costPer1kTokens: 0.0025,
-      complexityTypes: ["creative"]
-    },
-    {
-      name: "GPT-4o-mini",
-      provider: "openrouter",
-      modelId: "openai/gpt-4o-mini",
+      modelId: "deepseek/deepseek-v3:free",
       maxTokens: 4096,
       temperature: 0.7,
       targetLatency: 2500,
-      costPer1kTokens: 0.0015,
+      costPer1kTokens: 0.0,
       complexityTypes: ["creative"]
     },
     {
-      name: "LLaMA-3.1-70B",
+      name: "Qwen QwQ 32B Free",
       provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-70b-instruct",
-      maxTokens: 8192,
+      modelId: "qwen/qwq-32b-preview:free",
+      maxTokens: 4096,
       temperature: 0.7,
-      targetLatency: 5000,
-      costPer1kTokens: 0.0059,
+      targetLatency: 2000,
+      costPer1kTokens: 0.0,
+      complexityTypes: ["creative"]
+    },
+    {
+      name: "DeepHermes 3 Llama 3 8B Free",
+      provider: "openrouter",
+      modelId: "nousresearch/hermes-3-llama-3.1-8b:free",
+      maxTokens: 4096,
+      temperature: 0.7,
+      targetLatency: 1500,
+      costPer1kTokens: 0.0,
       complexityTypes: ["creative"]
     }
   ],
   technical: [
     {
-      name: "CodeLLaMA-34B-Instruct",
+      name: "Qwen 2.5 Coder 32B Free",
       provider: "openrouter",
-      modelId: "codellama/codellama-34b-instruct",
+      modelId: "qwen/qwen-2.5-coder-32b-instruct:free",
       maxTokens: 4096,
       temperature: 0.2,
-      targetLatency: 3000,
-      costPer1kTokens: 0.0035,
+      targetLatency: 2200,
+      costPer1kTokens: 0.0,
       complexityTypes: ["technical"]
     },
     {
-      name: "Deepseek-Coder-33B",
+      name: "DeepSeek Coder V2 Free",
       provider: "openrouter",
-      modelId: "deepseek/deepseek-coder-33b-instruct",
+      modelId: "deepseek/deepseek-coder:free",
       maxTokens: 4096,
       temperature: 0.2,
-      targetLatency: 2800,
-      costPer1kTokens: 0.0027,
+      targetLatency: 2000,
+      costPer1kTokens: 0.0,
+      complexityTypes: ["technical"]
+    },
+    {
+      name: "Llama 3.1 8B Instruct Free (Technical)",
+      provider: "openrouter",
+      modelId: "meta-llama/llama-3.1-8b-instruct:free",
+      maxTokens: 4096,
+      temperature: 0.2,
+      targetLatency: 1000,
+      costPer1kTokens: 0.0,
       complexityTypes: ["technical"]
     }
   ]
 };
 
-// Get optimal model for complexity level
+// Get optimal model for complexity level with fallback support
 export function selectModelForComplexity(complexity: ComplexityLevel): ModelConfig {
   const availableModels = MODEL_CONFIGS[complexity];
   if (!availableModels || availableModels.length === 0) {
@@ -112,6 +142,29 @@ export function selectModelForComplexity(complexity: ComplexityLevel): ModelConf
   
   // Select first available model (could be enhanced with load balancing)
   return availableModels[0];
+}
+
+// Get fallback model for when primary model fails
+export function getFallbackModel(originalComplexity: ComplexityLevel): ModelConfig {
+  // Fallback hierarchy: simple -> contextual -> creative -> technical
+  const fallbackOrder: ComplexityLevel[] = ["simple", "contextual", "creative", "technical"];
+  
+  for (const complexity of fallbackOrder) {
+    if (complexity !== originalComplexity) {
+      const models = MODEL_CONFIGS[complexity];
+      if (models && models.length > 0) {
+        return models[0];
+      }
+    }
+  }
+  
+  // Ultimate fallback - return the most reliable simple model
+  return MODEL_CONFIGS.simple[0];
+}
+
+// Get all free models for load balancing/rotation
+export function getAllFreeModels(): ModelConfig[] {
+  return Object.values(MODEL_CONFIGS).flat();
 }
 
 // Get all supported language pairs

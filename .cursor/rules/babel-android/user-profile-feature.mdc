@@ -1,0 +1,15 @@
+---
+description: When working on user profile system
+globs: 
+alwaysApply: false
+---
+# Babel Feed User Profile
+
+## User Experience
+- When user first opens the app, the app create a guest profile that's saved on device. 
+- There is a profile page user could choose to open. There it shows user login status and profile settings.
+- User could choose to bind their guest account to an email address by verifying that address. 
+- Upon requesting verification, it creates an account in the backend service
+- Upon successful verification, it updates the account to verified in the backend
+- Once a user is verified, all requests they make from the app will include authentication header
+- Due to the nature of this app (news feed), we don't want to actively authenticate users frequently. Once they have passed authentication their session on the app should stay indefinitely.

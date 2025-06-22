@@ -107,14 +107,14 @@ export const appiumConfig = {
 
   // Emulator management
   emulator: {
-    name: 'Pixel_6_API_30',
+    name: 'Pixel_6a_API_33',
     port: 5554,
     autoStart: true,
     bootTimeout: 120000, // 2 minutes boot time
     
     // Commands for emulator management
     commands: {
-      start: 'emulator -avd Pixel_6_API_30 -port 5554 -no-snapshot-save &',
+      start: 'emulator -avd Pixel_6a_API_33 -port 5554 -no-snapshot-save &',
       stop: 'adb -s emulator-5554 emu kill',
       isRunning: 'adb devices | grep emulator-5554'
     }
