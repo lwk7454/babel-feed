@@ -104,7 +104,10 @@ tools/nx-executors/
 - **Source of truth for project overview and rules are in .cursor/rules/**: Key configuration and development guidelines are stored in this directory. Make sure you read them all before making any changes. When updating those files, make sure you follow the same mindset, that is, keep things short, only state business requirements, architecture decisions and concepts, don't add source code or anything that's implementation specific. These files need to be stay true, and resilient to implementation changes.  
 - **The year is 2025**: Keep that in mind when doing web search.
 - **Always recursively check files and their headers under ./.cursor/rules/**: All files are .mdc with headers to guide when to read their contents. Read contents whenever they are relevant to the current work.
-- **Put task result docs in ./outputs**: If your task results in md files that conclude what you've done, put them into that fixed folder (which is git ignored), so you don't commit temporary docs into git. 
+- **Put task result docs in ./outputs**: If your task end up with md files that relate to your work progress, put them into that fixed folder (which is git ignored), so you don't commit temporary docs into git. 
+- **Always keep tests up to date**: You use tests to confirm your work. When you make code changes, always check if there are related tests. If necessary add new tests for key features. That would include unit and Appium tests. 
+- **Always git commit your code at key points**: Use git proactively to record your progress when working on big changes. You are free to create branches, but remember to clean them off when done, I don't like dangling branches. You are welcome to squash commits when merging branches, I like clean, readable and relevant git history. 
+- **Do not stop working until all requests are done**: If the request is too big, create temporary docs to record your progress. Make sure you finish them, unless you found yourself stuck in endless loop. 
 
 ### Key Rule Files
 - `.cursor/rules/overview.mdc` - Project mission, architecture, and features

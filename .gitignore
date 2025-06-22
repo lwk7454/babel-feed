@@ -16,6 +16,7 @@ yarn-error.log
 emulator.log
 *.local.*
 local.*
+tools/**/reports/
 
 # IDEs and editors
 .idea/

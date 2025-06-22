@@ -12,7 +12,9 @@ export default defineConfig({
     // Test patterns
     include: [
       'src/**/*.test.js',
-      'src/**/*.spec.js'
+      'src/**/*.spec.js',
+      'tests/**/*.test.js',
+      'tests/**/*.spec.js'
     ],
     
     // Reporters
