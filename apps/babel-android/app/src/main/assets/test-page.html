@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Test Page</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.6;
+        }
+        h1 { color: #333; }
+        p { margin-bottom: 15px; }
+        .highlight { background-color: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Babel Feed</h1>
+    <p>This is a test page to verify that translation functionality is working correctly.</p>
+    
+    <h2>News Article Sample</h2>
+    <p>Global climate summit reaches historic agreement on carbon emissions.</p>
+    <p>World leaders from 195 countries have agreed on ambitious targets for reducing carbon emissions by 2030.</p>
+    
+    <div class="highlight">
+        <h3>Technology News</h3>
+        <p>Breakthrough in quantum computing achieved by research team.</p>
+        <p>Scientists demonstrate quantum computer capable of solving complex problems.</p>
+    </div>
+    
+    <h2>Simple Text for Testing</h2>
+    <p>Hello world</p>
+    <p>Good morning</p>
+    <p>Thank you</p>
+    
+    <script>
+        console.log('Test page loaded successfully');
+        // Add some dynamic content for testing
+        setTimeout(() => {
+            const div = document.createElement('div');
+            div.innerHTML = '<p>Dynamic content added after 2 seconds</p>';
+            document.body.appendChild(div);
+            console.log('Dynamic content added');
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Error Page</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.6;
+        }
+        h1 { color: #333; }
+        p { margin-bottom: 15px; }
+        .highlight { background-color: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Bonjour Babel Feed</h1>
+    <p>Cette page est en français pour tester les erreurs de traduction.</p>
+    
+    <h2>Test d'erreur de traduction</h2>
+    <p>Ce texte français devrait déclencher une erreur car le français n'est pas supporté.</p>
+    
+    <div class="highlight">
+        <h3>Contenu de test</h3>
+        <p>Service de traduction non disponible pour cette langue.</p>
+    </div>
+    
+    <script>
+        console.log('Test error page loaded successfully');
+    </script>
+</body>
+</html>

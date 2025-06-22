@@ -1,0 +1,35 @@
+{
+  "name": "@babel-feed/appium-tests",
+  "version": "1.0.0",
+  "description": "Automated WebView translation testing for Babel Feed Android app",
+  "type": "module",
+  "main": "src/quick-vitest.test.js",
+  "scripts": {
+    "test": "vitest run src/quick-vitest.test.js",
+    "test:watch": "vitest src/quick-vitest.test.js",
+    "test:ui": "vitest --ui src/quick-vitest.test.js",
+    "test:local": "./scripts/test-local.sh",
+    "test:ci": "./scripts/test-ci.sh",
+    "setup": "bun setup.js",
+    "doctor": "bun doctor.js"
+  },
+  "dependencies": {
+    "appium": "^2.11.1",
+    "appium-uiautomator2-driver": "^3.5.4",
+    "webdriverio": "^8.43.0"
+  },
+  "devDependencies": {
+    "@vitest/ui": "^3.2.4",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "appium",
+    "android",
+    "webview",
+    "translation",
+    "automation",
+    "testing"
+  ],
+  "author": "Babel Feed Team",
+  "license": "MIT"
+}

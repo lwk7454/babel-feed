@@ -5,9 +5,10 @@ dist
 /tmp
 /out-tsc
 /bazel-out
+/outputs/*.md
 
 # Node
-/node_modules
+node_modules
 npm-debug.log
 yarn-error.log
 

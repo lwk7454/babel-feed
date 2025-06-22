@@ -33,23 +33,23 @@ class ArticleRepository @Inject constructor(
                 id = "1",
                 title = "Global Climate Summit Reaches Historic Agreement",
                 summary = "World leaders agree on ambitious climate action plan with binding commitments for carbon reduction by 2030.",
-                url = "https://example.com/climate-summit",
+                url = "file:///android_asset/test-page.html",
                 source = "Global News Network",
                 publishedAt = "2024-06-18T10:30:00Z"
             ),
             Article(
                 id = "2", 
-                title = "Breakthrough in Quantum Computing Achieved",
-                summary = "Scientists demonstrate quantum computer capable of solving complex problems in seconds that would take classical computers years.",
-                url = "https://example.com/quantum-computing",
-                source = "Tech Today",
+                title = "Test Translation Error Handling",
+                summary = "This page will trigger translation errors to test the error banner functionality.",
+                url = "file:///android_asset/test-error-page.html",
+                source = "Test Source",
                 publishedAt = "2024-06-18T09:15:00Z"
             ),
             Article(
                 id = "3",
                 title = "New Archaeological Discovery Rewrites Ancient History",
                 summary = "Recent excavations uncover evidence of advanced civilization dating back 10,000 years earlier than previously thought.",
-                url = "https://example.com/archaeology",
+                url = "https://www.nationalgeographic.com/science/article/archaeology",
                 source = "Science Weekly",
                 publishedAt = "2024-06-18T08:00:00Z"
             )

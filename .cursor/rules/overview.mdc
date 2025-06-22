@@ -47,28 +47,42 @@ alwaysApply: true
     *   Cluttered interfaces.
     *   Over-reliance on custom artistic assets that are hard to create/maintain.
 
-# Tech stack
-* This is a Nx monorepo that contains a native Android app and backend API services. 
-* The mobile app is built as a native Kotlin Android application using Jetpack Compose for UI.
-* Backend services remain TypeScript-based with ElysiaJS.
-* Nx orchestrates builds and manages dependencies across TypeScript backend and Android projects.
-* Always use Bun as JS/TS runtime and dependency manager for the backend. Don't use npm.
+# Technology Stack
 
-# Main features
+## Monorepo Architecture (Nx 21.1.2)
+- **apps/babel-android/**: Native Kotlin Android app with Jetpack Compose UI
+- **apps/babel-api/**: ElysiaJS backend services with type-safe API
+- **tools/nx-executors/**: Custom Nx executors for Android build orchestration
+- **Package Manager**: Bun (not npm)
+- **Build System**: Nx orchestrating TypeScript backend + Gradle for Android
 
-## Native Android App
-* News feed display using RecyclerView/LazyColumn with Jetpack Compose
-* News content summary pages with Material Design components
-* News original source WebView integration with custom JavaScript bridge
-* On-device translation system using Android ML Kit or TensorFlow Lite
-* Translation bridge communicates with WebView to extract HTML content, translate it locally, and inject translated content back
-* Dual WebView architecture: main app navigation + external content viewing
-* State management with MVVM pattern using ViewModels and StateFlow
-* Retrofit HTTP client for API communication
-* Hilt dependency injection
-* Support for multiple languages: English, Chinese (Simplified/Traditional), Japanese
+## Key Technologies
+- **Mobile Framework**: Native Kotlin Android with Jetpack Compose
+- **UI Framework**: Jetpack Compose with Material Design 3
+- **Backend**: ElysiaJS with type-safe API integration
+- **State Management**: MVVM pattern with ViewModels and StateFlow
+- **Translation**: On-device ML Kit + Cloud-assisted via OpenRouter free models
+- **HTTP Client**: Retrofit + OkHttp for API communication
+- **Dependency Injection**: Hilt (Dagger-based)
 
-## Backend API
-* Using ElysiaJS framework (unchanged)
-* Shares API schema with Android app via generated TypeScript definitions
-* Nx custom executors handle Android build orchestration
+## Core Features
+
+### Native Android App
+- News feed display using LazyColumn with Jetpack Compose
+- Content summary pages with Material Design components
+- External website WebView with JavaScript bridge
+- Dual translation system: on-device + cloud-assisted
+- Dual WebView architecture: main app navigation + external content viewing
+- MVVM architecture with ViewModels, StateFlow, and Compose integration
+
+### Backend API
+- ElysiaJS framework with type-safe API endpoints
+- Retrofit integration for Android app communication
+- Content aggregation from news and video sources
+- Assisted translation using OpenRouter free models
+
+### Supported Languages
+- English (en)
+- Chinese Simplified (zh-CN)
+- Chinese Traditional (zh-TW)
+- Japanese (ja)

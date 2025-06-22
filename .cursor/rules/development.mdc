@@ -1,0 +1,113 @@
+---
+description: Development commands, environment setup, and build guidelines
+alwaysApply: true
+---
+
+# Development Guidelines
+
+## Development Commands
+
+### Primary Development
+```bash
+# Install dependencies (ALWAYS use Bun, never npm)
+bun install
+
+# Run both API backend and Android with hot reload in parallel
+bun run dev
+
+# Android development with hot reload (requires device/emulator)
+bun run dev:android
+
+# API development only
+bun run dev:api
+```
+
+### Build Commands
+```bash
+# Build both API and Android app
+bun run build
+
+# Android builds (ARM64 only - macOS M4 development)
+bun run build:android              # Debug build
+bun run build:android:release      # Production release
+bun run assemble:android           # Assemble APK only
+
+# API build
+bun run build:api
+
+# Install APK to device
+bun run install:android
+```
+
+### Testing Commands
+```bash
+# Run Android unit tests
+bun run test:android
+
+# Run E2E tests with Appium
+bun run test:e2e
+bun run test:e2e:dev
+
+# Run Android lint checks
+bun run lint:android
+
+# Run all tests
+bun run test:all
+```
+
+## Platform Specifications
+
+### Build Targets
+- **Primary**: Android ARM64 (aarch64) only
+- **Development**: macOS M4 chip with Android emulator API level 30
+- **No x86_64 or other architectures needed**
+
+### Build Environments
+- **Dev**: Android emulator with API level 30, debug build
+- **Testing**: Unit tests with JUnit, E2E tests with Appium
+- **Production**: ARM64 Android release build only
+
+## Kotlin Android Best Practices
+
+- **Jetpack Compose**: Use declarative UI patterns, avoid imperative View system
+- **MVVM Architecture**: ViewModels for business logic, StateFlow for reactive data
+- **Hilt Dependency Injection**: Use @Inject, @HiltViewModel, @AndroidEntryPoint
+- **No nullable types**: Use proper Kotlin null safety practices
+- **Material Design 3**: Follow latest Material Design guidelines
+- **Coroutines**: Use suspend functions for async operations
+
+## Code Quality Guidelines
+
+- **Clean Architecture**: Separate data, domain, and presentation layers
+- **Repository Pattern**: Abstract data sources behind repositories
+- **Feature-Complete Components**: Mock API responses for incomplete backends
+- **No Hard-Coded Data**: Use dynamic data binding with StateFlow
+- **Build Verification**: Run `bun run build:android` to confirm code works
+
+## State Management (MVVM + Compose)
+
+- **ViewModels**: Handle UI-related data and business logic
+- **StateFlow**: Reactive state management for UI
+- **Compose State**: Use remember, rememberSaveable for local state
+- **Navigation**: Jetpack Navigation Compose for screen transitions
+
+## Environment Variables
+
+- **ANDROID_HOME**: Path to Android SDK (/Users/pooh/Library/Android/sdk)
+- **API_LEVEL=30**: Android API level for emulator/device
+
+## Troubleshooting
+
+### Common Issues
+- **Build failures**: Check Android SDK path and Gradle configuration
+- **Translation errors**: Check ML Kit Translation API setup and permissions
+- **WebView issues**: Check JavaScript bridge and WebView permissions
+- **Dependency injection**: Ensure proper Hilt annotations and modules
+
+## Legal Compliance
+
+### Content Handling
+- **No Content Re-hosting**: App only aggregates links/summaries
+- **Client-Side Translation**: All processing on user's device
+- **Original Source**: Users view content from original publishers
+- **UI Compliance**: Design must show content source clearly

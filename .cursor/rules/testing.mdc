@@ -1,0 +1,115 @@
+---
+description: When need to work on tests
+globs: 
+alwaysApply: false
+---
+
+# Testing Strategy
+
+## Two-Tier Testing Approach
+
+### 1. Unit Tests (Android Kotlin)
+**Purpose**: Test individual component behaviors in isolation
+**Location**: `apps/babel-android/app/src/test/kotlin/`
+**Coverage**: Business logic, data transformations, edge cases
+
+**Key Test Areas:**
+- ChannelSelector: Priority-based channel selection logic
+- AssistedTranslationStrategy: Backend communication and fallbacks
+- TranslationCoordinator: Integration of multiple components
+- ModelSelector: Model selection based on complexity
+
+### 2. Mobile E2E Tests (Vitest + Appium)
+**Purpose**: Test complete mobile app functionality with modern test framework
+**Commands**: `bun run test:appium`, `bun run test:appium:watch`, `bun run test:appium:ui`
+**Architecture**: Self-contained test environment with automated service management
+
+**Key Test Areas:**
+- Mobile app connectivity and UI interaction
+- WebView context detection and management
+- Backend API integration and health monitoring
+- Device capabilities and screenshot functionality
+- Service lifecycle management (automated startup/shutdown)
+
+## Modern Testing Architecture
+
+**Framework Choice: Vitest**
+- Industry-standard BDD testing framework (describe/it blocks)
+- Built-in assertions, mocking, and watch mode capabilities
+- Modern developer experience with IDE integration
+- Proper test reporting and CI/CD integration
+
+**Self-Contained Environment:**
+- Automated service startup (Backend API, Appium Server)
+- Health monitoring and verification
+- Graceful service shutdown and cleanup
+- Zero manual dependency management
+
+**Quality Gates:**
+- Success Threshold: ≥80% test pass rate
+- Service Management: 100% automated lifecycle
+- Developer Experience: Modern tooling with watch/UI modes
+- Test Structure: Proper BDD organization
+
+## Testing Workflow Integration
+
+**Continuous Development:**
+```bash
+bun run test:appium         # Full mobile test suite
+bun run test:appium:watch   # Watch mode for development
+bun run test:appium:ui      # Visual test interface
+```
+
+**Pre-Commit Verification:**
+```bash
+bun run test:appium     # Mobile E2E tests
+bun run test:android    # Unit tests
+bun run lint:android    # Code quality
+```
+
+**CI/CD Integration:**
+- Automated tests must pass before merge
+- Unit tests and linting required
+- Self-contained environment ensures consistent CI results
+
+## Success Metrics
+
+**Unit Tests:**
+- Coverage: 100% of business logic components
+- Success Rate: 100% (deterministic)
+- Performance: <30 seconds total execution
+- Isolation: No external dependencies
+
+**Mobile E2E Tests:**
+- Success Rate: ≥80% (account for environmental variations)
+- Performance: Full suite <60 seconds (including service startup)
+- Coverage: Core mobile app functionality and service integration
+- Automation: Zero manual service management required
+
+**Quality Gates:**
+1. All unit tests must pass
+2. Mobile E2E tests ≥80% success rate
+3. Service management 100% automated
+4. Modern test framework standards maintained
+
+## Testing Principles
+
+**Modern Framework Standards:**
+- Use Vitest for BDD structure (describe/it blocks)
+- Proper assertions with meaningful error messages
+- Graceful handling of service dependencies
+- Self-contained test environments
+
+**Robust Test Design:**
+- Focus on behavioral verification over implementation details
+- Reasonable timeouts accounting for service startup
+- Threshold-based success criteria (≥80% pass rate)
+- Automated service lifecycle management
+
+**Developer Experience:**
+- Watch mode for continuous development
+- Visual test interface for debugging
+- Clear test organization and reporting
+- Zero manual setup requirements
+
+This testing strategy ensures robust, maintainable tests using modern frameworks while providing a seamless developer experience through automated service management and industry-standard tooling.
