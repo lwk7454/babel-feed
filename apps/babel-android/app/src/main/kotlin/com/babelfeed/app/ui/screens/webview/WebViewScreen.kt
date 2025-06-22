@@ -43,7 +43,6 @@ import com.babelfeed.app.webview.BabelWebViewBridge
 import com.babelfeed.app.webview.BabelWebViewClient
 import com.babelfeed.app.webview.DynamicWebViewBridge
 import com.babelfeed.app.webview.StreamingTranslationService
-import com.babelfeed.app.webview.MockTranslationService
 import com.babelfeed.app.webview.ExtractedContent
 import com.babelfeed.app.webview.TranslationBatch
 import com.babelfeed.app.webview.DynamicContentUpdate
@@ -54,7 +53,8 @@ import com.babelfeed.app.webview.TranslationBatchUpdate
 @Composable
 fun WebViewScreen(
     url: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    translationService: StreamingTranslationService
 ) {
     var isTranslationEnabled by remember { mutableStateOf(true) }
     var isAdBlockingEnabled by remember { mutableStateOf(true) }
@@ -189,9 +189,6 @@ fun WebViewScreen(
         AndroidView(
             factory = { context ->
                 WebView(context).apply {
-                    val translationService = MockTranslationService()
-                    val streamingService = StreamingTranslationService()
-                    
                     val webViewBridge = BabelWebViewBridge(
                         webView = this,
                         translationService = translationService,
@@ -212,7 +209,7 @@ fun WebViewScreen(
                     
                     val dynamicWebViewBridge = DynamicWebViewBridge(
                         webView = this,
-                        streamingTranslationService = streamingService,
+                        streamingTranslationService = translationService,
                         onDynamicContentExtracted = { update ->
                             Log.d("BabelWebView", "Dynamic content: ${update.textNodes.size} nodes (${update.type})")
                             dynamicContentUpdate = update

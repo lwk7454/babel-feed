@@ -1,6 +1,5 @@
 package com.babelfeed.app.webview
 
-import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -9,6 +8,11 @@ import kotlinx.coroutines.selects.select
 import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import com.babelfeed.app.data.api.BabelApiService
+import com.babelfeed.app.data.models.BackendTranslationRequest
+import com.babelfeed.app.data.models.TranslationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Serializable
 data class StreamingTranslationRequest(
@@ -49,30 +53,10 @@ enum class TranslationPriority {
     LOW, NORMAL, HIGH, URGENT
 }
 
-@Serializable
-data class BackendTranslationRequest(
-    val content: String,
-    val fromLanguage: String,
-    val toLanguage: String,
-    val complexity: String = "contextual",
-    val contentType: String = "mixed_content",
-    val priority: String = "normal",
-    val streaming: Boolean = true,
-    val requestId: String
-)
-
-@Serializable
-data class BackendTranslationResponse(
-    val requestId: String,
-    val translatedContent: String,
-    val isComplete: Boolean,
-    val confidence: Double,
-    val tokensUsed: Int = 0,
-    val modelUsed: String = "unknown",
-    val backendProcessingTime: Long = 0
-)
-
-class StreamingTranslationService {
+@Singleton  
+class StreamingTranslationService @Inject constructor(
+    private val apiService: BabelApiService
+) {
     
     companion object {
         private const val TAG = "StreamingTranslationService"
@@ -95,25 +79,10 @@ class StreamingTranslationService {
     private val activeTranslations = ConcurrentHashMap<String, Job>()
     private val pendingRequests = ConcurrentHashMap<String, StreamingTranslationRequest>()
     
-    // Mock translation service for demo
-    private val mockTranslationService = MockTranslationService()
+    
     
     /**
-     * Check if we're running in an emulator
-     */
-    private fun isRunningInEmulator(): Boolean {
-        return (Build.FINGERPRINT.startsWith("generic") ||
-                Build.FINGERPRINT.startsWith("unknown") ||
-                Build.MODEL.contains("google_sdk") ||
-                Build.MODEL.contains("Emulator") ||
-                Build.MODEL.contains("Android SDK built for x86") ||
-                Build.MANUFACTURER.contains("Genymotion") ||
-                Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic") ||
-                "google_sdk".equals(Build.PRODUCT))
-    }
-    
-    /**
-     * Call backend translation API for emulator development
+     * Call backend translation API
      */
     private suspend fun translateWithBackendAPI(
         request: StreamingTranslationRequest,
@@ -122,24 +91,31 @@ class StreamingTranslationService {
         return try {
             Log.d(TAG, "Using backend API for translation: ${request.id}")
             
-            // TODO: Replace with actual HTTP client when backend API is integrated
-            // For now, simulate API call with delay and use mock service
-            delay(200) // Simulate network latency
-            
-            val mockResult = mockTranslationService.translate(
-                text = request.text,
-                sourceLanguage = request.sourceLanguage,
-                targetLanguage = request.targetLanguage,
-                context = request.context
+            val backendRequest = BackendTranslationRequest(
+                content = request.text,
+                fromLanguage = request.sourceLanguage,
+                toLanguage = request.targetLanguage,
+                complexity = "contextual",
+                contentType = "mixed_content", 
+                priority = request.priority.name.lowercase(),
+                streaming = false,
+                requestId = request.id,
+                context = null // TextContext from WebView is different from API TranslationContext
             )
+            
+            val response = apiService.translate(backendRequest)
+            
+            if (response.error != null) {
+                throw Exception("Translation API error: ${response.error.message}")
+            }
             
             Log.d(TAG, "Backend API translation completed for: ${request.id}")
             
             StreamingTranslationResult(
                 id = request.id,
                 originalText = request.text,
-                translatedText = "[API] ${mockResult.translatedText}", // Mark as API translation
-                confidence = mockResult.confidence,
+                translatedText = response.translatedContent,
+                confidence = response.confidence,
                 sourceLanguage = request.sourceLanguage,
                 targetLanguage = request.targetLanguage,
                 processingTimeMs = System.currentTimeMillis() - startTime,
@@ -147,38 +123,11 @@ class StreamingTranslationService {
                 progress = 1.0f
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Backend API translation failed for ${request.id}, falling back to mock", e)
-            // Fall back to mock service
-            translateWithMockService(request, startTime)
+            Log.e(TAG, "Backend API translation failed for ${request.id}", e)
+            throw e
         }
     }
     
-    /**
-     * Use mock translation service (original logic)
-     */
-    private suspend fun translateWithMockService(
-        request: StreamingTranslationRequest,
-        startTime: Long
-    ): StreamingTranslationResult {
-        val mockResult = mockTranslationService.translate(
-            text = request.text,
-            sourceLanguage = request.sourceLanguage,
-            targetLanguage = request.targetLanguage,
-            context = request.context
-        )
-        
-        return StreamingTranslationResult(
-            id = request.id,
-            originalText = request.text,
-            translatedText = mockResult.translatedText,
-            confidence = mockResult.confidence,
-            sourceLanguage = request.sourceLanguage,
-            targetLanguage = request.targetLanguage,
-            processingTimeMs = System.currentTimeMillis() - startTime,
-            isPartial = false,
-            progress = 1.0f
-        )
-    }
     
     init {
         startProcessingLoop()
@@ -274,11 +223,7 @@ class StreamingTranslationService {
         
         // For short text, translate immediately
         if (textLength < 100) {
-            return if (isRunningInEmulator()) {
-                translateWithBackendAPI(request, startTime)
-            } else {
-                translateWithMockService(request, startTime)
-            }
+            return translateWithBackendAPI(request, startTime)
         }
         
         // For longer text, provide streaming updates
@@ -303,25 +248,17 @@ class StreamingTranslationService {
                 ))
             }
             
-            // Translate chunk using appropriate service
-            val chunkResult = if (isRunningInEmulator()) {
-                // For emulator, simulate backend API call
-                delay(100) // Simulate API latency
-                val mockResult = mockTranslationService.translate(
-                    text = chunk,
-                    sourceLanguage = request.sourceLanguage,
-                    targetLanguage = request.targetLanguage,
-                    context = request.context
-                )
-                "[API] ${mockResult.translatedText}"
-            } else {
-                val mockResult = mockTranslationService.translate(
-                    text = chunk,
-                    sourceLanguage = request.sourceLanguage,
-                    targetLanguage = request.targetLanguage,
-                    context = request.context
-                )
-                mockResult.translatedText
+            // Translate chunk using backend API
+            val chunkRequest = request.copy(
+                id = "${request.id}_chunk_${index}",
+                text = chunk
+            )
+            val chunkResult = try {
+                val translationResult = translateWithBackendAPI(chunkRequest, System.currentTimeMillis())
+                translationResult.translatedText
+            } catch (e: Exception) {
+                Log.w(TAG, "Chunk translation failed, using original text: ${e.message}")
+                chunk // Fallback to original text if translation fails
             }
             
             translatedChunks.add(chunkResult)
@@ -522,6 +459,35 @@ class StreamingTranslationService {
     
     private suspend fun emitBatchUpdate(update: TranslationBatchUpdate) {
         Log.d(TAG, "Batch update: ${update.batchId} (${update.completed}/${update.total})")
+    }
+    
+    /**
+     * Synchronous translation method for simple use cases
+     */
+    suspend fun translateText(request: StreamingTranslationRequest): StreamingTranslationResult {
+        val startTime = System.currentTimeMillis()
+        
+        // Check cache first
+        val cacheKey = generateCacheKey(request.text, request.sourceLanguage, request.targetLanguage)
+        val cached = translationCache[cacheKey]
+        
+        if (cached != null) {
+            Log.d(TAG, "Using cached translation for: ${request.id}")
+            return cached.copy(
+                id = request.id,
+                processingTimeMs = System.currentTimeMillis() - startTime
+            )
+        }
+        
+        // Perform translation
+        val result = translateWithBackendAPI(request, startTime)
+        
+        // Cache the result
+        if (translationCache.size < CACHE_SIZE) {
+            translationCache[cacheKey] = result
+        }
+        
+        return result
     }
     
     /**

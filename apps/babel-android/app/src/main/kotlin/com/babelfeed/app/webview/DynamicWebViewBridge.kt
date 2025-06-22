@@ -298,25 +298,23 @@ class DynamicWebViewBridge(
                     
                     val isComplete = progress >= 1.0f
                     val result = if (isComplete) {
-                        // Final result
-                        val mockResult = MockTranslationService().translate(
-                            text = request.text,
-                            sourceLanguage = request.sourceLanguage,
-                            targetLanguage = request.targetLanguage,
-                            context = request.context
-                        )
-                        
-                        StreamingTranslationResult(
-                            id = request.id,
-                            originalText = request.text,
-                            translatedText = mockResult.translatedText,
-                            confidence = mockResult.confidence,
-                            sourceLanguage = request.sourceLanguage,
-                            targetLanguage = request.targetLanguage,
-                            processingTimeMs = mockResult.processingTimeMs,
-                            isPartial = false,
-                            progress = 1.0f
-                        )
+                        // Final result - use the injected streaming translation service
+                        try {
+                            streamingTranslationService.translateText(request)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Translation failed: ${e.message}")
+                            StreamingTranslationResult(
+                                id = request.id,
+                                originalText = request.text,
+                                translatedText = request.text, // Fallback to original text
+                                confidence = 0.0,
+                                sourceLanguage = request.sourceLanguage,
+                                targetLanguage = request.targetLanguage,
+                                processingTimeMs = 0,
+                                isPartial = false,
+                                progress = 1.0f
+                            )
+                        }
                     } else {
                         // Partial result
                         StreamingTranslationResult(

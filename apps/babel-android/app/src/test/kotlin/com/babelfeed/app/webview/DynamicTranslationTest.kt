@@ -11,6 +11,7 @@ import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.junit.Assert.assertNotNull
+import com.babelfeed.app.data.api.BabelApiService
 
 /**
  * Unit tests for DynamicWebViewBridge component
@@ -22,6 +23,9 @@ class DynamicTranslationTest {
     @Mock
     private lateinit var mockWebView: WebView
     
+    @Mock
+    private lateinit var mockApiService: BabelApiService
+    
     private lateinit var streamingService: StreamingTranslationService
     private lateinit var dynamicBridge: DynamicWebViewBridge
 
@@ -30,7 +34,7 @@ class DynamicTranslationTest {
         MockitoAnnotations.openMocks(this)
         `when`(mockWebView.context).thenReturn(RuntimeEnvironment.getApplication())
         
-        streamingService = StreamingTranslationService()
+        streamingService = StreamingTranslationService(mockApiService)
         dynamicBridge = DynamicWebViewBridge(
             webView = mockWebView,
             streamingTranslationService = streamingService

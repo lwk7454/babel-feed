@@ -95,7 +95,7 @@ data class TranslationBatch(
 
 class BabelWebViewBridge(
     private val webView: WebView,
-    private val translationService: MockTranslationService,
+    private val translationService: StreamingTranslationService,
     private val onContentExtracted: (ExtractedContent) -> Unit = {},
     private val onTranslationComplete: (TranslationBatch) -> Unit = {},
     private val onTranslationError: (String) -> Unit = {}
@@ -296,12 +296,19 @@ class BabelWebViewBridge(
                 val batchTranslations = withContext(Dispatchers.IO) {
                     batch.mapIndexed { itemIndex, textNode ->
                         Log.d(TAG, "Translating item ${batchIndex * 10 + itemIndex}: '${textNode.text.take(50)}...'")
-                        translationService.translate(
+                        
+                        val request = StreamingTranslationRequest(
+                            id = textNode.id,
                             text = textNode.text,
                             sourceLanguage = content.metadata.language,
                             targetLanguage = "zh-cn", // Default to simplified Chinese
+                            priority = TranslationPriority.NORMAL,
                             context = textNode.context
-                        ).let { result ->
+                        )
+                        
+                        try {
+                            // Get translation result from streaming service
+                            val result = translationService.translateText(request)
                             Log.d(TAG, "Translation result: '${textNode.text.take(30)}...' -> '${result.translatedText.take(30)}...'")
                             TranslationResult(
                                 id = textNode.id,
@@ -309,6 +316,15 @@ class BabelWebViewBridge(
                                 translatedText = result.translatedText,
                                 confidence = result.confidence,
                                 language = result.targetLanguage
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Translation failed for text node ${textNode.id}: ${e.message}")
+                            TranslationResult(
+                                id = textNode.id,
+                                originalText = textNode.text,
+                                translatedText = textNode.text, // Fallback to original text
+                                confidence = 0.0,
+                                language = content.metadata.language
                             )
                         }
                     }

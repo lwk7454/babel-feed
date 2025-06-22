@@ -9,50 +9,35 @@ import javax.inject.Singleton
 class ArticleRepository @Inject constructor(
     private val apiService: BabelApiService
 ) {
-    suspend fun getArticles(): List<Article> {
+    suspend fun getArticles(
+        limit: Int = 20,
+        offset: Int = 0,
+        language: String? = null,
+        search: String? = null
+    ): List<Article> {
         return try {
-            apiService.getArticles()
+            val response = apiService.getArticles(limit, offset, language, search)
+            if (response.success) {
+                response.data
+            } else {
+                emptyList()
+            }
         } catch (e: Exception) {
-            // Return mock data for now
-            getMockArticles()
+            emptyList()
         }
     }
 
     suspend fun getArticle(id: String): Article? {
         return try {
-            apiService.getArticle(id)
+            val response = apiService.getArticle(id)
+            if (response.success) {
+                response.data
+            } else {
+                null
+            }
         } catch (e: Exception) {
-            // Return mock data for now
-            getMockArticles().find { it.id == id }
+            null
         }
     }
 
-    private fun getMockArticles(): List<Article> {
-        return listOf(
-            Article(
-                id = "1",
-                title = "Global Climate Summit Reaches Historic Agreement",
-                summary = "World leaders agree on ambitious climate action plan with binding commitments for carbon reduction by 2030.",
-                url = "file:///android_asset/test-page.html",
-                source = "Global News Network",
-                publishedAt = "2024-06-18T10:30:00Z"
-            ),
-            Article(
-                id = "2", 
-                title = "Test Translation Error Handling",
-                summary = "This page will trigger translation errors to test the error banner functionality.",
-                url = "file:///android_asset/test-error-page.html",
-                source = "Test Source",
-                publishedAt = "2024-06-18T09:15:00Z"
-            ),
-            Article(
-                id = "3",
-                title = "New Archaeological Discovery Rewrites Ancient History",
-                summary = "Recent excavations uncover evidence of advanced civilization dating back 10,000 years earlier than previously thought.",
-                url = "https://www.nationalgeographic.com/science/article/archaeology",
-                source = "Science Weekly",
-                publishedAt = "2024-06-18T08:00:00Z"
-            )
-        )
-    }
 }

@@ -10,6 +10,19 @@ import com.babelfeed.app.ui.screens.feed.FeedScreen
 import com.babelfeed.app.ui.screens.article.ArticleScreen
 import com.babelfeed.app.ui.screens.webview.WebViewScreen
 import com.babelfeed.app.ui.screens.profile.ProfileScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.components.ActivityComponent
+import androidx.compose.ui.platform.LocalContext
+import com.babelfeed.app.webview.StreamingTranslationService
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+
+@EntryPoint
+@InstallIn(ActivityComponent::class)
+interface TranslationServiceEntryPoint {
+    fun translationService(): StreamingTranslationService
+}
 
 @Composable
 fun BabelFeedNavigation(
@@ -48,9 +61,14 @@ fun BabelFeedNavigation(
         
         composable("webview?url={url}") { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
+            val context = LocalContext.current
+            val translationService = EntryPointAccessors
+                .fromActivity(context as android.app.Activity, TranslationServiceEntryPoint::class.java)
+                .translationService()
             WebViewScreen(
                 url = url,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                translationService = translationService
             )
         }
         

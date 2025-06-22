@@ -6,10 +6,28 @@ import retrofit2.http.*
 interface BabelApiService {
     // Articles endpoints
     @GET("articles")
-    suspend fun getArticles(): List<Article>
+    suspend fun getArticles(
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null,
+        @Query("language") language: String? = null,
+        @Query("search") search: String? = null
+    ): ArticlesResponse
 
     @GET("articles/{id}")
-    suspend fun getArticle(@Path("id") id: String): Article
+    suspend fun getArticle(@Path("id") id: String): ArticleResponse
+    
+    // Translation endpoints
+    @POST("translation/stream")
+    suspend fun translateStream(@Body request: BackendTranslationRequest): BackendTranslationResponse
+    
+    @POST("translation/translate")
+    suspend fun translate(@Body request: BackendTranslationRequest): BackendTranslationResponse
+    
+    @GET("translation/languages")
+    suspend fun getSupportedLanguages(): SupportedLanguagesResponse
+    
+    @GET("translation/models")
+    suspend fun getTranslationModels(): TranslationModelsResponse
     
     // Authentication endpoints
     @POST("auth/guest")

@@ -104,11 +104,13 @@ fun ArticleCard(
                 text = article.title,
                 style = MaterialTheme.typography.headlineSmall
             )
-            Text(
-                text = article.summary,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            article.summary?.let { summary ->
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
             Text(
                 text = "Source: ${article.source}",
                 style = MaterialTheme.typography.bodySmall,

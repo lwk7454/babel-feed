@@ -73,11 +73,13 @@ fun ArticleScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
-                    Text(
-                        text = article.summary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    article.summary?.let { summary ->
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
                     
                     Text(
                         text = "Source: ${article.source}",
