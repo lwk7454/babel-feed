@@ -1,5 +1,8 @@
 import { vi, beforeEach, afterEach } from 'vitest';
 
+// Make vi globally available for hoisted mocks
+globalThis.vi = vi;
+
 // Mock global fetch for RSS parsing tests
 global.fetch = vi.fn();
 
