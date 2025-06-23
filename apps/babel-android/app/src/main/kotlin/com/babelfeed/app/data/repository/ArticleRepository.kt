@@ -1,5 +1,6 @@
 package com.babelfeed.app.data.repository
 
+import android.util.Log
 import com.babelfeed.app.data.api.BabelApiService
 import com.babelfeed.app.data.models.Article
 import javax.inject.Inject
@@ -16,13 +17,17 @@ class ArticleRepository @Inject constructor(
         search: String? = null
     ): List<Article> {
         return try {
+            Log.d("ArticleRepository", "Calling API for articles with limit=$limit, offset=$offset")
             val response = apiService.getArticles(limit, offset, language, search)
+            Log.d("ArticleRepository", "API response: success=${response.success}, articles count=${response.data.size}")
             if (response.success) {
                 response.data
             } else {
+                Log.w("ArticleRepository", "API response was not successful")
                 emptyList()
             }
         } catch (e: Exception) {
+            Log.e("ArticleRepository", "Exception calling articles API", e)
             emptyList()
         }
     }

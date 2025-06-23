@@ -18,9 +18,12 @@ class AuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         
-        // Add auth header if user is authenticated
+        // Check if this is an articles endpoint (should not require auth)
+        val isArticlesEndpoint = originalRequest.url.encodedPath.contains("/articles")
+        
+        // Add auth header if user is authenticated and it's not an articles endpoint
         val token = tokenManager.getAccessToken()
-        val request = if (token != null) {
+        val request = if (token != null && !isArticlesEndpoint) {
             originalRequest.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .build()
@@ -30,8 +33,8 @@ class AuthInterceptor @Inject constructor(
         
         val response = chain.proceed(request)
         
-        // Handle token refresh on 401 Unauthorized
-        if (response.code == 401 && token != null) {
+        // Handle token refresh on 401 Unauthorized (skip for articles endpoints)
+        if (response.code == 401 && token != null && !isArticlesEndpoint) {
             response.close()
             
             // Try to refresh token

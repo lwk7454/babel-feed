@@ -37,6 +37,7 @@ data class StreamingProgressUpdate(
 class DynamicWebViewBridge(
     private val webView: WebView,
     private val streamingTranslationService: StreamingTranslationService,
+    private val stateManager: TranslationStateManager? = null,
     private val onDynamicContentExtracted: (DynamicContentUpdate) -> Unit = {},
     private val onStreamingTranslationUpdate: (StreamingTranslationResult) -> Unit = {},
     private val onTranslationBatchUpdate: (TranslationBatchUpdate) -> Unit = {},
@@ -49,6 +50,7 @@ class DynamicWebViewBridge(
     private val isDynamicModeActive = AtomicBoolean(false)
     private val activeTranslations = ConcurrentHashMap<String, String>() // nodeId -> requestId
     private val contentHistory = ConcurrentHashMap<String, String>() // nodeId -> last translated text
+    private var currentUrl: String? = null
     
     companion object {
         private const val TAG = "DynamicWebViewBridge"
@@ -157,6 +159,14 @@ class DynamicWebViewBridge(
         Log.d(TAG, "Starting dynamic content monitoring")
         isDynamicModeActive.set(true)
         
+        // Save dynamic mode state
+        currentUrl?.let { url ->
+            stateManager?.let { manager ->
+                val currentState = manager.restoreTranslationState(url)
+                manager.saveTranslationState(url, currentState.copy(isDynamicModeEnabled = true))
+            }
+        }
+        
         val jsCode = """
             (function() {
                 try {
@@ -191,6 +201,14 @@ class DynamicWebViewBridge(
             streamingTranslationService.cancelTranslation(requestId)
         }
         activeTranslations.clear()
+        
+        // Save dynamic mode state as disabled
+        currentUrl?.let { url ->
+            stateManager?.let { manager ->
+                val currentState = manager.restoreTranslationState(url)
+                manager.saveTranslationState(url, currentState.copy(isDynamicModeEnabled = false))
+            }
+        }
         
         val jsCode = """
             (function() {
@@ -525,6 +543,40 @@ class DynamicWebViewBridge(
     }
 
     /**
+     * Set current URL for state management
+     */
+    fun setCurrentUrl(url: String) {
+        currentUrl = url
+        Log.d(TAG, "Current URL set to: $url")
+    }
+    
+    /**
+     * Handle URL navigation - clear cache and restore state
+     */
+    fun onUrlChanged(newUrl: String) {
+        Log.d(TAG, "URL changed to: $newUrl")
+        
+        // Clear previous page state
+        activeTranslations.clear()
+        contentHistory.clear()
+        
+        // Update current URL
+        currentUrl = newUrl
+        
+        // Restore dynamic mode state for new URL
+        stateManager?.let { manager ->
+            val state = manager.restoreTranslationState(newUrl)
+            if (state.isDynamicModeEnabled && !isDynamicModeActive.get()) {
+                Log.d(TAG, "Auto-starting dynamic mode for restored state")
+                startDynamicMode()
+            } else if (!state.isDynamicModeEnabled && isDynamicModeActive.get()) {
+                Log.d(TAG, "Auto-stopping dynamic mode for restored state")
+                stopDynamicMode()
+            }
+        }
+    }
+    
+    /**
      * Get dynamic mode status
      */
     fun getStatus(): Map<String, Any> {
@@ -532,6 +584,7 @@ class DynamicWebViewBridge(
             "isDynamicActive" to isDynamicModeActive.get(),
             "activeTranslations" to activeTranslations.size,
             "contentHistory" to contentHistory.size,
+            "currentUrl" to (currentUrl ?: "unknown"),
             "streamingStats" to streamingTranslationService.getCacheStats()
         )
     }
@@ -540,11 +593,23 @@ class DynamicWebViewBridge(
      * Cleanup resources
      */
     fun cleanup() {
+        // Save final state before cleanup
+        currentUrl?.let { url ->
+            stateManager?.let { manager ->
+                val currentState = manager.restoreTranslationState(url)
+                manager.saveTranslationState(url, currentState.copy(
+                    isDynamicModeEnabled = isDynamicModeActive.get(),
+                    lastTranslatedAt = System.currentTimeMillis()
+                ))
+            }
+        }
+        
         stopDynamicMode()
         streamingTranslationService.cleanup()
         webView.removeJavascriptInterface(BRIDGE_NAME)
         activeTranslations.clear()
         contentHistory.clear()
+        currentUrl = null
         Log.d(TAG, "Dynamic WebView bridge cleaned up")
     }
 }

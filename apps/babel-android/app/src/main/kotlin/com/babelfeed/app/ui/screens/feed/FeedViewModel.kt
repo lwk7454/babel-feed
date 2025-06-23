@@ -1,5 +1,6 @@
 package com.babelfeed.app.ui.screens.feed
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.babelfeed.app.data.models.Article
@@ -26,11 +27,14 @@ class FeedViewModel @Inject constructor(
     private fun loadArticles() {
         viewModelScope.launch {
             try {
+                Log.d("FeedViewModel", "Starting to load articles...")
                 _uiState.value = FeedUiState.Loading
                 val articles = articleRepository.getArticles()
+                Log.d("FeedViewModel", "Loaded ${articles.size} articles from repository")
                 _uiState.value = FeedUiState.Success(articles)
             } catch (e: Exception) {
-                _uiState.value = FeedUiState.Error(e.message ?: "Unknown error occurred")
+                Log.e("FeedViewModel", "Error loading articles", e)
+                _uiState.value = FeedUiState.Error("Failed to load articles: ${e.message}")
             }
         }
     }

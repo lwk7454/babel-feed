@@ -48,6 +48,9 @@ import com.babelfeed.app.webview.TranslationBatch
 import com.babelfeed.app.webview.DynamicContentUpdate
 import com.babelfeed.app.webview.StreamingTranslationResult
 import com.babelfeed.app.webview.TranslationBatchUpdate
+import com.babelfeed.app.webview.TranslationStateManager
+import com.babelfeed.app.webview.TranslationState
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,9 +59,17 @@ fun WebViewScreen(
     onBackClick: () -> Unit,
     translationService: StreamingTranslationService
 ) {
-    var isTranslationEnabled by remember { mutableStateOf(true) }
-    var isAdBlockingEnabled by remember { mutableStateOf(true) }
-    var isDynamicModeEnabled by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val stateManager = remember { TranslationStateManager.getInstance(context) }
+    
+    // Restore translation state for the current URL
+    val restoredState = remember(url) { stateManager.restoreTranslationState(url) }
+    
+    var currentUrl by remember { mutableStateOf(url) }
+    var isTranslationEnabled by remember { mutableStateOf(restoredState.isEnabled) }
+    var isAdBlockingEnabled by remember { mutableStateOf(restoredState.isAdBlockingEnabled) }
+    var isDynamicModeEnabled by remember { mutableStateOf(restoredState.isDynamicModeEnabled) }
+    var targetLanguage by remember { mutableStateOf(restoredState.targetLanguage) }
     var extractedContent by remember { mutableStateOf<ExtractedContent?>(null) }
     var translationBatch by remember { mutableStateOf<TranslationBatch?>(null) }
     var dynamicContentUpdate by remember { mutableStateOf<DynamicContentUpdate?>(null) }
@@ -69,6 +80,21 @@ fun WebViewScreen(
     var showDropdown by remember { mutableStateOf(false) }
     var translationError by remember { mutableStateOf<String?>(null) }
     var showErrorBanner by remember { mutableStateOf(false) }
+    
+    // Function to save current translation state
+    val saveTranslationState = {
+        val state = TranslationState(
+            isEnabled = isTranslationEnabled,
+            isDynamicModeEnabled = isDynamicModeEnabled,
+            isAdBlockingEnabled = isAdBlockingEnabled,
+            targetLanguage = targetLanguage,
+            sourceLanguage = "auto",
+            lastTranslatedAt = System.currentTimeMillis(),
+            translationCache = emptyMap(), // TODO: Implement cache
+            userPreferences = stateManager.getGlobalPreferences()
+        )
+        stateManager.saveTranslationState(currentUrl, state)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -103,6 +129,7 @@ fun WebViewScreen(
                                 bridge?.toggleTranslation()
                             }
                             isTranslationEnabled = !isTranslationEnabled
+                            saveTranslationState() // Save state when toggling translation
                             showDropdown = false
                         }
                     )
@@ -117,6 +144,7 @@ fun WebViewScreen(
                                 dynamicBridge?.startDynamicMode()
                             }
                             isDynamicModeEnabled = !isDynamicModeEnabled
+                            saveTranslationState() // Save state when toggling dynamic mode
                             showDropdown = false
                         }
                     )
@@ -131,6 +159,7 @@ fun WebViewScreen(
                                 bridge?.blockAds()
                             }
                             isAdBlockingEnabled = !isAdBlockingEnabled
+                            saveTranslationState() // Save state when toggling ad blocking
                             showDropdown = false
                         }
                     )
@@ -210,6 +239,7 @@ fun WebViewScreen(
                     val dynamicWebViewBridge = DynamicWebViewBridge(
                         webView = this,
                         streamingTranslationService = translationService,
+                        stateManager = stateManager,
                         onDynamicContentExtracted = { update ->
                             Log.d("BabelWebView", "Dynamic content: ${update.textNodes.size} nodes (${update.type})")
                             dynamicContentUpdate = update
@@ -227,8 +257,32 @@ fun WebViewScreen(
                     
                     webViewClient = BabelWebViewClient(
                         bridge = webViewBridge,
+                        stateManager = stateManager,
                         adBlockingEnabled = isAdBlockingEnabled,
-                        autoTranslateEnabled = false
+                        autoTranslateEnabled = stateManager.shouldAutoTranslate(url),
+                        onUrlChanged = { newUrl ->
+                            // Handle URL navigation - restore translation state for new URL
+                            Log.d("BabelWebView", "URL changed from $currentUrl to $newUrl")
+                            val newState = stateManager.restoreTranslationState(newUrl)
+                            
+                            // Update UI state
+                            currentUrl = newUrl
+                            isTranslationEnabled = newState.isEnabled
+                            isDynamicModeEnabled = newState.isDynamicModeEnabled
+                            isAdBlockingEnabled = newState.isAdBlockingEnabled
+                            targetLanguage = newState.targetLanguage
+                            
+                            // Notify dynamic bridge of URL change
+                            dynamicBridge?.onUrlChanged(newUrl)
+                            
+                            // Clear previous state
+                            extractedContent = null
+                            translationBatch = null
+                            dynamicContentUpdate = null
+                            streamingResults = emptyList()
+                            translationError = null
+                            showErrorBanner = false
+                        }
                     )
                     
                     settings.apply {
@@ -249,6 +303,9 @@ fun WebViewScreen(
                     webViewBridge.initialize()
                     dynamicWebViewBridge.initialize()
                     
+                    // Set initial URL for dynamic bridge
+                    dynamicWebViewBridge.setCurrentUrl(url)
+                    
                     loadUrl(url)
                 }
             },
@@ -262,24 +319,43 @@ fun WebViewScreen(
     }
     
     // Auto-start translation and dynamic mode when bridges are available
-    LaunchedEffect(bridge, dynamicBridge) {
+    LaunchedEffect(bridge, dynamicBridge, currentUrl) {
         val currentBridge = bridge
         val currentDynamicBridge = dynamicBridge
         
-        if (currentBridge != null && currentDynamicBridge != null && isTranslationEnabled && isDynamicModeEnabled) {
+        if (currentBridge != null && currentDynamicBridge != null) {
             // Add a small delay to ensure page is loaded
             kotlinx.coroutines.delay(1000)
             
-            // Start dynamic mode first
-            currentDynamicBridge.startDynamicMode()
+            // Check if auto-translation should be enabled for this URL
+            val shouldAutoTranslate = stateManager.shouldAutoTranslate(currentUrl)
             
-            // Then extract content for translation
-            currentBridge.extractContent()
+            if (shouldAutoTranslate || (isTranslationEnabled && isDynamicModeEnabled)) {
+                Log.d("BabelWebView", "Auto-starting translation for $currentUrl")
+                
+                // Start dynamic mode first if enabled
+                if (isDynamicModeEnabled) {
+                    currentDynamicBridge.startDynamicMode()
+                }
+                
+                // Then extract content for translation
+                if (isTranslationEnabled) {
+                    currentBridge.extractContent()
+                }
+            }
+        }
+    }
+    
+    // Save translation state when component unmounts or URL changes
+    DisposableEffect(currentUrl) {
+        onDispose {
+            saveTranslationState()
         }
     }
     
     DisposableEffect(Unit) {
         onDispose {
+            saveTranslationState()
             bridge?.cleanup()
             dynamicBridge?.cleanup()
         }

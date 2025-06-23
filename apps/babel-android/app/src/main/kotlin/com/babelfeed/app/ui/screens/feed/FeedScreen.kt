@@ -1,5 +1,6 @@
 package com.babelfeed.app.ui.screens.feed
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,17 +57,34 @@ fun FeedScreen(
                 }
             }
             is FeedUiState.Success -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items((uiState as FeedUiState.Success).articles) { article ->
-                        ArticleCard(
-                            article = article,
-                            onClick = { onArticleClick(article.id) },
-                            onReadFullArticle = { onReadFullArticle(article.url) }
+                val articles = (uiState as FeedUiState.Success).articles
+                Log.d("FeedScreen", "Rendering Success state with ${articles.size} articles")
+                if (articles.isEmpty()) {
+                    Log.d("FeedScreen", "Articles list is empty, showing 'No articles available'")
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No articles available",
+                            style = MaterialTheme.typography.bodyLarge
                         )
+                    }
+                } else {
+                    Log.d("FeedScreen", "Rendering LazyColumn with ${articles.size} articles")
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(articles) { article ->
+                            Log.d("FeedScreen", "Rendering article: ${article.title}")
+                            ArticleCard(
+                                article = article,
+                                onClick = { onArticleClick(article.id) },
+                                onReadFullArticle = { onReadFullArticle(article.url) }
+                            )
+                        }
                     }
                 }
             }
@@ -92,6 +110,7 @@ fun ArticleCard(
     onClick: () -> Unit,
     onReadFullArticle: () -> Unit
 ) {
+    Log.d("ArticleCard", "Rendering article card for: ${article.title}")
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
