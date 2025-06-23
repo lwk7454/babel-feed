@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -18,11 +21,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-// import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-// import com.babelfeed.app.R
+import com.babelfeed.app.R
 import com.babelfeed.app.data.models.Article
+import com.babelfeed.app.ui.components.LanguageBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,12 +40,12 @@ fun FeedScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Babel Feed") },
+            title = { Text(stringResource(R.string.app_name)) },
             actions = {
                 IconButton(onClick = onProfileClick) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Profile"
+                        contentDescription = stringResource(R.string.profile)
                     )
                 }
             }
@@ -66,7 +70,7 @@ fun FeedScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No articles available",
+                            text = stringResource(R.string.no_articles_available),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -119,10 +123,21 @@ fun ArticleCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = article.title,
-                style = MaterialTheme.typography.headlineSmall
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = article.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                LanguageBadge(
+                    languageCode = article.sourceLanguage
+                )
+            }
             article.summary?.let { summary ->
                 Text(
                     text = summary,
@@ -131,7 +146,7 @@ fun ArticleCard(
                 )
             }
             Text(
-                text = "Source: ${article.source}",
+                text = stringResource(R.string.source, article.source),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp)
             )

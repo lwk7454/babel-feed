@@ -1,10 +1,14 @@
 package com.babelfeed.app.ui.screens.article
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -21,10 +25,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-// import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-// import com.babelfeed.app.R
+import com.babelfeed.app.R
+import com.babelfeed.app.ui.components.LanguageBadge
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,10 +48,10 @@ fun ArticleScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Article Summary") },
+            title = { Text(stringResource(R.string.article_summary)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
             }
         )
@@ -67,11 +72,23 @@ fun ArticleScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    Text(
-                        text = article.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = article.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(bottom = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        LanguageBadge(
+                            languageCode = article.sourceLanguage
+                        )
+                    }
                     
                     article.summary?.let { summary ->
                         Text(
@@ -82,7 +99,7 @@ fun ArticleScreen(
                     }
                     
                     Text(
-                        text = "Source: ${article.source}",
+                        text = stringResource(R.string.source, article.source),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
@@ -91,7 +108,7 @@ fun ArticleScreen(
                         onClick = { onReadFullArticle(article.url) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Read Full Article")
+                        Text(stringResource(R.string.read_full_article))
                     }
                 }
             }

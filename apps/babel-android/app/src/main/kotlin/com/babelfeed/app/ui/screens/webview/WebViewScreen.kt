@@ -37,8 +37,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.babelfeed.app.R
 import com.babelfeed.app.webview.BabelWebViewBridge
 import com.babelfeed.app.webview.BabelWebViewClient
 import com.babelfeed.app.webview.DynamicWebViewBridge
@@ -98,15 +100,15 @@ fun WebViewScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Article") },
+            title = { Text(stringResource(R.string.article)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
             },
             actions = {
                 IconButton(onClick = { showDropdown = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Menu")
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu))
                 }
                 DropdownMenu(
                     expanded = showDropdown,
@@ -114,7 +116,7 @@ fun WebViewScreen(
                 ) {
                     DropdownMenuItem(
                         text = { 
-                            Text("${if (isTranslationEnabled) "Disable" else "Enable"} Translation") 
+                            Text(if (isTranslationEnabled) stringResource(R.string.disable_translation) else stringResource(R.string.enable_translation)) 
                         },
                         onClick = {
                             if (!isTranslationEnabled) {
@@ -135,7 +137,7 @@ fun WebViewScreen(
                     )
                     DropdownMenuItem(
                         text = { 
-                            Text("${if (isDynamicModeEnabled) "Disable" else "Enable"} Dynamic Mode") 
+                            Text(if (isDynamicModeEnabled) stringResource(R.string.disable_dynamic_mode) else stringResource(R.string.enable_dynamic_mode)) 
                         },
                         onClick = {
                             if (isDynamicModeEnabled) {
@@ -150,7 +152,7 @@ fun WebViewScreen(
                     )
                     DropdownMenuItem(
                         text = { 
-                            Text("${if (isAdBlockingEnabled) "Disable" else "Enable"} Ad Block") 
+                            Text(if (isAdBlockingEnabled) stringResource(R.string.disable_ad_block) else stringResource(R.string.enable_ad_block)) 
                         },
                         onClick = {
                             if (isAdBlockingEnabled) {
@@ -186,13 +188,13 @@ fun WebViewScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Warning,
-                        contentDescription = "Translation Error",
+                        contentDescription = stringResource(R.string.translation_error),
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Translation service is experiencing issues. Please try again later.",
+                        text = stringResource(R.string.translation_service_error),
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1f)
@@ -206,7 +208,7 @@ fun WebViewScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Dismiss",
+                            contentDescription = stringResource(R.string.dismiss),
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(16.dp)
                         )

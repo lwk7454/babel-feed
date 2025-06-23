@@ -7,10 +7,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.babelfeed.app.R
 import com.babelfeed.app.auth.AuthState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,7 +41,7 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Profile",
+            text = stringResource(R.string.profile),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -117,15 +119,15 @@ private fun NoAuthCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Welcome to Babel Feed",
+                text = stringResource(R.string.welcome_to_babel_feed),
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "Create a guest profile to start using the app",
+                text = stringResource(R.string.create_guest_profile_description),
                 textAlign = TextAlign.Center
             )
             Button(onClick = onCreateGuest) {
-                Text("Start as Guest")
+                Text(stringResource(R.string.start_as_guest))
             }
         }
     }
@@ -144,20 +146,20 @@ private fun GuestUserCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Guest User",
+                text = stringResource(R.string.guest_user),
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "Guest ID: ${guestId ?: "Unknown"}",
+                text = stringResource(R.string.guest_id, guestId ?: stringResource(R.string.unknown)),
                 style = MaterialTheme.typography.bodySmall
             )
             
-            Text("Add your email to save your preferences across devices:")
+            Text(stringResource(R.string.add_email_description))
             
             OutlinedTextField(
                 value = emailInput,
                 onValueChange = onEmailChange,
-                label = { Text("Email Address") },
+                label = { Text(stringResource(R.string.email_address)) },
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -166,7 +168,7 @@ private fun GuestUserCard(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = emailInput.isNotBlank()
             ) {
-                Text("Create Account")
+                Text(stringResource(R.string.create_account))
             }
         }
     }
@@ -185,17 +187,17 @@ private fun PendingVerificationCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Email Verification",
+                text = stringResource(R.string.email_verification),
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "Please check your email ($email) for a verification token."
+                text = stringResource(R.string.email_verification_instruction, email)
             )
             
             OutlinedTextField(
                 value = verificationTokenInput,
                 onValueChange = onTokenChange,
-                label = { Text("Verification Token") },
+                label = { Text(stringResource(R.string.verification_code)) },
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -204,7 +206,7 @@ private fun PendingVerificationCard(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = verificationTokenInput.isNotBlank()
             ) {
-                Text("Verify Email")
+                Text(stringResource(R.string.verify_email))
             }
         }
     }
@@ -221,15 +223,15 @@ private fun AuthenticatedUserCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Authenticated User",
+                text = stringResource(R.string.authenticated_user),
                 style = MaterialTheme.typography.titleMedium
             )
             
             user?.let { u ->
-                Text("Email: ${u.email}")
-                Text("User ID: ${u.id}")
-                Text("Email Verified: ${if (u.emailVerified) "Yes" else "No"}")
-                Text("Member since: ${u.createdAt}")
+                Text(stringResource(R.string.user_email, u.email ?: stringResource(R.string.unknown)))
+                Text(stringResource(R.string.user_id, u.id))
+                Text(stringResource(R.string.email_verified, if (u.emailVerified) stringResource(R.string.yes) else stringResource(R.string.no)))
+                Text(stringResource(R.string.member_since, u.createdAt))
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -241,7 +243,7 @@ private fun AuthenticatedUserCard(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Logout")
+                Text(stringResource(R.string.logout))
             }
         }
     }
