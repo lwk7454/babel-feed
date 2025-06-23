@@ -3,10 +3,13 @@ package com.babelfeed.app.ui.screens.profile
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -14,12 +17,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.babelfeed.app.R
 import com.babelfeed.app.auth.AuthState
+import com.babelfeed.app.data.models.UserPreferences
+import com.babelfeed.app.utils.PreferencesManager
+import javax.inject.Inject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -27,9 +34,28 @@ fun ProfileScreen(
     
     var emailInput by remember { mutableStateOf("") }
     var verificationTokenInput by remember { mutableStateOf("") }
+    var showPreferences by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.initializeProfile()
+    }
+    
+    if (showPreferences) {
+        PreferencesCard(
+            preferences = null, // You can load user preferences here
+            onUpdatePreferences = { preferences ->
+                // Apply language change immediately
+                val preferencesManager = PreferencesManager(viewModel.localeManager)
+                preferencesManager.applyPreferences(context, preferences)
+                
+                // Restart activity to apply language change
+                (context as? android.app.Activity)?.recreate()
+                
+                showPreferences = false
+            },
+            onBack = { showPreferences = false }
+        )
+        return
     }
 
     Column(
@@ -81,7 +107,8 @@ fun ProfileScreen(
                         if (emailInput.isNotBlank()) {
                             viewModel.createAccount(emailInput)
                         }
-                    }
+                    },
+                    onShowPreferences = { showPreferences = true }
                 )
             }
             
@@ -101,7 +128,8 @@ fun ProfileScreen(
             AuthState.Authenticated -> {
                 AuthenticatedUserCard(
                     user = currentUser,
-                    onLogout = { viewModel.logout() }
+                    onLogout = { viewModel.logout() },
+                    onShowPreferences = { showPreferences = true }
                 )
             }
         }
@@ -138,7 +166,8 @@ private fun GuestUserCard(
     guestId: String?,
     emailInput: String,
     onEmailChange: (String) -> Unit,
-    onCreateAccount: () -> Unit
+    onCreateAccount: () -> Unit,
+    onShowPreferences: () -> Unit
 ) {
     Card {
         Column(
@@ -163,12 +192,30 @@ private fun GuestUserCard(
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Button(
-                onClick = onCreateAccount,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = emailInput.isNotBlank()
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.create_account))
+                OutlinedButton(
+                    onClick = onShowPreferences,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.preferences))
+                }
+                
+                Button(
+                    onClick = onCreateAccount,
+                    modifier = Modifier.weight(1f),
+                    enabled = emailInput.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.create_account))
+                }
             }
         }
     }
@@ -215,7 +262,8 @@ private fun PendingVerificationCard(
 @Composable
 private fun AuthenticatedUserCard(
     user: com.babelfeed.app.data.models.User?,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onShowPreferences: () -> Unit
 ) {
     Card {
         Column(
@@ -236,14 +284,32 @@ private fun AuthenticatedUserCard(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            Button(
-                onClick = onLogout,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.logout))
+                OutlinedButton(
+                    onClick = onShowPreferences,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.preferences))
+                }
+                
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.logout))
+                }
             }
         }
     }

@@ -7,6 +7,7 @@ import com.babelfeed.app.auth.AuthenticationManager
 import com.babelfeed.app.data.models.User
 import com.babelfeed.app.data.models.UserPreferences
 import com.babelfeed.app.data.repository.UserRepository
+import com.babelfeed.app.utils.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authManager: AuthenticationManager,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    val localeManager: LocaleManager
 ) : ViewModel() {
 
     val authState: StateFlow<AuthState> = authManager.authState

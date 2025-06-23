@@ -24,6 +24,14 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var localeManager: LocaleManager
+    
+    override fun attachBaseContext(newBase: Context?) {
+        super.attachBaseContext(newBase?.let { context ->
+            val savedLocale = LocaleManager().getCurrentLocale(context)
+            LocaleManager().setLocale(context, savedLocale)
+        })
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -55,10 +63,4 @@ class MainActivity : ComponentActivity() {
         }
     }
     
-    override fun attachBaseContext(newBase: Context) {
-        val localeManager = LocaleManager()
-        val currentLocale = localeManager.getCurrentLocale(newBase)
-        val localizedContext = localeManager.setLocale(newBase, currentLocale)
-        super.attachBaseContext(localizedContext)
-    }
 }

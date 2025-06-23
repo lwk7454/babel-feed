@@ -28,10 +28,10 @@ export const appiumConfig = {
     'appium:platformVersion': '16',
     'appium:deviceName': 'emulator-5554',
     'appium:automationName': 'UiAutomator2',
-    'appium:appPackage': 'com.babelfeed.app.debug',
+    'appium:appPackage': 'com.babelfeed.app',
     'appium:appActivity': 'com.babelfeed.app.MainActivity',
     'appium:autoGrantPermissions': true,
-    'appium:noReset': false,
+    'appium:noReset': true,
     'appium:fullReset': false,
     'appium:newCommandTimeout': 600, // 10 minutes for longer operations
     'appium:androidInstallTimeout': 120000, // 2 minutes for app installation

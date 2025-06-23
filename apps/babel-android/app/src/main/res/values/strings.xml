@@ -47,6 +47,12 @@
     <string name="welcome_to_babel_feed">Welcome to Babel Feed</string>
     <string name="create_guest_profile_description">Create a guest profile to start using the app</string>
     <string name="start_as_guest">Start as Guest</string>
+    
+    <!-- Welcome Screen -->
+    <string name="choose_your_language">Choose your preferred language to get started</string>
+    <string name="select_language">Select Language</string>
+    <string name="continue_button">Continue</string>
+    <string name="use_system_language">Use System Language</string>
     <string name="guest_user">Guest User</string>
     <string name="guest_id">Guest ID: %1$s</string>
     <string name="add_email_description">Add your email to save your preferences across devices:</string>
