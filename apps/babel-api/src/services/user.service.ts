@@ -5,13 +5,14 @@ import { users, userSessions, userPreferences, type User, type NewUser, type New
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
+import { emailService } from './email.service.js';
 
 /**
  * User service for managing user accounts, authentication, and sessions
  */
 export class UserService {
   private readonly jwtSecret: string;
-  private readonly accessTokenExpiry = '30d'; // 30 days for news app
+  private readonly accessTokenExpiry = '30d'; // 30 days for news app - longer sessions preferred
   private readonly refreshTokenExpiry = '365d'; // 1 year
   private readonly db: PostgresJsDatabase<any>;
   
@@ -61,7 +62,7 @@ export class UserService {
 
     // Generate verification token
     const verificationToken = this.generateVerificationToken();
-    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Update guest user with email and verification token
     const [updatedUser] = await this.db
@@ -74,6 +75,14 @@ export class UserService {
       })
       .where(eq(users.id, guestUser.id))
       .returning();
+
+    // Send OTP email
+    try {
+      await emailService.sendOTPEmail(email, verificationToken);
+    } catch (error) {
+      console.error('Failed to send OTP email:', error);
+      // Don't throw here - user creation succeeded, email failure shouldn't block it
+    }
 
     return { user: updatedUser, verificationToken };
   }
@@ -115,6 +124,14 @@ export class UserService {
 
     // Create session and generate tokens
     const tokens = await this.createSession(verifiedUser);
+
+    // Send welcome email
+    try {
+      await emailService.sendWelcomeEmail(verifiedUser.email!);
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+      // Don't throw here - verification succeeded, welcome email failure shouldn't block it
+    }
 
     return { user: verifiedUser, tokens };
   }
@@ -274,7 +291,8 @@ export class UserService {
   }
 
   private generateVerificationToken(): string {
-    return randomBytes(32).toString('hex');
+    // Generate 4-digit OTP
+    return Math.floor(1000 + Math.random() * 9000).toString();
   }
 
   private generateAccessToken(user: User): string {
@@ -291,8 +309,7 @@ export class UserService {
   }
 
   private generateRefreshToken(): string {
-    return randomBytes(32).toString('hex');
-  }
+    return randomBytes(32).toString('hex');  }
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');

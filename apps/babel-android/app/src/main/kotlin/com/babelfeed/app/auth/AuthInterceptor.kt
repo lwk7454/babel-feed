@@ -93,12 +93,30 @@ class AuthInterceptor @Inject constructor(
     }
 
     private suspend fun performTokenRefresh(refreshToken: String): com.babelfeed.app.data.models.AuthTokens? {
-        // Note: This is a simplified implementation. In a real app, you might want
-        // to create a separate, simpler HTTP client for token refresh to avoid
-        // circular dependencies and potential issues.
-        
-        // For now, we'll return null to indicate refresh should be handled
-        // by the AuthenticationManager instead
-        return null
+        return try {
+            // Create a simple HTTP client for token refresh to avoid circular dependencies
+            val retrofit = retrofit2.Retrofit.Builder()
+                .baseUrl("http://10.0.2.2:3000/api/") // Android emulator localhost
+                .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+                .build()
+            
+            val refreshService = retrofit.create(RefreshTokenService::class.java)
+            val request = com.babelfeed.app.data.models.RefreshTokenRequest(refreshToken)
+            val response = refreshService.refreshToken(request)
+            
+            if (response.success) {
+                response.data
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    // Simple service interface for token refresh only
+    private interface RefreshTokenService {
+        @retrofit2.http.POST("auth/refresh-token")
+        suspend fun refreshToken(@retrofit2.http.Body request: com.babelfeed.app.data.models.RefreshTokenRequest): com.babelfeed.app.data.models.RefreshTokenResponse
     }
 }

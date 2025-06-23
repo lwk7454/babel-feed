@@ -53,7 +53,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         const result = await userService.createAccountFromGuest(guestId, email);
         
         // In a real app, you would send verification email here
-        console.log(`📧 Verification email for ${email}: ${result.verificationToken}`);
+        // OTP email is sent automatically by the user service
         
         return {
           success: true,

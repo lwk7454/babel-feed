@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Information -->
+    <string name="app_name">巴别新闻</string>
+    
+    <!-- Navigation -->
+    <string name="news_feed">新闻动态</string>
+    <string name="profile">个人资料</string>
+    <string name="back">返回</string>
+    <string name="menu">菜单</string>
+    <string name="save">保存</string>
+    
+    <!-- Common Actions -->
+    <string name="loading">正在加载…</string>
+    <string name="retry">重试</string>
+    <string name="save_preferences">保存设置</string>
+    <string name="dismiss">关闭</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    <string name="unknown">未知</string>
+    
+    <!-- Feed Screen -->
+    <string name="no_articles_available">暂无文章</string>
+    
+    <!-- Article Screen -->
+    <string name="article_summary">文章摘要</string>
+    <string name="read_full_article">阅读全文</string>
+    <string name="article">文章</string>
+    <string name="source">来源：%1$s</string>
+    <string name="published_time">发布时间：%1$s</string>
+    
+    <!-- Translation Features -->
+    <string name="translate">翻译</string>
+    <string name="original">原文</string>
+    <string name="translation_enabled">翻译已启用</string>
+    <string name="translation_disabled">翻译已禁用</string>
+    <string name="enable_translation">启用翻译</string>
+    <string name="disable_translation">禁用翻译</string>
+    <string name="enable_dynamic_mode">启用动态模式</string>
+    <string name="disable_dynamic_mode">禁用动态模式</string>
+    <string name="enable_ad_block">启用广告拦截</string>
+    <string name="disable_ad_block">禁用广告拦截</string>
+    <string name="translation_error">翻译错误</string>
+    <string name="translation_service_error">翻译服务出现问题，请稍后重试。</string>
+    
+    <!-- Profile Screen -->
+    <string name="welcome_to_babel_feed">欢迎使用巴别新闻</string>
+    <string name="create_guest_profile_description">创建访客资料开始使用应用</string>
+    <string name="start_as_guest">以访客身份开始</string>
+    <string name="guest_user">访客用户</string>
+    <string name="guest_id">访客ID：%1$s</string>
+    <string name="add_email_description">添加您的邮箱以在设备间保存您的设置：</string>
+    <string name="email_address">邮箱地址</string>
+    <string name="create_account">创建账户</string>
+    <string name="email_verification">邮箱验证</string>
+    <string name="email_verification_instruction">请检查您的邮箱（%1$s）获取4位验证码。</string>
+    <string name="verification_code">4位验证码</string>
+    <string name="verify_email">验证邮箱</string>
+    <string name="authenticated_user">已认证用户</string>
+    <string name="user_email">邮箱：%1$s</string>
+    <string name="user_id">用户ID：%1$s</string>
+    <string name="email_verified">邮箱已验证：%1$s</string>
+    <string name="member_since">注册时间：%1$s</string>
+    <string name="logout">退出登录</string>
+    
+    <!-- Preferences -->
+    <string name="preferences">设置</string>
+    <string name="language_preferences">语言设置</string>
+    <string name="translation_settings">翻译设置</string>
+    <string name="auto_translate_content">自动翻译内容</string>
+    <string name="default_target_language">默认目标语言</string>
+    <string name="theme">主题</string>
+    <string name="notifications">通知</string>
+    <string name="email_notifications">邮件通知</string>
+    <string name="push_notifications">推送通知</string>
+    <string name="privacy">隐私</string>
+    <string name="analytics">数据分析</string>
+    <string name="personalization">个性化</string>
+    
+    <!-- Languages -->
+    <string name="language_english">英语</string>
+    <string name="language_spanish">西班牙语</string>
+    <string name="language_french">法语</string>
+    <string name="language_german">德语</string>
+    <string name="language_italian">意大利语</string>
+    <string name="language_portuguese">葡萄牙语</string>
+    <string name="language_japanese">日语</string>
+    <string name="language_korean">韩语</string>
+    <string name="language_chinese">中文</string>
+    <string name="language_chinese_simplified">中文（简体）</string>
+    <string name="language_chinese_traditional">中文（繁体）</string>
+    
+    <!-- Theme Options -->
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_system">跟随系统</string>
+    
+    <!-- Language Codes for Badges -->
+    <string name="lang_code_en">EN</string>
+    <string name="lang_code_zh">ZH</string>
+    <string name="lang_code_ja">JA</string>
+    <string name="lang_code_es">ES</string>
+    <string name="lang_code_fr">FR</string>
+    <string name="lang_code_de">DE</string>
+    <string name="lang_code_it">IT</string>
+    <string name="lang_code_pt">PT</string>
+    <string name="lang_code_ko">KO</string>
+    
+    <!-- Error Messages -->
+    <string name="error_loading">加载内容失败</string>
+    <string name="error_article_not_found">文章未找到</string>
+    <string name="error_unknown">发生未知错误</string>
+    <string name="error_failed_load_articles">加载文章失败：%1$s</string>
+    <string name="error_failed_create_guest">创建访客用户失败：%1$s</string>
+    <string name="error_failed_create_account">创建账户失败：%1$s</string>
+    <string name="error_email_verification_failed">邮箱验证失败：%1$s</string>
+    <string name="error_failed_load_profile">加载用户资料失败：%1$s</string>
+    <string name="error_failed_load_preferences">加载设置失败：%1$s</string>
+    <string name="error_failed_update_preferences">更新设置失败：%1$s</string>
+    <string name="error_failed_create_guest_user">创建访客用户失败</string>
+    <string name="error_no_guest_user_found">未找到访客用户</string>
+    <string name="error_not_authenticated">未登录</string>
+    <string name="error_failed_get_user_profile">获取用户资料失败</string>
+    <string name="error_failed_get_preferences">获取设置失败</string>
+    <string name="error_failed_update_preferences_auth">更新设置失败</string>
+</resources>

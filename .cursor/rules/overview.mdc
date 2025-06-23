@@ -86,3 +86,24 @@ alwaysApply: true
 - Chinese Simplified (zh-CN)
 - Chinese Traditional (zh-TW)
 - Japanese (ja)
+
+## Translation Requirements
+
+### App-Wide Translation Policy
+- **Default State**: User sees translated content throughout entire app based on their language preference
+- **WebView Real-time Translation**: Only full article view (WebView) supports real-time toggle translation
+- **Translation Toggle Scope**: WebView translation toggle only affects current WebView session lifetime
+- **All Other Content**: Pre-translated content displayed according to user's language setting
+
+### Content Translation Categories
+- **App Interface Text**: Hard-coded UI text with full i18n support for all supported languages
+- **News Feed & Summary**: Pre-translated content served in user's preferred language
+- **Article Content**: Real-time translation available in WebView with toggle functionality
+
+### Source Language Indicators
+- **Feed Items**: Small language badge overlay on banner images (e.g., "EN", "ZH", "JA")
+- **Summary Pages**: Source language badge prominently displayed
+
+### Article Data Model
+- **Multi-language Storage**: Articles stored with translations in all supported languages
+- **Source Language Tracking**: Original source language preserved and indicated to users

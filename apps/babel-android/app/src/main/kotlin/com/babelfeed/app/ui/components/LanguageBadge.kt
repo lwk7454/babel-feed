@@ -10,55 +10,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.babelfeed.app.R
-import com.babelfeed.app.utils.LocaleManager
 
 /**
- * A small badge component that displays the source language code
- * (e.g., "EN", "ZH", "JA") for articles and content.
+ * Small badge component to display source language code (e.g., "EN", "ZH", "JA")
  */
 @Composable
 fun LanguageBadge(
     languageCode: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    textColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
-    val displayCode = getLanguageDisplayCode(languageCode)
-    
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.secondary)
+            .background(backgroundColor)
             .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = displayCode,
-            color = MaterialTheme.colorScheme.onSecondary,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 10.sp
-            )
+            text = languageCode,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor,
+            maxLines = 1
         )
-    }
-}
-
-/**
- * Helper function to get the display code for a language
- */
-@Composable
-private fun getLanguageDisplayCode(languageCode: String): String {
-    return when (languageCode.lowercase()) {
-        "en" -> stringResource(R.string.lang_code_en)
-        "zh", "zh-cn", "zh-tw" -> stringResource(R.string.lang_code_zh)
-        "ja" -> stringResource(R.string.lang_code_ja)
-        "es" -> stringResource(R.string.lang_code_es)
-        "fr" -> stringResource(R.string.lang_code_fr)
-        "de" -> stringResource(R.string.lang_code_de)
-        "it" -> stringResource(R.string.lang_code_it)
-        "pt" -> stringResource(R.string.lang_code_pt)
-        "ko" -> stringResource(R.string.lang_code_ko)
-        else -> languageCode.take(2).uppercase()
     }
 }

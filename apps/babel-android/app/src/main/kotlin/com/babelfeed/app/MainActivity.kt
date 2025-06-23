@@ -1,5 +1,6 @@
 package com.babelfeed.app
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -14,10 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import com.babelfeed.app.ui.navigation.BabelFeedNavigation
 import com.babelfeed.app.ui.theme.BabelFeedTheme
+import com.babelfeed.app.utils.LocaleManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    @Inject
+    lateinit var localeManager: LocaleManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -47,5 +53,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    
+    override fun attachBaseContext(newBase: Context) {
+        val localeManager = LocaleManager()
+        val currentLocale = localeManager.getCurrentLocale(newBase)
+        val localizedContext = localeManager.setLocale(newBase, currentLocale)
+        super.attachBaseContext(localizedContext)
     }
 }

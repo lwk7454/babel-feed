@@ -86,7 +86,7 @@ fun ArticleScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         LanguageBadge(
-                            languageCode = article.sourceLanguage
+                            languageCode = article.getSourceLanguageCode()
                         )
                     }
                     

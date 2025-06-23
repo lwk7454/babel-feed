@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.babelfeed.app.auth.AuthState
 import com.babelfeed.app.auth.AuthenticationManager
 import com.babelfeed.app.data.models.User
+import com.babelfeed.app.data.models.UserPreferences
+import com.babelfeed.app.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -12,11 +14,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authManager: AuthenticationManager
+    private val authManager: AuthenticationManager,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     val authState: StateFlow<AuthState> = authManager.authState
     val currentUser: StateFlow<User?> = authManager.currentUser
+
+    private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
+    val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -29,8 +35,9 @@ class ProfileViewModel @Inject constructor(
             if (authManager.needsGuestProfile()) {
                 createGuestUser()
             } else if (authManager.isAuthenticated()) {
-                // Try to get current user profile
+                // Try to get current user profile and preferences
                 getCurrentUser()
+                getUserPreferences()
             }
         }
     }
@@ -108,6 +115,40 @@ class ProfileViewModel @Inject constructor(
 
     fun getGuestId(): String? {
         return authManager.getGuestId()
+    }
+
+    fun getUserPreferences() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            
+            userRepository.getUserPreferences()
+                .onSuccess { preferences ->
+                    _userPreferences.value = preferences
+                }
+                .onFailure { exception ->
+                    _error.value = "Failed to load preferences: ${exception.message}"
+                }
+            
+            _isLoading.value = false
+        }
+    }
+
+    fun updatePreferences(preferences: UserPreferences) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            
+            userRepository.updateUserPreferences(preferences)
+                .onSuccess { updatedPreferences ->
+                    _userPreferences.value = updatedPreferences
+                }
+                .onFailure { exception ->
+                    _error.value = "Failed to update preferences: ${exception.message}"
+                }
+            
+            _isLoading.value = false
+        }
     }
 
     fun clearError() {

@@ -135,7 +135,7 @@ fun ArticleCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 LanguageBadge(
-                    languageCode = article.sourceLanguage
+                    languageCode = article.getSourceLanguageCode()
                 )
             }
             article.summary?.let { summary ->
