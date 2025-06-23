@@ -64,6 +64,19 @@ export const appiumConfig = {
     // Backend API health check timeout  
     apiHealthTimeout: 10000, // 10 seconds
     
+    // Navigation-specific timeouts
+    navigationTimeout: 20000, // 20 seconds for page navigation
+    stateRecoveryTimeout: 15000, // 15 seconds for translation state recovery
+    persistenceCheckInterval: 2000, // 2 seconds between persistence checks
+    
+    // Memory management thresholds
+    maxMemoryIncrease: 75 * 1024 * 1024, // 75MB max memory increase during navigation
+    memoryCheckInterval: 5000, // 5 seconds between memory checks
+    
+    // Navigation performance thresholds
+    maxNavigationTime: 15000, // 15 seconds max navigation time
+    performanceCheckCycles: 2, // Number of cycles for performance testing
+    
     // Screenshots and debugging
     screenshotOnFailure: true,
     savePageSource: true,
@@ -142,7 +155,35 @@ export const appiumConfig = {
       'https://example.com',
       'https://news.ycombinator.com',
       'https://www.bbc.com/news'
-    ]
+    ],
+
+    // Navigation test URLs for state persistence testing
+    navigationTestUrls: [
+      'https://example.com',
+      'https://httpbin.org/html',
+      'https://jsonplaceholder.typicode.com/',
+      'https://www.w3.org/TR/html52/',
+      'https://developer.mozilla.org/en-US/'
+    ],
+
+    // Failure scenario URLs for recovery testing
+    failureUrls: [
+      { name: 'Invalid URL', url: 'https://invalid-domain-that-does-not-exist.com' },
+      { name: 'Network timeout', url: 'https://httpstat.us/408' },
+      { name: 'Server error', url: 'https://httpstat.us/500' },
+      { name: 'Not found', url: 'https://httpstat.us/404' }
+    ],
+
+    // Performance testing thresholds
+    performanceThresholds: {
+      translationStatePersistence: 80, // 80% success rate for state persistence
+      autoTranslationActivation: 70, // 70% success rate for auto-activation
+      dynamicTranslationAcrossNavigation: 75, // 75% success rate for dynamic translation
+      mutationObserverAcrossNavigation: 80, // 80% success rate for mutation observer
+      navigationPerformance: 75, // 75% success rate for performance tests
+      recoveryAfterFailedNavigation: 66, // 66% success rate for recovery (2 out of 3)
+      memoryManagementDuringNavigation: 80 // 80% success rate for memory management
+    }
   }
 };
 

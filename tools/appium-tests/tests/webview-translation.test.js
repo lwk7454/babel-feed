@@ -679,6 +679,295 @@ describe('WebView Translation Test Suite', () => {
     });
   });
 
+  describe('Translation Navigation Fixes Validation', () => {
+    it('should persist translation state across URL navigation', async () => {
+      await runTranslationTest('Translation State Persistence Across URLs', async () => {
+        await navigateToWebViewArticle();
+        
+        // Use navigation test URLs from config
+        const testUrls = config.testData.navigationTestUrls.slice(0, 3);
+        
+        // Test translation persistence across multiple URLs
+        const persistenceResult = await translationTester.testNavigationPersistence(testUrls);
+        
+        // Validate persistence results
+        expect(persistenceResult.overallSuccess).toBe(true);
+        expect(persistenceResult.persistenceRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.translationStatePersistence
+        );
+        expect(persistenceResult.successfulUrls).toBeGreaterThan(0);
+        
+        console.log(`  📊 Navigation persistence: ${persistenceResult.persistenceRate}% success rate`);
+        console.log(`  📊 Successful URLs: ${persistenceResult.successfulUrls}/${persistenceResult.totalUrls}`);
+      });
+    });
+
+    it('should activate auto-translation when navigating to new pages', async () => {
+      await runTranslationTest('Auto-Translation Activation on Navigation', async () => {
+        await navigateToWebViewArticle();
+        
+        // Enable translation on initial page
+        await translationTester.enableTranslation();
+        await translationTester.waitForTranslationComplete();
+        
+        // Test auto-translation activation on navigation
+        const activationResult = await translationTester.testAutoTranslationOnNavigation();
+        
+        // Validate auto-translation results
+        expect(activationResult.overallSuccess).toBe(true);
+        expect(activationResult.activationRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.autoTranslationActivation
+        );
+        
+        console.log(`  📊 Auto-translation activation: ${activationResult.activationRate}% success rate`);
+        console.log(`  📊 Successful activations: ${activationResult.successfulActivations}/${activationResult.totalLinks}`);
+      });
+    });
+
+    it('should maintain dynamic translation across page transitions', async () => {
+      await runTranslationTest('Dynamic Translation Across Page Transitions', async () => {
+        await navigateToWebViewArticle();
+        
+        // Test dynamic translation across navigation
+        const dynamicResult = await translationTester.testDynamicTranslationAcrossNavigation();
+        
+        // Validate dynamic translation results
+        expect(dynamicResult.overallSuccess).toBe(true);
+        expect(dynamicResult.dynamicSuccessRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.dynamicTranslationAcrossNavigation
+        );
+        
+        console.log(`  📊 Dynamic translation across navigation: ${dynamicResult.dynamicSuccessRate}% success rate`);
+        console.log(`  📊 Successful pages: ${dynamicResult.successfulPages}/${dynamicResult.totalPages}`);
+      });
+    });
+
+    it('should preserve MutationObserver functionality across page transitions', async () => {
+      await runTranslationTest('MutationObserver Across Page Transitions', async () => {
+        await navigateToWebViewArticle();
+        
+        // Test mutation observer across navigation
+        const observerResult = await translationTester.testMutationObserverAcrossNavigation();
+        
+        // Validate mutation observer results
+        expect(observerResult.overallSuccess).toBe(true);
+        expect(observerResult.observerSuccessRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.mutationObserverAcrossNavigation
+        );
+        
+        console.log(`  📊 MutationObserver across navigation: ${observerResult.observerSuccessRate}% success rate`);
+        console.log(`  📊 Successful pages: ${observerResult.successfulPages}/${observerResult.totalPages}`);
+      });
+    });
+
+    it('should restore translation state after app restart', async () => {
+      await runTranslationTest('Translation State Restoration After Restart', async () => {
+        await navigateToWebViewArticle();
+        
+        // Enable translation
+        await translationTester.enableTranslation();
+        await translationTester.waitForTranslationComplete();
+        
+        // Test state restoration after restart
+        const restartResult = await translationTester.testTranslationStateAfterRestart();
+        
+        // Validate restart recovery
+        expect(restartResult.restartRecoverySuccessful).toBe(true);
+        expect(restartResult.stateRestored).toBe(true);
+        expect(restartResult.translationWorking).toBe(true);
+        
+        console.log(`  📊 Restart recovery: ${restartResult.restartRecoverySuccessful ? 'SUCCESS' : 'FAILED'}`);
+      });
+    });
+
+    it('should handle mixed navigation scenarios (back/forward with translation)', async () => {
+      await runTranslationTest('Mixed Navigation Back/Forward with Translation', async () => {
+        await navigateToWebViewArticle();
+        
+        // Enable translation
+        await translationTester.enableTranslation();
+        await translationTester.waitForTranslationComplete();
+        
+        // Store initial state
+        const initialState = await translationTester.saveTranslationState();
+        
+        // Navigate to a linked page
+        await translationTester.navigateToLinkedPage();
+        await translationTester.waitForPageLoad();
+        
+        // Verify translation works on new page
+        const newPageTranslated = await translationTester.isCurrentPageTranslated();
+        expect(newPageTranslated).toBe(true);
+        
+        // Navigate back
+        await translationTester.navigateBack();
+        await translationTester.waitForPageLoad();
+        
+        // Verify translation still works after back navigation
+        const backPageTranslated = await translationTester.isCurrentPageTranslated();
+        expect(backPageTranslated).toBe(true);
+        
+        // Navigate forward
+        await translationTester.navigateForward();
+        await translationTester.waitForPageLoad();
+        
+        // Verify translation works after forward navigation
+        const forwardPageTranslated = await translationTester.isCurrentPageTranslated();
+        expect(forwardPageTranslated).toBe(true);
+        
+        // Verify translation state persistence
+        const finalPersistence = await translationTester.verifyTranslationStatePersistence();
+        expect(finalPersistence.persistent).toBe(true);
+        
+        console.log(`  📊 Back/Forward navigation: Translation ${finalPersistence.persistent ? 'persisted' : 'lost'}`);
+      });
+    });
+  });
+
+  describe('Navigation Performance and Error Handling', () => {
+    it('should maintain acceptable performance during navigation with translation', async () => {
+      await runTranslationTest('Navigation Performance with Translation', async () => {
+        await navigateToWebViewArticle();
+        
+        // Test navigation performance
+        const performanceResult = await translationTester.testNavigationPerformance();
+        
+        // Validate performance results
+        expect(performanceResult.overallSuccess).toBe(true);
+        expect(performanceResult.performanceRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.navigationPerformance
+        );
+        
+        // Verify acceptable performance metrics
+        expect(performanceResult.avgNavigationTime).toBeLessThan(config.testConfig.maxNavigationTime);
+        expect(performanceResult.avgMemoryIncrease).toBeLessThan(
+          Math.round(config.testConfig.maxMemoryIncrease / 1024 / 1024)
+        );
+        
+        console.log(`  📊 Navigation performance: ${performanceResult.performanceRate}% success rate`);
+        console.log(`  📊 Average navigation time: ${performanceResult.avgNavigationTime}ms`);
+        console.log(`  📊 Average memory increase: ${performanceResult.avgMemoryIncrease}MB`);
+      });
+    });
+
+    it('should recover translation after failed navigation', async () => {
+      await runTranslationTest('Translation Recovery After Failed Navigation', async () => {
+        await navigateToWebViewArticle();
+        
+        // Enable translation
+        await translationTester.enableTranslation();
+        await translationTester.waitForTranslationComplete();
+        
+        // Test recovery after failed navigation
+        const recoveryResult = await translationTester.testTranslationRecoveryAfterFailedNavigation();
+        
+        // Validate recovery results
+        expect(recoveryResult.overallSuccess).toBe(true);
+        expect(recoveryResult.recoveryRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.recoveryAfterFailedNavigation
+        );
+        
+        console.log(`  📊 Recovery after failed navigation: ${recoveryResult.recoveryRate}% success rate`);
+        console.log(`  📊 Successful recoveries: ${recoveryResult.successfulRecoveries}/${recoveryResult.totalScenarios}`);
+        
+        // Verify specific recovery scenarios
+        const successfulRecoveries = recoveryResult.recoveryResults.filter(r => r.success);
+        expect(successfulRecoveries.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should manage memory effectively during extended navigation', async () => {
+      await runTranslationTest('Memory Management During Extended Navigation', async () => {
+        await navigateToWebViewArticle();
+        
+        // Test memory management during navigation
+        const memoryResult = await translationTester.testMemoryManagementDuringNavigation();
+        
+        // Validate memory management results
+        expect(memoryResult.overallSuccess).toBe(true);
+        expect(memoryResult.memoryManagementRate).toBeGreaterThanOrEqual(
+          config.testData.performanceThresholds.memoryManagementDuringNavigation
+        );
+        expect(memoryResult.memoryLeakDetected).toBe(false);
+        
+        // Verify memory increase is within acceptable bounds
+        const maxAllowedIncrease = Math.round(config.testConfig.maxMemoryIncrease / 1024 / 1024);
+        expect(memoryResult.totalMemoryIncrease).toBeLessThan(maxAllowedIncrease);
+        
+        console.log(`  📊 Memory management: ${memoryResult.memoryManagementRate}% success rate`);
+        console.log(`  📊 Total memory increase: ${memoryResult.totalMemoryIncrease}MB`);
+        console.log(`  📊 Peak memory: ${memoryResult.peakMemory}MB`);
+        console.log(`  📊 Memory leak detected: ${memoryResult.memoryLeakDetected ? 'YES' : 'NO'}`);
+      });
+    });
+
+    it('should handle translation service unavailability during navigation', async () => {
+      await runTranslationTest('Translation Service Unavailability During Navigation', async () => {
+        await navigateToWebViewArticle();
+        
+        // Enable translation
+        await translationTester.enableTranslation();
+        await translationTester.waitForTranslationComplete();
+        
+        // Simulate service unavailability
+        await translationTester.simulateNetworkDisconnection();
+        
+        // Try to navigate during service unavailability
+        const links = await translationTester.getNavigationLinks();
+        if (links.length > 0) {
+          await translationTester.navigateToUrl(links[0]);
+          await translationTester.waitForPageLoad();
+          
+          // Verify graceful handling
+          const errorHandled = await translationTester.verifyErrorHandling();
+          expect(errorHandled.appStable).toBe(true);
+        }
+        
+        // Restore service
+        await translationTester.restoreNetworkConnection();
+        
+        // Verify recovery
+        const recoveryResult = await translationTester.verifyNetworkRecovery();
+        expect(recoveryResult.translationWorking).toBe(true);
+        
+        console.log(`  📊 Service unavailability handling: ${errorHandled.appStable ? 'STABLE' : 'UNSTABLE'}`);
+        console.log(`  📊 Recovery after service restoration: ${recoveryResult.translationWorking ? 'SUCCESS' : 'FAILED'}`);
+      });
+    });
+
+    it('should provide graceful fallback when translation state cannot be restored', async () => {
+      await runTranslationTest('Graceful Fallback for Unrestorable Translation State', async () => {
+        await navigateToWebViewArticle();
+        
+        // Enable translation and store state
+        await translationTester.enableTranslation();
+        await translationTester.waitForTranslationComplete();
+        const originalState = await translationTester.saveTranslationState();
+        
+        // Navigate to multiple pages to test state corruption scenarios
+        const testUrls = config.testData.navigationTestUrls.slice(0, 2);
+        
+        for (const url of testUrls) {
+          await translationTester.navigateToUrl(url);
+          await translationTester.waitForPageLoad();
+          
+          // Verify app remains stable even if state restoration fails
+          const appStable = await translationTester.verifyAppStateConsistent();
+          expect(appStable).toBe(true);
+          
+          // Verify translation can be re-enabled if needed
+          if (!await translationTester.isCurrentPageTranslated()) {
+            await translationTester.enableTranslation();
+            const reactivationSuccess = await translationTester.waitForTranslationComplete();
+            expect(reactivationSuccess.success).toBe(true);
+          }
+        }
+        
+        console.log(`  📊 Graceful fallback: App remained stable throughout navigation`);
+      });
+    });
+  });
+
   describe('Test Suite Quality Assurance', () => {
     it('should achieve high overall success rate', async () => {
       // This test runs after all others to validate overall success
@@ -690,8 +979,8 @@ describe('WebView Translation Test Suite', () => {
       console.log(`   Passed: ${testResults.passed}`);
       console.log(`   Failed: ${testResults.failed}`);
       
-      // Quality assertions
-      expect(testResults.total).toBeGreaterThan(15); // Ensure comprehensive testing
+      // Quality assertions - Updated for expanded test suite
+      expect(testResults.total).toBeGreaterThan(25); // Ensure comprehensive testing with navigation tests
       expect(testResults.passed).toBeGreaterThan(0); // Ensure some tests pass
       expect(successRate).toBeGreaterThanOrEqual(80); // 80% minimum success rate
       

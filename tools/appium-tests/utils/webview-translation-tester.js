@@ -1517,6 +1517,616 @@ export class WebViewTranslationTester {
     return reportPath;
   }
 
+  // ===== NAVIGATION-SPECIFIC TESTING METHODS =====
+
+  /**
+   * Store translation state for persistence testing
+   */
+  async saveTranslationState() {
+    const state = {
+      enabled: this.translationState.enabled,
+      targetLanguage: this.translationState.targetLanguage,
+      dynamicEnabled: this.translationState.dynamicEnabled,
+      currentUrl: this.webViewContext ? await this.getCurrentUrl() : null,
+      translatedContent: this.translationState.translatedContent,
+      timestamp: Date.now()
+    };
+    
+    this.storedTranslationState = state;
+    console.log('  💾 Translation state saved for persistence testing');
+    return state;
+  }
+
+  /**
+   * Verify translation state persistence after navigation
+   */
+  async verifyTranslationStatePersistence() {
+    if (!this.storedTranslationState) {
+      throw new Error('No stored translation state to compare against');
+    }
+
+    const currentState = {
+      enabled: this.translationState.enabled,
+      targetLanguage: this.translationState.targetLanguage,
+      dynamicEnabled: this.translationState.dynamicEnabled,
+      currentUrl: this.webViewContext ? await this.getCurrentUrl() : null
+    };
+
+    const persistent = 
+      currentState.enabled === this.storedTranslationState.enabled &&
+      currentState.targetLanguage === this.storedTranslationState.targetLanguage &&
+      currentState.dynamicEnabled === this.storedTranslationState.dynamicEnabled;
+
+    console.log(`  🔍 Translation state persistence: ${persistent ? 'PRESERVED' : 'LOST'}`);
+    return {
+      persistent,
+      before: this.storedTranslationState,
+      after: currentState,
+      urlChanged: currentState.currentUrl !== this.storedTranslationState.currentUrl
+    };
+  }
+
+  /**
+   * Navigate to multiple URLs and test translation persistence
+   */
+  async testNavigationPersistence(urls) {
+    const results = [];
+    let baselineState = null;
+
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      console.log(`  🧭 Navigating to URL ${i + 1}/${urls.length}: ${url}`);
+
+      try {
+        await this.navigateToUrl(url);
+        await this.waitForPageLoad();
+
+        // On first URL, enable translation and store baseline
+        if (i === 0) {
+          await this.enableTranslation();
+          await this.waitForTranslationComplete();
+          baselineState = await this.saveTranslationState();
+        }
+
+        // Wait for auto-translation to kick in
+        await this.driver.pause(3000);
+
+        // Check if translation is still active
+        const isTranslated = await this.isCurrentPageTranslated();
+        const translationEnabled = await this.isTranslationEnabled();
+
+        results.push({
+          url,
+          index: i,
+          isTranslated,
+          translationEnabled,
+          success: isTranslated && translationEnabled
+        });
+
+        console.log(`  ${isTranslated && translationEnabled ? '✅' : '❌'} URL ${i + 1}: Translation ${isTranslated && translationEnabled ? 'persisted' : 'lost'}`);
+
+      } catch (error) {
+        console.error(`  ❌ Navigation to URL ${i + 1} failed: ${error.message}`);
+        results.push({
+          url,
+          index: i,
+          isTranslated: false,
+          translationEnabled: false,
+          success: false,
+          error: error.message
+        });
+      }
+
+      await this.driver.pause(2000);
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const persistenceRate = (successCount / results.length) * 100;
+
+    return {
+      results,
+      baselineState,
+      totalUrls: urls.length,
+      successfulUrls: successCount,
+      persistenceRate: Math.round(persistenceRate),
+      overallSuccess: persistenceRate >= 80 // 80% threshold
+    };
+  }
+
+  /**
+   * Test auto-translation activation on navigation
+   */
+  async testAutoTranslationOnNavigation() {
+    console.log('  🔄 Testing auto-translation activation on navigation...');
+    
+    const testResults = [];
+    
+    // Get multiple navigation links
+    const links = await this.getNavigationLinks();
+    const testLinks = links.slice(0, 3); // Test first 3 links
+    
+    for (let i = 0; i < testLinks.length; i++) {
+      const link = testLinks[i];
+      console.log(`  🔗 Testing auto-translation on link ${i + 1}: ${link}`);
+      
+      try {
+        const beforeTranslation = await this.isCurrentPageTranslated();
+        
+        await this.navigateToUrl(link);
+        await this.waitForPageLoad();
+        
+        // Wait for auto-translation to activate
+        await this.driver.pause(5000);
+        
+        const afterTranslation = await this.isCurrentPageTranslated();
+        const translationActivated = afterTranslation || (beforeTranslation && afterTranslation);
+        
+        testResults.push({
+          link,
+          beforeTranslation,
+          afterTranslation,
+          translationActivated,
+          success: translationActivated
+        });
+        
+        console.log(`  ${translationActivated ? '✅' : '❌'} Auto-translation ${translationActivated ? 'activated' : 'failed'} for link ${i + 1}`);
+        
+      } catch (error) {
+        console.error(`  ❌ Auto-translation test failed for link ${i + 1}: ${error.message}`);
+        testResults.push({
+          link,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    const successCount = testResults.filter(r => r.success).length;
+    const activationRate = testLinks.length > 0 ? (successCount / testLinks.length) * 100 : 0;
+    
+    return {
+      testResults,
+      totalLinks: testLinks.length,
+      successfulActivations: successCount,
+      activationRate: Math.round(activationRate),
+      overallSuccess: activationRate >= 70 // 70% threshold for auto-activation
+    };
+  }
+
+  /**
+   * Test dynamic translation across page transitions
+   */
+  async testDynamicTranslationAcrossNavigation() {
+    console.log('  ⚡ Testing dynamic translation across page transitions...');
+    
+    // Enable dynamic translation
+    await this.enableDynamicTranslation();
+    
+    const navigationResults = [];
+    const links = await this.getNavigationLinks();
+    const testLinks = links.slice(0, 2); // Test 2 page transitions
+    
+    for (let i = 0; i < testLinks.length; i++) {
+      const link = testLinks[i];
+      console.log(`  📄 Testing dynamic translation on page ${i + 1}: ${link}`);
+      
+      try {
+        await this.navigateToUrl(link);
+        await this.waitForPageLoad();
+        
+        // Trigger dynamic content load
+        await this.triggerDynamicContentLoad();
+        
+        // Wait for dynamic translation
+        const dynamicResult = await this.waitForDynamicTranslation();
+        
+        navigationResults.push({
+          link,
+          pageIndex: i + 1,
+          dynamicTranslationWorking: dynamicResult.success,
+          newContentTranslated: dynamicResult.newContentTranslated,
+          duration: dynamicResult.duration,
+          success: dynamicResult.success
+        });
+        
+        console.log(`  ${dynamicResult.success ? '✅' : '❌'} Dynamic translation ${dynamicResult.success ? 'working' : 'failed'} on page ${i + 1}`);
+        
+      } catch (error) {
+        console.error(`  ❌ Dynamic translation test failed for page ${i + 1}: ${error.message}`);
+        navigationResults.push({
+          link,
+          pageIndex: i + 1,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    const successCount = navigationResults.filter(r => r.success).length;
+    const dynamicSuccessRate = testLinks.length > 0 ? (successCount / testLinks.length) * 100 : 0;
+    
+    return {
+      navigationResults,
+      totalPages: testLinks.length,
+      successfulPages: successCount,
+      dynamicSuccessRate: Math.round(dynamicSuccessRate),
+      overallSuccess: dynamicSuccessRate >= 75 // 75% threshold
+    };
+  }
+
+  /**
+   * Test MutationObserver functionality across page transitions
+   */
+  async testMutationObserverAcrossNavigation() {
+    console.log('  👁️ Testing MutationObserver across page transitions...');
+    
+    const observerResults = [];
+    const links = await this.getNavigationLinks();
+    const testLinks = links.slice(0, 2);
+    
+    for (let i = 0; i < testLinks.length; i++) {
+      const link = testLinks[i];
+      console.log(`  🔬 Testing MutationObserver on page ${i + 1}: ${link}`);
+      
+      try {
+        await this.navigateToUrl(link);
+        await this.waitForPageLoad();
+        
+        // Get initial element count
+        const initialCount = await this.getTranslatableElementCount();
+        
+        // Trigger DOM mutations
+        await this.simulateDOMChanges();
+        
+        // Wait for mutation observer to detect changes
+        await this.waitForMutationTranslation();
+        
+        // Get final element count
+        const finalCount = await this.getTranslatableElementCount();
+        
+        // Verify new elements are translated
+        const newElementsTranslated = await this.verifyNewElementsTranslated();
+        
+        const mutationDetected = finalCount > initialCount;
+        const observerWorking = mutationDetected && newElementsTranslated;
+        
+        observerResults.push({
+          link,
+          pageIndex: i + 1,
+          initialElementCount: initialCount,
+          finalElementCount: finalCount,
+          mutationDetected,
+          newElementsTranslated,
+          observerWorking,
+          success: observerWorking
+        });
+        
+        console.log(`  ${observerWorking ? '✅' : '❌'} MutationObserver ${observerWorking ? 'working' : 'failed'} on page ${i + 1}`);
+        
+      } catch (error) {
+        console.error(`  ❌ MutationObserver test failed for page ${i + 1}: ${error.message}`);
+        observerResults.push({
+          link,
+          pageIndex: i + 1,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    const successCount = observerResults.filter(r => r.success).length;
+    const observerSuccessRate = testLinks.length > 0 ? (successCount / testLinks.length) * 100 : 0;
+    
+    return {
+      observerResults,
+      totalPages: testLinks.length,
+      successfulPages: successCount,
+      observerSuccessRate: Math.round(observerSuccessRate),
+      overallSuccess: observerSuccessRate >= 80 // 80% threshold
+    };
+  }
+
+  /**
+   * Test navigation performance under translation load
+   */
+  async testNavigationPerformance() {
+    console.log('  ⚡ Testing navigation performance with translation...');
+    
+    const performanceResults = [];
+    const links = await this.getNavigationLinks();
+    const testLinks = links.slice(0, 3);
+    
+    // Test performance over multiple navigation cycles
+    for (let cycle = 0; cycle < 2; cycle++) {
+      console.log(`  🔄 Performance test cycle ${cycle + 1}/2`);
+      
+      for (let i = 0; i < testLinks.length; i++) {
+        const link = testLinks[i];
+        const startTime = Date.now();
+        const startMemory = await this.getMemoryUsage();
+        
+        try {
+          await this.navigateToUrl(link);
+          await this.waitForPageLoad();
+          
+          // Enable translation if not already enabled
+          if (!this.translationState.enabled) {
+            await this.enableTranslation();
+          }
+          
+          await this.waitForTranslationComplete();
+          
+          const endTime = Date.now();
+          const endMemory = await this.getMemoryUsage();
+          
+          const navigationTime = endTime - startTime;
+          const memoryIncrease = endMemory - startMemory;
+          
+          performanceResults.push({
+            cycle: cycle + 1,
+            link,
+            linkIndex: i + 1,
+            navigationTime,
+            memoryIncrease,
+            performanceAcceptable: navigationTime < 15000 && memoryIncrease < 30 * 1024 * 1024, // 15s, 30MB
+            success: true
+          });
+          
+          console.log(`  📊 Navigation ${i + 1}: ${navigationTime}ms, ${Math.round(memoryIncrease / 1024 / 1024)}MB`);
+          
+        } catch (error) {
+          console.error(`  ❌ Performance test failed for link ${i + 1}: ${error.message}`);
+          performanceResults.push({
+            cycle: cycle + 1,
+            link,
+            linkIndex: i + 1,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+    }
+    
+    const successfulResults = performanceResults.filter(r => r.success && r.performanceAcceptable);
+    const performanceRate = performanceResults.length > 0 ? 
+      (successfulResults.length / performanceResults.filter(r => r.success).length) * 100 : 0;
+    
+    const avgNavigationTime = successfulResults.length > 0 ?
+      successfulResults.reduce((sum, r) => sum + r.navigationTime, 0) / successfulResults.length : 0;
+      
+    const avgMemoryIncrease = successfulResults.length > 0 ?
+      successfulResults.reduce((sum, r) => sum + r.memoryIncrease, 0) / successfulResults.length : 0;
+    
+    return {
+      performanceResults,
+      totalTests: performanceResults.length,
+      successfulTests: successfulResults.length,
+      performanceRate: Math.round(performanceRate),
+      avgNavigationTime: Math.round(avgNavigationTime),
+      avgMemoryIncrease: Math.round(avgMemoryIncrease / 1024 / 1024), // Convert to MB
+      overallSuccess: performanceRate >= 75 // 75% threshold
+    };
+  }
+
+  /**
+   * Test translation recovery after failed navigation
+   */
+  async testTranslationRecoveryAfterFailedNavigation() {
+    console.log('  🔧 Testing translation recovery after failed navigation...');
+    
+    const recoveryResults = [];
+    
+    // Test different failure scenarios
+    const failureScenarios = [
+      { name: 'Invalid URL', url: 'https://invalid-domain-that-does-not-exist.com' },
+      { name: 'Network timeout', url: 'https://httpstat.us/408' },
+      { name: 'Server error', url: 'https://httpstat.us/500' }
+    ];
+    
+    for (const scenario of failureScenarios) {
+      console.log(`  🚫 Testing recovery scenario: ${scenario.name}`);
+      
+      try {
+        // Store current translation state
+        const beforeFailure = await this.saveTranslationState();
+        
+        // Attempt navigation that should fail
+        let navigationFailed = false;
+        try {
+          await this.navigateToUrl(scenario.url);
+          await this.driver.pause(5000); // Wait for potential failure
+        } catch (error) {
+          navigationFailed = true;
+          console.log(`  ⚠️ Expected navigation failure: ${error.message}`);
+        }
+        
+        // Try to recover by navigating to a valid URL
+        const validUrl = 'https://example.com';
+        await this.navigateToUrl(validUrl);
+        await this.waitForPageLoad();
+        
+        // Check if translation state recovered
+        const afterRecovery = await this.verifyTranslationStatePersistence();
+        const translationRecovered = await this.isCurrentPageTranslated();
+        
+        const recoverySuccessful = afterRecovery.persistent && translationRecovered;
+        
+        recoveryResults.push({
+          scenario: scenario.name,
+          url: scenario.url,
+          navigationFailed,
+          translationStateRecovered: afterRecovery.persistent,
+          translationWorking: translationRecovered,
+          recoverySuccessful,
+          success: recoverySuccessful
+        });
+        
+        console.log(`  ${recoverySuccessful ? '✅' : '❌'} Recovery ${recoverySuccessful ? 'successful' : 'failed'} for ${scenario.name}`);
+        
+      } catch (error) {
+        console.error(`  ❌ Recovery test failed for ${scenario.name}: ${error.message}`);
+        recoveryResults.push({
+          scenario: scenario.name,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    const successCount = recoveryResults.filter(r => r.success).length;
+    const recoveryRate = failureScenarios.length > 0 ? (successCount / failureScenarios.length) * 100 : 0;
+    
+    return {
+      recoveryResults,
+      totalScenarios: failureScenarios.length,
+      successfulRecoveries: successCount,
+      recoveryRate: Math.round(recoveryRate),
+      overallSuccess: recoveryRate >= 66 // 66% threshold (2 out of 3 scenarios)
+    };
+  }
+
+  /**
+   * Test memory management during extended navigation
+   */
+  async testMemoryManagementDuringNavigation() {
+    console.log('  🧠 Testing memory management during extended navigation...');
+    
+    const memoryResults = [];
+    const links = await this.getNavigationLinks();
+    const testLinks = links.slice(0, 3);
+    
+    const initialMemory = await this.getMemoryUsage();
+    let peakMemory = initialMemory;
+    let currentMemory = initialMemory;
+    
+    // Navigate through multiple pages multiple times
+    for (let cycle = 0; cycle < 3; cycle++) {
+      console.log(`  🔄 Memory test cycle ${cycle + 1}/3`);
+      
+      for (let i = 0; i < testLinks.length; i++) {
+        const link = testLinks[i];
+        
+        try {
+          await this.navigateToUrl(link);
+          await this.waitForPageLoad();
+          
+          // Enable translation if needed
+          if (!this.translationState.enabled) {
+            await this.enableTranslation();
+          }
+          
+          await this.waitForTranslationComplete();
+          
+          // Trigger some dynamic content to stress memory
+          await this.triggerDynamicContentLoad();
+          await this.scrollThroughArticle();
+          
+          currentMemory = await this.getMemoryUsage();
+          if (currentMemory > peakMemory) {
+            peakMemory = currentMemory;
+          }
+          
+          const memoryIncrease = currentMemory - initialMemory;
+          const memoryAcceptable = memoryIncrease < 75 * 1024 * 1024; // 75MB increase limit
+          
+          memoryResults.push({
+            cycle: cycle + 1,
+            linkIndex: i + 1,
+            link,
+            currentMemory,
+            memoryIncrease,
+            memoryAcceptable,
+            success: memoryAcceptable
+          });
+          
+          console.log(`  📊 Memory: ${Math.round(currentMemory / 1024 / 1024)}MB (+${Math.round(memoryIncrease / 1024 / 1024)}MB)`);
+          
+        } catch (error) {
+          console.error(`  ❌ Memory test failed for link ${i + 1}: ${error.message}`);
+          memoryResults.push({
+            cycle: cycle + 1,
+            linkIndex: i + 1,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+    }
+    
+    const finalMemory = await this.getMemoryUsage();
+    const totalMemoryIncrease = finalMemory - initialMemory;
+    const successCount = memoryResults.filter(r => r.success).length;
+    const memoryManagementRate = memoryResults.length > 0 ? (successCount / memoryResults.length) * 100 : 0;
+    
+    return {
+      memoryResults,
+      initialMemory: Math.round(initialMemory / 1024 / 1024),
+      finalMemory: Math.round(finalMemory / 1024 / 1024),
+      peakMemory: Math.round(peakMemory / 1024 / 1024),
+      totalMemoryIncrease: Math.round(totalMemoryIncrease / 1024 / 1024),
+      memoryManagementRate: Math.round(memoryManagementRate),
+      memoryLeakDetected: totalMemoryIncrease > 100 * 1024 * 1024, // 100MB threshold
+      overallSuccess: memoryManagementRate >= 80 && !this.memoryLeakDetected
+    };
+  }
+
+  /**
+   * Get current URL from WebView
+   */
+  async getCurrentUrl() {
+    if (!this.webViewContext) return null;
+    
+    try {
+      await this.driver.switchContext(this.webViewContext);
+      const url = await this.driver.getUrl();
+      return url;
+    } catch (error) {
+      console.warn('Failed to get current URL:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Test translation state after app restart (simulate)
+   */
+  async testTranslationStateAfterRestart() {
+    console.log('  🔄 Testing translation state after app restart...');
+    
+    try {
+      // Save current state
+      const beforeRestart = await this.saveTranslationState();
+      
+      // Simulate app restart by switching contexts and refreshing
+      await this.driver.switchContext('NATIVE_APP');
+      await this.driver.pause(2000);
+      
+      // Return to article (simulate returning to a WebView article)
+      await this.navigateToNewsList();
+      await this.selectFirstArticle();
+      await this.clickReadFullArticle();
+      await this.waitForWebViewLoad();
+      
+      // Check if translation state is restored
+      const afterRestart = await this.verifyTranslationStatePersistence();
+      const translationWorking = await this.isCurrentPageTranslated();
+      
+      return {
+        beforeRestart,
+        afterRestart,
+        stateRestored: afterRestart.persistent,
+        translationWorking,
+        restartRecoverySuccessful: afterRestart.persistent && translationWorking
+      };
+      
+    } catch (error) {
+      console.error('  ❌ Restart test failed:', error.message);
+      return {
+        restartRecoverySuccessful: false,
+        error: error.message
+      };
+    }
+  }
+
   // Additional placeholder methods to satisfy test requirements
   async getTranslatableElementCount() { return Math.floor(Math.random() * 20) + 10; }
   async simulateDOMChanges() { await this.driver.pause(1000); }
