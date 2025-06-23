@@ -24,7 +24,7 @@ data class Article(
     @SerializedName("source")
     val source: String,
     
-    @SerializedName("sourceLanguage")
+    @SerializedName("language")
     val sourceLanguage: String = "en",
     
     @SerializedName("availableLanguages")
@@ -67,7 +67,7 @@ data class Article(
      * Get display language code for badges (e.g., "EN", "ZH", "JA")  
      */
     fun getSourceLanguageCode(): String {
-        return when (sourceLanguage) {
+        return when (sourceLanguage.lowercase()) {
             "en" -> "EN"
             "zh-cn", "zh-tw" -> "ZH"
             "ja" -> "JA"
