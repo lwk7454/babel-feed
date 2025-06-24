@@ -62,6 +62,9 @@
     <string name="email_verification_instruction">Please check your email (%1$s) for a 4-digit verification code.</string>
     <string name="verification_code">4-Digit Verification Code</string>
     <string name="verify_email">Verify Email</string>
+    <string name="resend_code">Resend Code</string>
+    <string name="pending_verification">Pending Verification</string>
+    <string name="verification_email_sent">Please check your email (%1$s) for a 4-digit verification code.</string>
     <string name="authenticated_user">Authenticated User</string>
     <string name="user_email">Email: %1$s</string>
     <string name="user_id">User ID: %1$s</string>
@@ -119,7 +122,7 @@
     <!-- Error Messages -->
     <string name="error_loading">Error loading content</string>
     <string name="error_article_not_found">Article not found</string>
-    <string name="error_unknown">Unknown error occurred</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
     <string name="error_failed_load_articles">Failed to load articles: %1$s</string>
     <string name="error_failed_create_guest">Failed to create guest user: %1$s</string>
     <string name="error_failed_create_account">Failed to create account: %1$s</string>
@@ -133,4 +136,29 @@
     <string name="error_failed_get_user_profile">Failed to get user profile</string>
     <string name="error_failed_get_preferences">Failed to get preferences</string>
     <string name="error_failed_update_preferences_auth">Failed to update preferences</string>
+    
+    <!-- User-Friendly Error Messages -->
+    <string name="error_network_connection">Please check your internet connection and try again.</string>
+    <string name="error_server_unavailable">Our servers are temporarily unavailable. Please try again later.</string>
+    <string name="error_invalid_email">Please enter a valid email address.</string>
+    <string name="error_invalid_verification_code">The verification code is incorrect. Please check and try again.</string>
+    <string name="error_verification_code_expired">Your verification code has expired. Please request a new one.</string>
+    <string name="error_email_already_exists">This email is already associated with an account. Try signing in instead.</string>
+    <string name="error_email_already_verified">Your email is already verified. You can sign in directly.</string>
+    <string name="error_guest_session_expired">Your guest session has expired. Please start over.</string>
+    <string name="error_account_recovery_needed">Account recovery is needed. Please contact support.</string>
+    
+    <!-- Success Messages -->
+    <string name="success_verification_code_sent">Verification code sent to your email!</string>
+    <string name="success_email_verified">Email verified successfully! Welcome to Babel Feed.</string>
+    <string name="success_preferences_saved">Your preferences have been saved.</string>
+    <string name="success_account_created">Account created successfully! Please check your email for verification.</string>
+    
+    <!-- Account Recovery -->
+    <string name="existing_user_signin">Existing User? Sign In</string>
+    <string name="signin_with_email">Sign In With Email</string>
+    <string name="signin_description">Enter your email to sign in to your existing account</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="send_signin_link">Send Sign-In Link</string>
+    <string name="signin_link_sent">A sign-in link has been sent to your email.</string>
 </resources>

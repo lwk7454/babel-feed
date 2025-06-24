@@ -70,7 +70,7 @@ data class UserPreferences(
  */
 data class TranslationSettings(
     @SerializedName("autoTranslate")
-    val autoTranslate: Boolean = false,
+    val autoTranslate: Boolean = true,
     
     @SerializedName("defaultTargetLanguage")
     val defaultTargetLanguage: String = "en"

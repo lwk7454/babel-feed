@@ -252,10 +252,93 @@
             }
         },
 
+        // Inject a single translation result for streaming updates
+        injectSingleTranslation: function(translationResult) {
+            try {
+                const translation = translationResult;
+                
+                // Skip invalid translation objects with proper validation
+                if (!translation || typeof translation !== 'object') {
+                    console.warn('Invalid translation result - not an object:', translation);
+                    return false;
+                }
+                
+                if (!translation.id || typeof translation.id !== 'string') {
+                    console.warn('Invalid translation result - missing or invalid id:', translation);
+                    return false;
+                }
+                
+                if (!translation.translatedText || typeof translation.translatedText !== 'string' || translation.translatedText.trim() === '') {
+                    console.warn('Invalid translation result - missing or empty translatedText:', translation);
+                    return false;
+                }
+                
+                // Automatically activate translation when injecting
+                this.isTranslationActive = true;
+                
+                // Find element by locator stored during extraction
+                const locator = this.elementLocators.get(translation.id);
+                let element = null;
+                
+                if (locator) {
+                    element = this.findElementByLocator(locator);
+                }
+                
+                // Fallback to text node ID search if locator fails
+                if (!element) {
+                    element = this.findElementByTextNodeId(translation.id);
+                }
+                
+                if (element) {
+                    // Store original content if not already stored
+                    if (!this.originalContent.has(translation.id)) {
+                        this.originalContent.set(translation.id, element.textContent);
+                    }
+                    
+                    // Store translated content (safely trimmed)
+                    const trimmedTranslation = translation.translatedText.trim();
+                    this.translatedContent.set(translation.id, trimmedTranslation);
+                    
+                    // Inject translation with visual feedback for streaming
+                    element.textContent = trimmedTranslation;
+                    element.setAttribute('data-babel-translated', 'true');
+                    element.setAttribute('data-babel-confidence', String(translation.confidence || 0.95));
+                    element.setAttribute('data-babel-progress', String(translation.progress || 1.0));
+                    element.setAttribute('data-babel-streaming', 'true');
+                    
+                    // Add subtle visual indicator for real-time translation
+                    element.style.transition = 'background-color 0.3s ease';
+                    element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+                    setTimeout(() => {
+                        element.style.backgroundColor = '';
+                    }, 1000);
+                    
+                    console.log(`Injected streaming translation for ${translation.id}`);
+                    return true;
+                } else {
+                    console.warn(`Element not found for translation ID: ${translation.id}`);
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error('Single translation injection error:', error);
+                return false;
+            }
+        },
+
         // Inject translations using element locators from batched NDJSON response
         injectTranslationsByLocator: function(ndjsonResults) {
             try {
-                const results = ndjsonResults.split('\n').filter(line => line.trim());
+                const results = ndjsonResults.split('\n').filter(line => {
+                    const trimmed = line.trim();
+                    // Filter out SSE format lines and keep only JSON data
+                    return trimmed && 
+                           !trimmed.startsWith('id: ') && 
+                           !trimmed.startsWith('event: ') &&
+                           trimmed.startsWith('{') && 
+                           trimmed.endsWith('}');
+                });
+                
                 let injectedCount = 0;
                 
                 // Automatically activate translation when injecting
@@ -265,8 +348,18 @@
                     try {
                         const translation = JSON.parse(line);
                         
-                        // Skip non-translation lines (like batch completion status)
-                        if (!translation.id || !translation.translatedText) return;
+                        // Skip non-translation lines with proper validation
+                        if (!translation || typeof translation !== 'object') {
+                            return;
+                        }
+                        
+                        if (!translation.id || typeof translation.id !== 'string') {
+                            return;
+                        }
+                        
+                        if (!translation.translatedText || typeof translation.translatedText !== 'string' || translation.translatedText.trim() === '') {
+                            return;
+                        }
                         
                         // Find element by locator stored during extraction
                         const locator = this.elementLocators.get(translation.id);
@@ -287,14 +380,15 @@
                                 this.originalContent.set(translation.id, element.textContent);
                             }
                             
-                            // Store translated content
-                            this.translatedContent.set(translation.id, translation.translatedText);
+                            // Store translated content (safely trimmed)
+                            const trimmedTranslation = translation.translatedText.trim();
+                            this.translatedContent.set(translation.id, trimmedTranslation);
                             
                             // Inject translation
-                            element.textContent = translation.translatedText;
+                            element.textContent = trimmedTranslation;
                             element.setAttribute('data-babel-translated', 'true');
-                            element.setAttribute('data-babel-confidence', translation.confidence || '0.5');
-                            element.setAttribute('data-babel-progress', translation.progress || '1.0');
+                            element.setAttribute('data-babel-confidence', String(translation.confidence || 0.5));
+                            element.setAttribute('data-babel-progress', String(translation.progress || 1.0));
                             
                             injectedCount++;
                         } else {

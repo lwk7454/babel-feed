@@ -72,11 +72,19 @@ data class AccountData(
 )
 
 /**
- * Request to verify email
+ * Request to verify email with verification token
  */
 data class VerifyEmailRequest(
     @SerializedName("verificationToken")
     val verificationToken: String
+)
+
+/**
+ * Request to resend verification code
+ */
+data class ResendVerificationRequest(
+    @SerializedName("email")
+    val email: String
 )
 
 /**

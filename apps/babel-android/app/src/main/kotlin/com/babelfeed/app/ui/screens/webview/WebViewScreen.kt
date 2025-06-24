@@ -259,8 +259,17 @@ fun WebViewScreen(
                         adBlockingEnabled = isAdBlockingEnabled,
                         autoTranslateEnabled = stateManager.shouldAutoTranslate(url),
                         onUrlChanged = { newUrl ->
-                            // Handle URL navigation - restore translation state for new URL
-                            Log.d("BabelWebView", "URL changed from $currentUrl to $newUrl")
+                            // Handle URL navigation - cancel all ongoing translations first
+                            Log.d("BabelWebView", "URL changed from $currentUrl to $newUrl - cancelling ongoing translations")
+                            
+                            // Cancel all ongoing translation requests from previous page
+                            translationService.cancelAllTranslations()
+                            
+                            // Clear translation state from bridges
+                            webViewBridge.cancelCurrentTranslation()
+                            dynamicBridge?.cancelAllTranslations()
+                            
+                            // Restore translation state for new URL
                             val newState = stateManager.restoreTranslationState(newUrl)
                             
                             // Update UI state
@@ -347,6 +356,9 @@ fun WebViewScreen(
             saveTranslationState()
             bridge?.cleanup()
             dynamicBridge?.cleanup()
+            // Don't call translationService.cleanup() here as it's a singleton
+            // Just cancel ongoing translations for this page
+            translationService.cancelAllTranslations()
         }
     }
 }

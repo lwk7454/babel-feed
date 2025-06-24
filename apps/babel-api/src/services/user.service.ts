@@ -137,6 +137,43 @@ export class UserService {
   }
 
   /**
+   * Resend verification code for pending email verification
+   */
+  async resendVerificationCode(email: string): Promise<void> {
+    // Find user by email
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (!user) {
+      throw new Error('User not found with this email address');
+    }
+
+    if (user.emailVerified) {
+      throw new Error('Email is already verified');
+    }
+
+    // Generate new verification token
+    const verificationToken = this.generateVerificationToken();
+    const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user with new verification token
+    await this.db
+      .update(users)
+      .set({
+        verificationToken,
+        verificationTokenExpiry,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, user.id));
+
+    // Send new OTP email
+    await emailService.sendOTPEmail(email, verificationToken);
+  }
+
+  /**
    * Create a new session for authenticated user
    */
   async createSession(user: User, deviceInfo?: any, ipAddress?: string, userAgent?: string): Promise<{ accessToken: string; refreshToken: string }> {

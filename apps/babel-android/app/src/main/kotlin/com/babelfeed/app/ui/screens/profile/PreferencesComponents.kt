@@ -13,300 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.babelfeed.app.R
 import com.babelfeed.app.data.models.UserPreferences
-
-@Composable
-fun PreferencesCard(
-    preferences: UserPreferences?,
-    onUpdatePreferences: (UserPreferences) -> Unit,
-    onBack: () -> Unit
-) {
-    var currentPreferences by remember { 
-        mutableStateOf(preferences ?: UserPreferences(
-            userId = "",
-            preferredLanguages = listOf("en"),
-            feedCategories = emptyList(),
-            translationSettings = com.babelfeed.app.data.models.TranslationSettings(),
-            themePreference = "system",
-            notificationSettings = com.babelfeed.app.data.models.NotificationSettings(),
-            privacySettings = com.babelfeed.app.data.models.PrivacySettings(),
-            updatedAt = ""
-        ))
-    }
-
-    Card {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.preferences),
-                    style = MaterialTheme.typography.titleLarge
-                )
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
-                }
-            }
-
-            Divider()
-
-            // Language Preferences
-            PreferenceSection(
-                title = stringResource(R.string.language_preferences),
-                icon = Icons.Default.Person
-            ) {
-                val languageOptions = listOf(
-                    "en" to stringResource(R.string.language_english),
-                    "es" to stringResource(R.string.language_spanish), 
-                    "fr" to stringResource(R.string.language_french),
-                    "de" to stringResource(R.string.language_german),
-                    "it" to stringResource(R.string.language_italian),
-                    "pt" to stringResource(R.string.language_portuguese),
-                    "ja" to stringResource(R.string.language_japanese),
-                    "ko" to stringResource(R.string.language_korean),
-                    "zh" to stringResource(R.string.language_chinese)
-                )
-                
-                Column(modifier = Modifier.selectableGroup()) {
-                    languageOptions.forEach { (code, name) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = currentPreferences.preferredLanguages.contains(code),
-                                    onClick = {
-                                        val updatedLanguages = if (currentPreferences.preferredLanguages.contains(code)) {
-                                            currentPreferences.preferredLanguages - code
-                                        } else {
-                                            currentPreferences.preferredLanguages + code
-                                        }
-                                        currentPreferences = currentPreferences.copy(
-                                            preferredLanguages = updatedLanguages
-                                        )
-                                    }
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = currentPreferences.preferredLanguages.contains(code),
-                                onCheckedChange = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(name)
-                        }
-                    }
-                }
-            }
-
-            // Translation Settings
-            PreferenceSection(
-                title = stringResource(R.string.translation_settings),
-                icon = Icons.Default.Person
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.auto_translate_content))
-                    Switch(
-                        checked = currentPreferences.translationSettings.autoTranslate,
-                        onCheckedChange = { enabled ->
-                            currentPreferences = currentPreferences.copy(
-                                translationSettings = currentPreferences.translationSettings.copy(
-                                    autoTranslate = enabled
-                                )
-                            )
-                        }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = stringResource(R.string.default_target_language),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                val targetLanguageOptions = listOf(
-                    "en" to stringResource(R.string.language_english),
-                    "es" to stringResource(R.string.language_spanish),
-                    "fr" to stringResource(R.string.language_french),
-                    "de" to stringResource(R.string.language_german)
-                )
-                Column(modifier = Modifier.selectableGroup()) {
-                    targetLanguageOptions.forEach { (code, name) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = currentPreferences.translationSettings.defaultTargetLanguage == code,
-                                    onClick = {
-                                        currentPreferences = currentPreferences.copy(
-                                            translationSettings = currentPreferences.translationSettings.copy(
-                                                defaultTargetLanguage = code
-                                            )
-                                        )
-                                    }
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = currentPreferences.translationSettings.defaultTargetLanguage == code,
-                                onClick = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(name)
-                        }
-                    }
-                }
-            }
-
-            // Theme Preferences
-            PreferenceSection(
-                title = stringResource(R.string.theme),
-                icon = Icons.Default.Person
-            ) {
-                val themeOptions = listOf(
-                    "light" to stringResource(R.string.theme_light),
-                    "dark" to stringResource(R.string.theme_dark),
-                    "system" to stringResource(R.string.theme_system)
-                )
-                Column(modifier = Modifier.selectableGroup()) {
-                    themeOptions.forEach { (code, name) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = currentPreferences.themePreference == code,
-                                    onClick = {
-                                        currentPreferences = currentPreferences.copy(
-                                            themePreference = code
-                                        )
-                                    }
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = currentPreferences.themePreference == code,
-                                onClick = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(name)
-                        }
-                    }
-                }
-            }
-
-            // Notification Settings
-            PreferenceSection(
-                title = stringResource(R.string.notifications),
-                icon = Icons.Default.Person
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.email_notifications))
-                    Switch(
-                        checked = currentPreferences.notificationSettings.emailNotifications,
-                        onCheckedChange = { enabled ->
-                            currentPreferences = currentPreferences.copy(
-                                notificationSettings = currentPreferences.notificationSettings.copy(
-                                    emailNotifications = enabled
-                                )
-                            )
-                        }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.push_notifications))
-                    Switch(
-                        checked = currentPreferences.notificationSettings.pushNotifications,
-                        onCheckedChange = { enabled ->
-                            currentPreferences = currentPreferences.copy(
-                                notificationSettings = currentPreferences.notificationSettings.copy(
-                                    pushNotifications = enabled
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-
-            // Privacy Settings
-            PreferenceSection(
-                title = stringResource(R.string.privacy),
-                icon = Icons.Default.Person
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.analytics))
-                    Switch(
-                        checked = currentPreferences.privacySettings.analytics,
-                        onCheckedChange = { enabled ->
-                            currentPreferences = currentPreferences.copy(
-                                privacySettings = currentPreferences.privacySettings.copy(
-                                    analytics = enabled
-                                )
-                            )
-                        }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.personalization))
-                    Switch(
-                        checked = currentPreferences.privacySettings.personalization,
-                        onCheckedChange = { enabled ->
-                            currentPreferences = currentPreferences.copy(
-                                privacySettings = currentPreferences.privacySettings.copy(
-                                    personalization = enabled
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-
-            Divider()
-
-            // Save Button
-            Button(
-                onClick = { onUpdatePreferences(currentPreferences) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = stringResource(R.string.save),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.save_preferences))
-            }
-        }
-    }
-}
+import com.babelfeed.app.ui.theme.spacing
 
 @Composable
 fun PreferenceSection(
@@ -315,11 +22,12 @@ fun PreferenceSection(
     content: @Composable () -> Unit
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)
         ) {
             Icon(
                 imageVector = icon,
@@ -335,12 +43,268 @@ fun PreferenceSection(
         }
         
         Card(
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            ),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Box(modifier = Modifier.padding(12.dp)) {
+            Box(modifier = Modifier.padding(MaterialTheme.spacing.large)) {
                 content()
+            }
+        }
+    }
+}
+
+@Composable
+fun PreferencesContent(
+    preferences: UserPreferences,
+    onUpdatePreferences: (UserPreferences) -> Unit
+) {
+    var currentPreferences by remember { mutableStateOf(preferences) }
+    
+    LaunchedEffect(preferences) {
+        currentPreferences = preferences
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.large)
+    ) {
+
+        // Translation Settings
+        PreferenceSection(
+            title = stringResource(R.string.translation_settings),
+            icon = Icons.Default.Person
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.auto_translate_content),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                    Switch(
+                        checked = currentPreferences.translationSettings.autoTranslate,
+                        onCheckedChange = { enabled ->
+                            currentPreferences = currentPreferences.copy(
+                                translationSettings = currentPreferences.translationSettings.copy(
+                                    autoTranslate = enabled
+                                )
+                            )
+                            onUpdatePreferences(currentPreferences)
+                        }
+                    )
+                }
+                
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                ) {
+                    Text(
+                        text = stringResource(R.string.choose_your_language),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = MaterialTheme.spacing.small)
+                    )
+                    
+                    val targetLanguageOptions = listOf(
+                        "en" to "English",
+                        "zh-CN" to "中文（简体）",
+                        "zh-TW" to "中文（繁體）",
+                        "ja" to "日本語"
+                    )
+                    
+                    Column(
+                        modifier = Modifier.selectableGroup(),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                    ) {
+                        targetLanguageOptions.forEach { (code, name) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = MaterialTheme.spacing.extraSmall)
+                                    .selectable(
+                                        selected = currentPreferences.translationSettings.defaultTargetLanguage == code,
+                                        onClick = {
+                                            currentPreferences = currentPreferences.copy(
+                                                preferredLanguages = listOf(code),
+                                                translationSettings = currentPreferences.translationSettings.copy(
+                                                    defaultTargetLanguage = code
+                                                )
+                                            )
+                                            onUpdatePreferences(currentPreferences)
+                                        }
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = currentPreferences.translationSettings.defaultTargetLanguage == code,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                                Text(name)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Theme Preferences
+        PreferenceSection(
+            title = stringResource(R.string.theme),
+            icon = Icons.Default.Person
+        ) {
+            val themeOptions = listOf(
+                "light" to stringResource(R.string.theme_light),
+                "dark" to stringResource(R.string.theme_dark),
+                "system" to stringResource(R.string.theme_system)
+            )
+            Column(
+                modifier = Modifier.selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            ) {
+                themeOptions.forEach { (code, name) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = MaterialTheme.spacing.extraSmall)
+                            .selectable(
+                                selected = currentPreferences.themePreference == code,
+                                onClick = {
+                                    currentPreferences = currentPreferences.copy(
+                                        themePreference = code
+                                    )
+                                    onUpdatePreferences(currentPreferences)
+                                }
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = currentPreferences.themePreference == code,
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                        Text(name)
+                    }
+                }
+            }
+        }
+
+        // Notification Settings
+        PreferenceSection(
+            title = stringResource(R.string.notifications),
+            icon = Icons.Default.Person
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.email_notifications),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                    Switch(
+                        checked = currentPreferences.notificationSettings.emailNotifications,
+                        onCheckedChange = { enabled ->
+                            currentPreferences = currentPreferences.copy(
+                                notificationSettings = currentPreferences.notificationSettings.copy(
+                                    emailNotifications = enabled
+                                )
+                            )
+                            onUpdatePreferences(currentPreferences)
+                        }
+                    )
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.push_notifications),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                    Switch(
+                        checked = currentPreferences.notificationSettings.pushNotifications,
+                        onCheckedChange = { enabled ->
+                            currentPreferences = currentPreferences.copy(
+                                notificationSettings = currentPreferences.notificationSettings.copy(
+                                    pushNotifications = enabled
+                                )
+                            )
+                            onUpdatePreferences(currentPreferences)
+                        }
+                    )
+                }
+            }
+        }
+
+        // Privacy Settings
+        PreferenceSection(
+            title = stringResource(R.string.privacy),
+            icon = Icons.Default.Person
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.analytics),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                    Switch(
+                        checked = currentPreferences.privacySettings.analytics,
+                        onCheckedChange = { enabled ->
+                            currentPreferences = currentPreferences.copy(
+                                privacySettings = currentPreferences.privacySettings.copy(
+                                    analytics = enabled
+                                )
+                            )
+                            onUpdatePreferences(currentPreferences)
+                        }
+                    )
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.personalization),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                    Switch(
+                        checked = currentPreferences.privacySettings.personalization,
+                        onCheckedChange = { enabled ->
+                            currentPreferences = currentPreferences.copy(
+                                privacySettings = currentPreferences.privacySettings.copy(
+                                    personalization = enabled
+                                )
+                            )
+                            onUpdatePreferences(currentPreferences)
+                        }
+                    )
+                }
             }
         }
     }

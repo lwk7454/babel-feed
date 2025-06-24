@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import android.app.Activity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -18,70 +20,123 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.babelfeed.app.R
 import com.babelfeed.app.auth.AuthState
 import com.babelfeed.app.data.models.UserPreferences
-import com.babelfeed.app.utils.PreferencesManager
-import javax.inject.Inject
+import com.babelfeed.app.ui.theme.spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    onBackClick: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
+
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
+    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
+    val shouldRecreateActivity by viewModel.shouldRecreateActivity.collectAsStateWithLifecycle()
+    
+    val context = LocalContext.current
     
     var emailInput by remember { mutableStateOf("") }
     var verificationTokenInput by remember { mutableStateOf("") }
-    var showPreferences by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.initializeProfile()
     }
-    
-    if (showPreferences) {
-        PreferencesCard(
-            preferences = null, // You can load user preferences here
-            onUpdatePreferences = { preferences ->
-                // Apply language change immediately
-                val preferencesManager = PreferencesManager(viewModel.localeManager)
-                preferencesManager.applyPreferences(context, preferences)
-                
-                // Restart activity to apply language change
-                (context as? android.app.Activity)?.recreate()
-                
-                showPreferences = false
-            },
-            onBack = { showPreferences = false }
-        )
-        return
+
+    // Handle activity recreation when language changes
+    LaunchedEffect(shouldRecreateActivity) {
+        if (shouldRecreateActivity) {
+            (context as? Activity)?.recreate()
+            viewModel.onActivityRecreated()
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(MaterialTheme.spacing.medium)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
-        Text(
-            text = stringResource(R.string.profile),
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
-        )
+        // Header with title and back button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            onBackClick?.let {
+                IconButton(onClick = it) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
+                    )
+                }
+            } ?: Spacer(modifier = Modifier.size(48.dp))
+            
+            Text(
+                text = stringResource(R.string.profile),
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+            )
+            
+            // Placeholder for symmetry
+            Spacer(modifier = Modifier.size(48.dp))
+        }
 
-        // Error display
+        // Success message display
+        successMessage?.let { message ->
+            if (!isLoading) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = { viewModel.clearSuccessMessage() }
+                        ) {
+                            Text(stringResource(R.string.dismiss))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Error display - only show non-loading errors
         error?.let { errorMessage ->
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-            ) {
-                Text(
-                    text = errorMessage,
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
+            if (!isLoading) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = { viewModel.clearError() }
+                        ) {
+                            Text(stringResource(R.string.dismiss))
+                        }
+                    }
+                }
             }
         }
 
@@ -90,7 +145,7 @@ fun ProfileScreen(
             CircularProgressIndicator()
         }
 
-        // Authentication state display
+        // Authentication state display with integrated preferences
         when (authState) {
             AuthState.None -> {
                 NoAuthCard(
@@ -107,8 +162,18 @@ fun ProfileScreen(
                         if (emailInput.isNotBlank()) {
                             viewModel.createAccount(emailInput)
                         }
-                    },
-                    onShowPreferences = { showPreferences = true }
+                    }
+                )
+                
+                // Show preferences for guest users too
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                PreferencesSection(
+                    preferences = userPreferences,
+                    currentLocale = viewModel.localeManager.getCurrentLocale(context),
+                    onUpdatePreferences = { preferences ->
+                        viewModel.updatePreferences(preferences)
+                    }
                 )
             }
             
@@ -121,6 +186,22 @@ fun ProfileScreen(
                         if (verificationTokenInput.isNotBlank()) {
                             viewModel.verifyEmail(verificationTokenInput)
                         }
+                    },
+                    onResendCode = {
+                        currentUser?.email?.let { email ->
+                            viewModel.resendVerificationCode(email)
+                        }
+                    }
+                )
+                
+                // Show preferences for pending verification users
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                PreferencesSection(
+                    preferences = userPreferences,
+                    currentLocale = viewModel.localeManager.getCurrentLocale(context),
+                    onUpdatePreferences = { preferences ->
+                        viewModel.updatePreferences(preferences)
                     }
                 )
             }
@@ -128,8 +209,18 @@ fun ProfileScreen(
             AuthState.Authenticated -> {
                 AuthenticatedUserCard(
                     user = currentUser,
-                    onLogout = { viewModel.logout() },
-                    onShowPreferences = { showPreferences = true }
+                    onLogout = { viewModel.logout() }
+                )
+                
+                // Show preferences for authenticated users
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                PreferencesSection(
+                    preferences = userPreferences,
+                    currentLocale = viewModel.localeManager.getCurrentLocale(context),
+                    onUpdatePreferences = { preferences ->
+                        viewModel.updatePreferences(preferences)
+                    }
                 )
             }
         }
@@ -140,11 +231,15 @@ fun ProfileScreen(
 private fun NoAuthCard(
     onCreateGuest: () -> Unit
 ) {
-    Card {
+    Card(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text(
                 text = stringResource(R.string.welcome_to_babel_feed),
@@ -166,13 +261,18 @@ private fun GuestUserCard(
     guestId: String?,
     emailInput: String,
     onEmailChange: (String) -> Unit,
-    onCreateAccount: () -> Unit,
-    onShowPreferences: () -> Unit
+    onCreateAccount: () -> Unit
 ) {
-    Card {
+    var showSignInMode by remember { mutableStateOf(false) }
+    
+    Card(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text(
                 text = stringResource(R.string.guest_user),
@@ -183,38 +283,56 @@ private fun GuestUserCard(
                 style = MaterialTheme.typography.bodySmall
             )
             
-            Text(stringResource(R.string.add_email_description))
-            
-            OutlinedTextField(
-                value = emailInput,
-                onValueChange = onEmailChange,
-                label = { Text(stringResource(R.string.email_address)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onShowPreferences,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.preferences))
-                }
+            if (!showSignInMode) {
+                Text(stringResource(R.string.add_email_description))
+                
+                OutlinedTextField(
+                    value = emailInput,
+                    onValueChange = onEmailChange,
+                    label = { Text(stringResource(R.string.email_address)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 
                 Button(
                     onClick = onCreateAccount,
-                    modifier = Modifier.weight(1f),
-                    enabled = emailInput.isNotBlank()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.create_account))
+                }
+                
+                Divider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.small))
+                
+                TextButton(
+                    onClick = { showSignInMode = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.existing_user_signin))
+                }
+            } else {
+                Text(stringResource(R.string.signin_description))
+                
+                OutlinedTextField(
+                    value = emailInput,
+                    onValueChange = onEmailChange,
+                    label = { Text(stringResource(R.string.email_address)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Button(
+                    onClick = {
+                        // For now, use the same create account flow since backend handles existing users
+                        onCreateAccount()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.send_signin_link))
+                }
+                
+                TextButton(
+                    onClick = { showSignInMode = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.back))
                 }
             }
         }
@@ -226,20 +344,23 @@ private fun PendingVerificationCard(
     email: String,
     verificationTokenInput: String,
     onTokenChange: (String) -> Unit,
-    onVerifyEmail: () -> Unit
+    onVerifyEmail: () -> Unit,
+    onResendCode: () -> Unit
 ) {
-    Card {
+    Card(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text(
-                text = stringResource(R.string.email_verification),
+                text = stringResource(R.string.pending_verification),
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                text = stringResource(R.string.email_verification_instruction, email)
-            )
+            Text(stringResource(R.string.verification_email_sent, email))
             
             OutlinedTextField(
                 value = verificationTokenInput,
@@ -248,12 +369,23 @@ private fun PendingVerificationCard(
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Button(
-                onClick = onVerifyEmail,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = verificationTokenInput.isNotBlank()
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.verify_email))
+                Button(
+                    onClick = onVerifyEmail,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.verify_email))
+                }
+                
+                OutlinedButton(
+                    onClick = onResendCode,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.resend_code))
+                }
             }
         }
     }
@@ -262,13 +394,16 @@ private fun PendingVerificationCard(
 @Composable
 private fun AuthenticatedUserCard(
     user: com.babelfeed.app.data.models.User?,
-    onLogout: () -> Unit,
-    onShowPreferences: () -> Unit
+    onLogout: () -> Unit
 ) {
-    Card {
+    Card(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
             Text(
                 text = stringResource(R.string.authenticated_user),
@@ -282,34 +417,59 @@ private fun AuthenticatedUserCard(
                 Text(stringResource(R.string.member_since, u.createdAt))
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Row(
+            Button(
+                onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
             ) {
-                OutlinedButton(
-                    onClick = onShowPreferences,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.preferences))
-                }
-                
-                Button(
-                    onClick = onLogout,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.logout))
-                }
+                Text(stringResource(R.string.logout))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreferencesSection(
+    preferences: UserPreferences?,
+    currentLocale: String,
+    onUpdatePreferences: (UserPreferences) -> Unit
+) {
+    Card {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.preferences),
+                style = MaterialTheme.typography.titleMedium
+            )
+            
+            preferences?.let { prefs ->
+                PreferencesContent(
+                    preferences = prefs,
+                    onUpdatePreferences = onUpdatePreferences
+                )
+            } ?: run {
+                // Show default preferences if none are loaded yet
+                val defaultPrefs = UserPreferences(
+                    userId = "",
+                    preferredLanguages = listOf(currentLocale),
+                    feedCategories = emptyList(),
+                    translationSettings = com.babelfeed.app.data.models.TranslationSettings(
+                        autoTranslate = true,
+                        defaultTargetLanguage = currentLocale
+                    ),
+                    themePreference = "system",
+                    notificationSettings = com.babelfeed.app.data.models.NotificationSettings(),
+                    privacySettings = com.babelfeed.app.data.models.PrivacySettings(),
+                    updatedAt = ""
+                )
+                PreferencesContent(
+                    preferences = defaultPrefs,
+                    onUpdatePreferences = onUpdatePreferences
+                )
             }
         }
     }

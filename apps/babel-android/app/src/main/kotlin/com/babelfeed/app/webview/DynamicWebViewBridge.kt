@@ -551,14 +551,31 @@ class DynamicWebViewBridge(
     }
     
     /**
+     * Cancel all ongoing translations
+     */
+    fun cancelAllTranslations() {
+        Log.d(TAG, "Cancelling all dynamic translations")
+        
+        // Cancel all active translation requests
+        activeTranslations.values.forEach { requestId ->
+            streamingTranslationService.cancelTranslation(requestId)
+        }
+        activeTranslations.clear()
+        
+        // Clear content history
+        contentHistory.clear()
+        
+        Log.d(TAG, "All dynamic translations cancelled")
+    }
+
+    /**
      * Handle URL navigation - clear cache and restore state
      */
     fun onUrlChanged(newUrl: String) {
         Log.d(TAG, "URL changed to: $newUrl")
         
-        // Clear previous page state
-        activeTranslations.clear()
-        contentHistory.clear()
+        // Cancel all ongoing translations from previous page
+        cancelAllTranslations()
         
         // Update current URL
         currentUrl = newUrl
@@ -605,10 +622,10 @@ class DynamicWebViewBridge(
         }
         
         stopDynamicMode()
-        streamingTranslationService.cleanup()
+        // Don't call streamingTranslationService.cleanup() here as it's a singleton
+        // Just cancel this bridge's translations
+        cancelAllTranslations()
         webView.removeJavascriptInterface(BRIDGE_NAME)
-        activeTranslations.clear()
-        contentHistory.clear()
         currentUrl = null
         Log.d(TAG, "Dynamic WebView bridge cleaned up")
     }

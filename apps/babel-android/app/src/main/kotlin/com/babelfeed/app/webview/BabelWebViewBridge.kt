@@ -15,6 +15,7 @@ import com.babelfeed.app.utils.PreferencesManager
 import com.babelfeed.app.data.models.BatchedTranslationRequest
 import com.babelfeed.app.data.models.BatchedTranslationElement
 import com.babelfeed.app.data.models.BatchedTranslationResult
+import com.babelfeed.app.data.models.BatchedStreamingResult
 import com.babelfeed.app.data.models.ElementContext
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.EntryPoint
@@ -372,57 +373,80 @@ class BabelWebViewBridge(
                 requestId = "req_${System.currentTimeMillis()}"
             )
             
-            // Process batched translation using streaming service
+            // Send ALL content in one batched API call, receive streaming response
             val translations = mutableListOf<TranslationResult>()
             
             withContext(Dispatchers.IO) {
                 try {
+                    Log.d(TAG, "Making single batched API call for ${batchElements.size} elements")
                     val apiService = translationService.getApiService()
                     val responseBody = apiService.translateBatched(batchRequest)
                     
-                    // Process NDJSON streaming response
-                    val ndjsonContent = StringBuilder()
+                    // Process streaming NDJSON response line by line  
                     responseBody.byteStream().bufferedReader().use { reader ->
                         var line: String?
                         while (reader.readLine().also { line = it } != null) {
                             line?.let { ndjsonLine ->
-                                ndjsonContent.append(ndjsonLine).append("\n")
-                                
-                                try {
-                                    // Parse each NDJSON line
-                                    val result = json.decodeFromString<BatchedTranslationResult>(ndjsonLine)
-                                    
-                                    // Convert to TranslationResult format
-                                    val originalElement = batchElements.find { it.id == result.id }
-                                    originalElement?.let { element ->
-                                        val translationResult = TranslationResult(
-                                            id = result.id,
-                                            originalText = element.text,
-                                            translatedText = result.translatedText,
-                                            confidence = result.confidence,
-                                            language = targetLanguage
-                                        )
-                                        translations.add(translationResult)
-                                        
-                                        Log.d(TAG, "Received translation for ${result.id}: '${element.text.take(30)}...' -> '${result.translatedText.take(30)}...' (progress: ${(result.progress * 100).toInt()}%)")
-                                        
-                                        // Inject translation immediately using NDJSON method
-                                        withContext(Dispatchers.Main) {
-                                            injectNDJSONTranslations(ndjsonLine)
+                                if (ndjsonLine.trim().isNotEmpty()) {
+                                    try {
+                                        // Handle Server-Sent Events (SSE) format properly
+                                        val cleanedLine = when {
+                                            ndjsonLine.startsWith("data: ") -> ndjsonLine.removePrefix("data: ").trim()
+                                            ndjsonLine.startsWith("id: ") -> {
+                                                // Skip SSE id lines as they're not JSON data
+                                                Log.d(TAG, "Skipping SSE id line: $ndjsonLine")
+                                                return@let
+                                            }
+                                            ndjsonLine.trim().isEmpty() -> {
+                                                // Skip empty lines (SSE heartbeat)
+                                                return@let
+                                            }
+                                            else -> ndjsonLine.trim()
                                         }
+                                        
+                                        if (cleanedLine.isNotEmpty() && cleanedLine.startsWith("{")) {
+                                            // Try to parse as BatchedTranslationResult first (individual translation)
+                                            try {
+                                                val result = json.decodeFromString<BatchedTranslationResult>(cleanedLine)
+                                                
+                                                // Convert to TranslationResult and store
+                                                val originalElement = batchElements.find { it.id == result.id }
+                                                originalElement?.let { element ->
+                                                    val translationResult = TranslationResult(
+                                                        id = result.id,
+                                                        originalText = element.text,
+                                                        translatedText = result.translatedText,
+                                                        confidence = result.confidence,
+                                                        language = targetLanguage
+                                                    )
+                                                    translations.add(translationResult)
+                                                    
+                                                    Log.d(TAG, "Streaming translation: '${element.text.take(20)}...' -> '${result.translatedText.take(20)}...'")
+                                                    
+                                                    // Inject each translation as it arrives
+                                                    withContext(Dispatchers.Main) {
+                                                        injectSingleTranslation(result)
+                                                    }
+                                                }
+                                            } catch (translationParseError: Exception) {
+                                                // Try to parse as BatchedStreamingResult (batch completion status)
+                                                try {
+                                                    val batchResult = json.decodeFromString<BatchedStreamingResult>(cleanedLine)
+                                                    Log.d(TAG, "Batch completion: ${batchResult.processedElements}/${batchResult.totalElements} elements processed")
+                                                } catch (batchParseError: Exception) {
+                                                    Log.w(TAG, "Failed to parse NDJSON line as either type: $cleanedLine", translationParseError)
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "Failed to process NDJSON line: $ndjsonLine", e)
                                     }
-                                } catch (e: Exception) {
-                                    Log.w(TAG, "Failed to parse NDJSON line: $ndjsonLine", e)
                                 }
                             }
                         }
                     }
                     
-                    // Final injection with all accumulated translations
-                    withContext(Dispatchers.Main) {
-                        Log.d(TAG, "Injecting final batch of NDJSON translations")
-                        injectNDJSONTranslations(ndjsonContent.toString())
-                    }
+                    Log.d(TAG, "Completed streaming translation: ${translations.size} elements processed")
                 } catch (e: Exception) {
                     Log.e(TAG, "Batched translation API call failed, falling back to individual requests", e)
                     // Fallback to original individual translation approach
@@ -555,8 +579,52 @@ class BabelWebViewBridge(
     }
 
     /**
-     * Inject NDJSON streaming translations directly
+     * Inject a single translation result as it arrives from streaming response
      */
+    private fun injectSingleTranslation(result: BatchedTranslationResult) {
+        // Validate translation result before injection
+        if (result.id.isBlank()) {
+            Log.w(TAG, "Skipping translation injection - empty ID")
+            return
+        }
+        
+        if (result.translatedText.isBlank()) {
+            Log.w(TAG, "Skipping translation injection for ${result.id} - empty translated text")
+            return
+        }
+        
+        val escapedTranslation = result.translatedText.trim()
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+        
+        val jsCode = """
+            (function() {
+                try {
+                    const translationResult = {
+                        id: "${result.id}",
+                        translatedText: "$escapedTranslation",
+                        confidence: ${result.confidence},
+                        progress: ${result.progress}
+                    };
+                    
+                    if (window.BabelContentInjector && window.BabelContentInjector.injectSingleTranslation) {
+                        const success = window.BabelContentInjector.injectSingleTranslation(translationResult);
+                        console.log('Injected single translation for ${result.id}:', success);
+                    } else {
+                        console.warn('BabelContentInjector.injectSingleTranslation not available');
+                    }
+                } catch (error) {
+                    console.error('Single translation injection error for ${result.id}:', error);
+                }
+            })();
+        """.trimIndent()
+
+        webView.evaluateJavascript(jsCode, null)
+    }
+
     private fun injectNDJSONTranslations(ndjsonContent: String) {
         // Escape the NDJSON content for JavaScript injection
         val escapedNdjson = ndjsonContent
@@ -746,8 +814,19 @@ class BabelWebViewBridge(
         }
     }
 
+    /**
+     * Cancel current translation processing
+     */
+    fun cancelCurrentTranslation() {
+        isTranslationInProgress = false
+        Log.d(TAG, "Cancelled current translation processing")
+    }
+
     fun cleanup() {
+        // Cancel any ongoing translation
+        cancelCurrentTranslation()
         webView.removeJavascriptInterface(BRIDGE_NAME)
+        Log.d(TAG, "BabelWebViewBridge cleaned up")
     }
 }
 

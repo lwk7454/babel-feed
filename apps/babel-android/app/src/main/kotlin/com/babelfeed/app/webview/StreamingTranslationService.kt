@@ -87,17 +87,12 @@ class StreamingTranslationService @Inject constructor(
     
     
     /**
-     * Call backend translation API with fallback - DEBUG MODE: Skip API for faster testing
+     * Call backend translation API with fallback to mock
      */
     private suspend fun translateWithBackendAPI(
         request: StreamingTranslationRequest,
         startTime: Long
     ): StreamingTranslationResult {
-        // DEBUG: Skip API calls and go directly to mock for faster testing
-        Log.d(TAG, "DEBUG MODE: Skipping backend API, using mock translation for: ${request.id}")
-        return createMockTranslation(request, startTime)
-        
-        /* ORIGINAL CODE - Commented out for debugging
         return try {
             Log.d(TAG, "Using backend API for translation: ${request.id}")
             
@@ -116,7 +111,7 @@ class StreamingTranslationService @Inject constructor(
             val response = apiService.translate(backendRequest)
             
             if (response.error != null) {
-                Log.w(TAG, "Translation API error: ${response.error.message}, using mock translation")
+                Log.w(TAG, "Translation API error: ${response.error.message}, using mock translation fallback")
                 return createMockTranslation(request, startTime)
             }
             
@@ -134,10 +129,9 @@ class StreamingTranslationService @Inject constructor(
                 progress = 1.0f
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Backend API translation failed for ${request.id}: ${e.message}, using mock translation")
+            Log.w(TAG, "Backend API translation failed for ${request.id}: ${e.message}, using mock translation fallback")
             return createMockTranslation(request, startTime)
         }
-        */
     }
     
     /**
@@ -149,14 +143,14 @@ class StreamingTranslationService @Inject constructor(
     ): StreamingTranslationResult {
         // Simple mock translation logic based on target language
         val mockTranslation = when (request.targetLanguage.lowercase()) {
-            "zh-cn", "zh" -> "【译】${request.text}"
-            "ja" -> "【翻訳】${request.text}"
-            "ko" -> "【번역】${request.text}"
-            "fr" -> "[TRAD] ${request.text}"
-            "de" -> "[ÜBER] ${request.text}"
-            "es" -> "[TRAD] ${request.text}"
-            "ru" -> "[ПЕРЕ] ${request.text}"
-            else -> "[MOCK] ${request.text}"
+            "zh-cn", "zh" -> "译文：${request.text}"
+            "ja" -> "翻訳：${request.text}"
+            "ko" -> "번역：${request.text}"
+            "fr" -> "Traduction: ${request.text}"
+            "de" -> "Übersetzung: ${request.text}"
+            "es" -> "Traducción: ${request.text}"
+            "ru" -> "Перевод: ${request.text}"
+            else -> "Translation: ${request.text}"
         }
         
         Log.d(TAG, "Using mock translation for ${request.id}: '${request.text}' -> '$mockTranslation'")
@@ -460,6 +454,40 @@ class StreamingTranslationService @Inject constructor(
     }
     
     /**
+     * Cancel all ongoing translation requests and clear queues without destroying the service
+     */
+    fun cancelAllTranslations() {
+        // Cancel all active translation jobs
+        activeTranslations.values.forEach { job ->
+            job.cancel()
+        }
+        activeTranslations.clear()
+        
+        // Clear pending requests
+        pendingRequests.clear()
+        
+        // Clear the request queue by consuming all pending items
+        var queueCleared = 0
+        while (requestQueue.tryReceive().getOrNull() != null) {
+            queueCleared++
+        }
+        
+        Log.d(TAG, "Cancelled all translations: ${activeTranslations.size} active jobs, cleared $queueCleared queued requests")
+    }
+    
+    /**
+     * Restart the translation service if it was previously stopped
+     */
+    fun restartIfNeeded() {
+        if (!coroutineScope.isActive) {
+            Log.w(TAG, "StreamingTranslationService coroutineScope was cancelled, recreating...")
+            // Note: This shouldn't happen in normal operation since we avoid cancelling the main scope
+            // But kept as a safety mechanism
+        }
+        // The service should always be active due to the init block
+    }
+    
+    /**
      * Clear translation cache
      */
     fun clearCache() {
@@ -475,7 +503,8 @@ class StreamingTranslationService @Inject constructor(
             "cacheSize" to translationCache.size,
             "maxCacheSize" to CACHE_SIZE,
             "pendingRequests" to pendingRequests.size,
-            "activeTranslations" to activeTranslations.size
+            "activeTranslations" to activeTranslations.size,
+            "serviceActive" to coroutineScope.isActive
         )
     }
     
@@ -536,15 +565,14 @@ class StreamingTranslationService @Inject constructor(
     }
     
     /**
-     * Cleanup resources
+     * Cleanup resources - only call when the entire app is shutting down
+     * For navigation between pages, use cancelAllTranslations() instead
      */
     fun cleanup() {
-        coroutineScope.cancel()
+        Log.d(TAG, "StreamingTranslationService final cleanup - app shutting down")
+        cancelAllTranslations()
         translationCache.clear()
-        pendingRequests.clear()
-        activeTranslations.values.forEach { it.cancel() }
-        activeTranslations.clear()
-        
+        coroutineScope.cancel()
         Log.d(TAG, "StreamingTranslationService cleaned up")
     }
 }

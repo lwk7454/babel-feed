@@ -114,6 +114,24 @@ class AuthenticationManager @Inject constructor(
     }
 
     /**
+     * Resend verification code for email verification
+     */
+    suspend fun resendVerificationCode(email: String): Result<Unit> {
+        return try {
+            val request = ResendVerificationRequest(email)
+            val response = apiService.resendVerificationCode(request)
+            
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.message))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Get current user profile
      */
     suspend fun getCurrentUser(): Result<User> {

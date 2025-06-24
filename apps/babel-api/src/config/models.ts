@@ -1,132 +1,132 @@
 import { ComplexityLevel, ModelConfig } from "../types/translation.js";
 
-// Model configuration based on complexity levels - ALL FREE MODELS FROM OPENROUTER
+// Model configuration based on complexity levels - PAID MODELS WITH LOW LATENCY
 export const MODEL_CONFIGS: Record<ComplexityLevel, ModelConfig[]> = {
   simple: [
     {
-      name: "Mistral 7B Instruct Free",
+      name: "Mistral 7B Instruct",
       provider: "openrouter",
-      modelId: "mistralai/mistral-7b-instruct:free",
+      modelId: "mistralai/mistral-7b-instruct",
       maxTokens: 2048,
       temperature: 0.3,
-      targetLatency: 800,
-      costPer1kTokens: 0.0,
+      targetLatency: 400,
+      costPer1kTokens: 0.0002,
       complexityTypes: ["simple"]
     },
     {
-      name: "Llama 3.1 8B Instruct Free",
+      name: "Llama 3.1 8B Instruct",
       provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct:free",
+      modelId: "meta-llama/llama-3.1-8b-instruct",
       maxTokens: 2048,
       temperature: 0.3,
-      targetLatency: 600,
-      costPer1kTokens: 0.0,
+      targetLatency: 300,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["simple"]
     },
     {
-      name: "Gemma 2 9B Instruct Free",
+      name: "Gemma 2 9B Instruct",
       provider: "openrouter",
-      modelId: "google/gemma-2-9b-it:free",
+      modelId: "google/gemma-2-9b-it",
       maxTokens: 2048,
       temperature: 0.3,
-      targetLatency: 700,
-      costPer1kTokens: 0.0,
+      targetLatency: 350,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["simple"]
     }
   ],
   contextual: [
     {
-      name: "Llama 3.3 70B Instruct Free",
+      name: "Mistral 7B Instruct",
       provider: "openrouter",
-      modelId: "meta-llama/llama-3.3-70b-instruct:free",
+      modelId: "mistralai/mistral-7b-instruct",
       maxTokens: 4096,
       temperature: 0.5,
-      targetLatency: 2000,
-      costPer1kTokens: 0.0,
+      targetLatency: 500,
+      costPer1kTokens: 0.0002,
       complexityTypes: ["contextual"]
     },
     {
-      name: "Qwen 2.5 72B Instruct Free",
+      name: "Llama 3.1 8B Instruct",
       provider: "openrouter",
-      modelId: "qwen/qwen-2.5-72b-instruct:free",
+      modelId: "meta-llama/llama-3.1-8b-instruct",
       maxTokens: 4096,
       temperature: 0.5,
-      targetLatency: 2200,
-      costPer1kTokens: 0.0,
+      targetLatency: 400,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["contextual"]
     },
     {
-      name: "DeepSeek R1 Free",
+      name: "Phi-3 Mini 128k Instruct",
       provider: "openrouter",
-      modelId: "deepseek/deepseek-r1:free",
+      modelId: "microsoft/phi-3-mini-128k-instruct",
       maxTokens: 4096,
       temperature: 0.5,
-      targetLatency: 1800,
-      costPer1kTokens: 0.0,
+      targetLatency: 300,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["contextual"]
     }
   ],
   creative: [
     {
-      name: "DeepSeek V3 Free",
+      name: "Llama 3.1 8B Instruct",
       provider: "openrouter",
-      modelId: "deepseek/deepseek-v3:free",
+      modelId: "meta-llama/llama-3.1-8b-instruct",
       maxTokens: 4096,
       temperature: 0.7,
-      targetLatency: 2500,
-      costPer1kTokens: 0.0,
+      targetLatency: 400,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["creative"]
     },
     {
-      name: "Qwen QwQ 32B Free",
+      name: "Mistral 7B Instruct",
       provider: "openrouter",
-      modelId: "qwen/qwq-32b-preview:free",
+      modelId: "mistralai/mistral-7b-instruct",
       maxTokens: 4096,
       temperature: 0.7,
-      targetLatency: 2000,
-      costPer1kTokens: 0.0,
+      targetLatency: 500,
+      costPer1kTokens: 0.0002,
       complexityTypes: ["creative"]
     },
     {
-      name: "DeepHermes 3 Llama 3 8B Free",
+      name: "Gemma 2 9B Instruct",
       provider: "openrouter",
-      modelId: "nousresearch/hermes-3-llama-3.1-8b:free",
+      modelId: "google/gemma-2-9b-it",
       maxTokens: 4096,
       temperature: 0.7,
-      targetLatency: 1500,
-      costPer1kTokens: 0.0,
+      targetLatency: 450,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["creative"]
     }
   ],
   technical: [
     {
-      name: "Qwen 2.5 Coder 32B Free",
+      name: "Llama 3.1 8B Instruct",
       provider: "openrouter",
-      modelId: "qwen/qwen-2.5-coder-32b-instruct:free",
+      modelId: "meta-llama/llama-3.1-8b-instruct",
       maxTokens: 4096,
       temperature: 0.2,
-      targetLatency: 2200,
-      costPer1kTokens: 0.0,
+      targetLatency: 400,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["technical"]
     },
     {
-      name: "DeepSeek Coder V2 Free",
+      name: "Mistral 7B Instruct",
       provider: "openrouter",
-      modelId: "deepseek/deepseek-coder:free",
+      modelId: "mistralai/mistral-7b-instruct",
       maxTokens: 4096,
       temperature: 0.2,
-      targetLatency: 2000,
-      costPer1kTokens: 0.0,
+      targetLatency: 500,
+      costPer1kTokens: 0.0002,
       complexityTypes: ["technical"]
     },
     {
-      name: "Llama 3.1 8B Instruct Free (Technical)",
+      name: "Phi-3 Mini 128k Instruct",
       provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct:free",
+      modelId: "microsoft/phi-3-mini-128k-instruct",
       maxTokens: 4096,
-      temperature: 0.2,
-      targetLatency: 1000,
-      costPer1kTokens: 0.0,
+      temperature: 0.2,  
+      targetLatency: 300,
+      costPer1kTokens: 0.0001,
       complexityTypes: ["technical"]
     }
   ]

@@ -120,7 +120,9 @@ fun BabelFeedNavigation(
         }
         
         composable("profile") {
-            ProfileScreen()
+            ProfileScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }

@@ -12,9 +12,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Create guest profile
    */
   .post('/guest', 
-    async ({ body, headers }) => {
+    async ({ body, headers, set }) => {
       try {
-        const deviceFingerprint = body.deviceFingerprint;
+        const deviceFingerprint = (body as any).deviceFingerprint;
         const user = await userService.createGuestUser(deviceFingerprint);
         
         return {
@@ -28,7 +28,15 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         };
       } catch (error) {
         console.error('Guest creation error:', error);
-        throw new Error('Failed to create guest profile');
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'GUEST_CREATION_FAILED',
+            message: 'Failed to create guest profile',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
       }
     },
     {
@@ -47,13 +55,10 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Create account from guest
    */
   .post('/create-account',
-    async ({ body }) => {
+    async ({ body, set }) => {
       try {
-        const { guestId, email } = body;
+        const { guestId, email } = body as any;
         const result = await userService.createAccountFromGuest(guestId, email);
-        
-        // In a real app, you would send verification email here
-        // OTP email is sent automatically by the user service
         
         return {
           success: true,
@@ -69,14 +74,38 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         
         if (error instanceof Error) {
           if (error.message === 'Email already registered') {
-            throw new Error('Email address is already registered');
+            set.status = 409; // Conflict
+            return {
+              success: false,
+              error: {
+                code: 'EMAIL_ALREADY_REGISTERED',
+                message: 'Email address is already registered',
+                details: 'This email is already associated with an account. Try logging in instead.'
+              }
+            };
           }
           if (error.message === 'Guest user not found') {
-            throw new Error('Invalid guest user');
+            set.status = 404; // Not found
+            return {
+              success: false,
+              error: {
+                code: 'GUEST_USER_NOT_FOUND',
+                message: 'Invalid guest user',
+                details: 'The guest user ID provided was not found.'
+              }
+            };
           }
         }
         
-        throw new Error('Failed to create account');
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'ACCOUNT_CREATION_FAILED',
+            message: 'Failed to create account',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
       }
     },
     {
@@ -93,12 +122,76 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   )
   
   /**
+   * Resend verification code
+   */
+  .post('/resend-verification',
+    async ({ body, set }) => {
+      try {
+        const { email } = body as any;
+        await userService.resendVerificationCode(email);
+        
+        return {
+          success: true,
+          message: 'Verification code sent successfully'
+        };
+      } catch (error) {
+        console.error('Resend verification error:', error);
+        
+        if (error instanceof Error) {
+          if (error.message.includes('User not found')) {
+            set.status = 404;
+            return {
+              success: false,
+              error: {
+                code: 'USER_NOT_FOUND',
+                message: 'User not found',
+                details: 'No account found with this email address.'
+              }
+            };
+          }
+          if (error.message.includes('already verified')) {
+            set.status = 400;
+            return {
+              success: false,
+              error: {
+                code: 'ALREADY_VERIFIED',
+                message: 'Email already verified',
+                details: 'This email address is already verified. You can log in directly.'
+              }
+            };
+          }
+        }
+        
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'RESEND_FAILED',
+            message: 'Failed to resend verification code',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
+      }
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: 'email' })
+      }),
+      detail: {
+        tags: ['Authentication'],
+        summary: 'Resend verification code',
+        description: 'Resends verification code to the email address'
+      }
+    }
+  )
+  
+  /**
    * Verify email address
    */
   .post('/verify',
-    async ({ body }) => {
+    async ({ body, set }) => {
       try {
-        const { verificationToken } = body;
+        const { verificationToken } = body as any;
         const result = await userService.verifyEmail(verificationToken);
         
         return {
@@ -107,6 +200,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
             user: {
               id: result.user.id,
               email: result.user.email,
+              guestId: result.user.guestId,
               emailVerified: result.user.emailVerified,
               createdAt: result.user.createdAt
             },
@@ -120,14 +214,38 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         
         if (error instanceof Error) {
           if (error.message.includes('Invalid or expired')) {
-            throw new Error('Invalid or expired verification token');
+            set.status = 400; // Bad request
+            return {
+              success: false,
+              error: {
+                code: 'INVALID_VERIFICATION_TOKEN',
+                message: 'Invalid or expired verification token',
+                details: 'Please request a new verification code.'
+              }
+            };
           }
           if (error.message.includes('expired')) {
-            throw new Error('Verification token has expired');
+            set.status = 410; // Gone
+            return {
+              success: false,
+              error: {
+                code: 'VERIFICATION_TOKEN_EXPIRED',
+                message: 'Verification token has expired',
+                details: 'Please request a new verification code.'
+              }
+            };
           }
         }
         
-        throw new Error('Email verification failed');
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'EMAIL_VERIFICATION_FAILED',
+            message: 'Email verification failed',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
       }
     },
     {
@@ -146,13 +264,21 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Refresh access token
    */
   .post('/refresh',
-    async ({ body }) => {
+    async ({ body, set }) => {
       try {
-        const { refreshToken } = body;
+        const { refreshToken } = body as any;
         const tokens = await userService.refreshToken(refreshToken);
         
         if (!tokens) {
-          throw new Error('Invalid or expired refresh token');
+          set.status = 401;
+          return {
+            success: false,
+            error: {
+              code: 'INVALID_REFRESH_TOKEN',
+              message: 'Invalid or expired refresh token',
+              details: 'Please log in again.'
+            }
+          };
         }
         
         return {
@@ -162,7 +288,15 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         };
       } catch (error) {
         console.error('Token refresh error:', error);
-        throw new Error('Failed to refresh tokens');
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'TOKEN_REFRESH_FAILED',
+            message: 'Failed to refresh tokens',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
       }
     },
     {
@@ -181,7 +315,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Logout user
    */
   .post('/logout',
-    async ({ headers }) => {
+    async ({ headers, set }) => {
       try {
         const authorization = headers.authorization;
         if (authorization && authorization.startsWith('Bearer ')) {
@@ -242,9 +376,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Update user preferences
    */
   .put('/preferences',
-    async ({ user, body }) => {
+    async ({ user, body, set }) => {
       try {
-        await userService.updateUserPreferences(user!.id, body);
+        await userService.updateUserPreferences(user!.id, body as any);
         const preferences = await userService.getUserPreferences(user!.id);
         
         return {
@@ -254,7 +388,15 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         };
       } catch (error) {
         console.error('Preferences update error:', error);
-        throw new Error('Failed to update preferences');
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'PREFERENCES_UPDATE_FAILED',
+            message: 'Failed to update preferences',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
       }
     },
     {
@@ -279,7 +421,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Get user preferences
    */
   .get('/preferences',
-    async ({ user }) => {
+    async ({ user, set }) => {
       try {
         const preferences = await userService.getUserPreferences(user!.id);
         
@@ -289,7 +431,15 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         };
       } catch (error) {
         console.error('Get preferences error:', error);
-        throw new Error('Failed to get preferences');
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'PREFERENCES_FETCH_FAILED',
+            message: 'Failed to get preferences',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
       }
     },
     {

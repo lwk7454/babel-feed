@@ -1,5 +1,6 @@
 package com.babelfeed.app.auth
 
+import android.util.Log
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -17,24 +18,31 @@ class AuthInterceptor @Inject constructor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
+        val path = originalRequest.url.encodedPath
         
-        // Check if this is an articles endpoint (should not require auth)
-        val isArticlesEndpoint = originalRequest.url.encodedPath.contains("/articles")
+        // Only articles endpoints should NOT require auth, everything else should use auth if available
+        val isArticlesEndpoint = path.contains("/api/articles") && !path.contains("/api/auth")
+        val shouldUseAuth = !isArticlesEndpoint && tokenManager.getAccessToken() != null
         
-        // Add auth header if user is authenticated and it's not an articles endpoint
+        Log.d("AuthInterceptor", "Path: $path, isArticlesEndpoint: $isArticlesEndpoint, shouldUseAuth: $shouldUseAuth")
+        
+        // Add auth header if we should use auth
         val token = tokenManager.getAccessToken()
-        val request = if (token != null && !isArticlesEndpoint) {
+        val request = if (shouldUseAuth && token != null) {
+            Log.d("AuthInterceptor", "Adding auth header for path: $path")
             originalRequest.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .build()
         } else {
+            Log.d("AuthInterceptor", "No auth header for path: $path")
             originalRequest
         }
         
         val response = chain.proceed(request)
         
-        // Handle token refresh on 401 Unauthorized (skip for articles endpoints)
-        if (response.code == 401 && token != null && !isArticlesEndpoint) {
+        // Handle token refresh on 401 Unauthorized (only for endpoints that should use auth)
+        if (response.code == 401 && shouldUseAuth && token != null) {
+            Log.d("AuthInterceptor", "Got 401 for authenticated request, attempting token refresh")
             response.close()
             
             // Try to refresh token
@@ -42,10 +50,15 @@ class AuthInterceptor @Inject constructor(
             if (refreshToken != null) {
                 return handleTokenRefresh(chain, originalRequest, refreshToken)
             } else {
+                Log.w("AuthInterceptor", "No refresh token available, clearing auth")
                 // No refresh token, clear auth and proceed without auth
                 tokenManager.clearAuthTokens()
                 return chain.proceed(originalRequest)
             }
+        }
+        
+        if (response.code == 401 && shouldUseAuth) {
+            Log.w("AuthInterceptor", "Got 401 for path $path - authentication failed")
         }
         
         return response
@@ -60,10 +73,12 @@ class AuthInterceptor @Inject constructor(
         // to avoid blocking the OkHttp thread with coroutines. This is a simplified approach.
         return try {
             runBlocking {
+                Log.d("AuthInterceptor", "Attempting token refresh")
                 // Create a temporary API service instance to refresh token
                 val newTokens = performTokenRefresh(refreshToken)
                 
                 if (newTokens != null) {
+                    Log.d("AuthInterceptor", "Token refresh successful")
                     // Update stored tokens
                     tokenManager.storeTokens(
                         accessToken = newTokens.accessToken,
@@ -80,12 +95,14 @@ class AuthInterceptor @Inject constructor(
                     
                     chain.proceed(retryRequest)
                 } else {
+                    Log.w("AuthInterceptor", "Token refresh failed, clearing auth")
                     // Refresh failed, clear auth and proceed without auth
                     tokenManager.clearAuthTokens()
                     chain.proceed(originalRequest)
                 }
             }
         } catch (e: Exception) {
+            Log.e("AuthInterceptor", "Token refresh exception", e)
             // Refresh failed, clear auth and proceed without auth
             tokenManager.clearAuthTokens()
             chain.proceed(originalRequest)
@@ -94,6 +111,7 @@ class AuthInterceptor @Inject constructor(
 
     private suspend fun performTokenRefresh(refreshToken: String): com.babelfeed.app.data.models.AuthTokens? {
         return try {
+            Log.d("AuthInterceptor", "Performing token refresh API call")
             // Create a simple HTTP client for token refresh to avoid circular dependencies
             val retrofit = retrofit2.Retrofit.Builder()
                 .baseUrl("http://10.0.2.2:3000/api/") // Android emulator localhost
@@ -105,18 +123,21 @@ class AuthInterceptor @Inject constructor(
             val response = refreshService.refreshToken(request)
             
             if (response.success) {
+                Log.d("AuthInterceptor", "Token refresh API success")
                 response.data
             } else {
+                Log.w("AuthInterceptor", "Token refresh API failed: ${response.message}")
                 null
             }
         } catch (e: Exception) {
+            Log.e("AuthInterceptor", "Token refresh API exception", e)
             null
         }
     }
     
     // Simple service interface for token refresh only
     private interface RefreshTokenService {
-        @retrofit2.http.POST("auth/refresh-token")
+        @retrofit2.http.POST("auth/refresh")
         suspend fun refreshToken(@retrofit2.http.Body request: com.babelfeed.app.data.models.RefreshTokenRequest): com.babelfeed.app.data.models.RefreshTokenResponse
     }
 }

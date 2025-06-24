@@ -43,6 +43,9 @@ interface BabelApiService {
     @POST("auth/verify")
     suspend fun verifyEmail(@Body request: VerifyEmailRequest): VerifyEmailResponse
     
+    @POST("auth/resend-verification")
+    suspend fun resendVerificationCode(@Body request: ResendVerificationRequest): ApiResponse<Unit>
+    
     @POST("auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
     

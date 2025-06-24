@@ -3,6 +3,7 @@ package com.babelfeed.app.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val DarkColorScheme = darkColorScheme(
     primary = Primary,
@@ -29,9 +30,11 @@ private val DarkColorScheme = darkColorScheme(
 fun BabelFeedTheme(
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = DarkColorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalSpacing provides Spacing()) {
+        MaterialTheme(
+            colorScheme = DarkColorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
