@@ -1,0 +1,2 @@
+-- Migration already applied manually - no changes needed
+-- The articles table already has the correct structure

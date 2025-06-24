@@ -26,11 +26,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.babelfeed.app.R
 import com.babelfeed.app.ui.components.LanguageBadge
+import com.babelfeed.app.utils.LocaleManager
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +75,13 @@ fun ArticleScreen(
             }
             is ArticleUiState.Success -> {
                 val article = (uiState as ArticleUiState.Success).article
+                val context = LocalContext.current
+                val localeManager = EntryPointAccessors.fromApplication(
+                    context.applicationContext,
+                    ArticleLocaleManagerEntryPoint::class.java
+                ).localeManager()
+                val currentLocale = localeManager.getCurrentLocale(context)
+                
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -80,7 +93,7 @@ fun ArticleScreen(
                         verticalAlignment = Alignment.Top
                     ) {
                         Text(
-                            text = article.title,
+                            text = article.getLocalizedTitle(currentLocale),
                             style = MaterialTheme.typography.headlineMedium,
                             modifier = Modifier
                                 .weight(1f)
@@ -92,7 +105,7 @@ fun ArticleScreen(
                         )
                     }
                     
-                    article.summary?.let { summary ->
+                    article.getLocalizedSummary(currentLocale)?.let { summary ->
                         Text(
                             text = summary,
                             style = MaterialTheme.typography.bodyLarge,
@@ -107,7 +120,12 @@ fun ArticleScreen(
                     )
                     
                     Button(
-                        onClick = { onReadFullArticle(article.url) },
+                        onClick = { 
+                            android.util.Log.d("ArticleScreen", "Read Full Article clicked - URL: '${article.url}'")
+                            android.util.Log.d("ArticleScreen", "URL length: ${article.url.length}")
+                            android.util.Log.d("ArticleScreen", "URL encoded: ${java.net.URLEncoder.encode(article.url, "UTF-8")}")
+                            onReadFullArticle(article.url) 
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.read_full_article))
@@ -127,4 +145,10 @@ fun ArticleScreen(
             }
         }
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface ArticleLocaleManagerEntryPoint {
+    fun localeManager(): LocaleManager
 }

@@ -24,7 +24,7 @@ data class Article(
     @SerializedName("source")
     val source: String,
     
-    @SerializedName("language")
+    @SerializedName("sourceLanguage")
     val sourceLanguage: String = "en",
     
     @SerializedName("availableLanguages")

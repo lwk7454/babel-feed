@@ -8,7 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **For detailed project information, see**: `.cursor/rules/overview.mdc`
 
-## Architecture & Development
+## Architecture & Development Principles
+
+### Localization Requirements
+- Given a user has a language selected, everything they see in the app should be in their language
+- The app's primary purpose is to collect news from all sources and present them in the user's selected language
 
 **For complete architecture details, see**: `.cursor/rules/overview.mdc`
 **For development commands and guidelines, see**: `.cursor/rules/development.mdc`
@@ -85,29 +89,14 @@ tools/nx-executors/
 └── android-test/                # Custom Nx test executors
 ```
 
-## Nx Workspace Guidelines
-
-### Using Nx Tools
-- Use `nx_workspace` tool for workspace understanding
-- Use `nx_docs` tool for configuration questions
-- Use `nx_generators` tool for code generation
-- Use `nx_visualize_graph` tool for dependency visualization
-
-### Task Management
-- Use `nx run <taskId>` for task execution
-- Check `nx_current_running_tasks_details` for task status
-- Use `nx_current_running_task_output` for task debugging
-
 ## Development References
 
 ### Rules and Configuration
 - **Source of truth for project overview and rules are in .cursor/rules/**: Key configuration and development guidelines are stored in this directory. Make sure you read them all before making any changes. When updating those files, make sure you follow the same mindset, that is, keep things short, only state business requirements, architecture decisions and concepts, don't add source code or anything that's implementation specific. These files need to be stay true, and resilient to implementation changes.  
-- **The year is 2025**: Keep that in mind when doing web search.
 - **Always recursively check files and their headers under ./.cursor/rules/**: All files are .mdc with headers to guide when to read their contents. Read contents whenever they are relevant to the current work.
 - **Put task result docs in ./outputs**: If your task end up with md files that relate to your work progress, put them into that fixed folder (which is git ignored), so you don't commit temporary docs into git. 
 - **Always keep tests up to date**: You use tests to confirm your work. When you make code changes, always check if there are related tests. If necessary add new tests for key features. That would include unit and Appium tests. 
-- **Always git commit your code at key points**: Use git proactively to record your progress when working on big changes. You are free to create branches, but remember to clean them off when done, I don't like dangling branches. You are welcome to squash commits when merging branches, I like clean, readable and relevant git history. 
-- **Do not stop working until all requests are done**: If the request is too big, create temporary docs to record your progress. Make sure you finish them, unless you found yourself stuck in endless loop. That includes confirming your work with Appium tests, make sure your code work as intended. 
+- **Always git commit your code at key points**: Use git proactively to record your progress when working on big changes. You are free to create branches, but remember to clean them off when done, I don't like dangling branches. You are welcome to squash commits when merging branches, I like clean, readable and relevant git history. app and tests, make sure your code work as intended. 
 
 ### Key Rule Files
 - `.cursor/rules/overview.mdc` - Project mission, architecture, and features
@@ -115,3 +104,7 @@ tools/nx-executors/
 - `.cursor/rules/testing.mdc` - Comprehensive testing strategy
 - `.cursor/rules/babel-android/` - Android-specific architecture and API contracts
 - `.cursor/rules/nx-rules.mdc` - Complete Nx workspace guidelines
+
+## Database Configuration
+
+- When accessing DB make sure you are using the correct MCP. There are sqlite and postgresql mcps, this project's db is in postgresql

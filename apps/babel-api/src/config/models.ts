@@ -185,11 +185,35 @@ export const SUPPORTED_LANGUAGES = [
 
 export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
 
-// Validate language pair support
+// Validate language pair support (case-insensitive)
 export function isLanguagePairSupported(from: string, to: string): boolean {
-  return SUPPORTED_LANGUAGES.includes(from as SupportedLanguage) &&
-         SUPPORTED_LANGUAGES.includes(to as SupportedLanguage) &&
-         from !== to;
+  // Normalize language codes to handle case variations
+  const normalizedFrom = normalizeLanguageCode(from);
+  const normalizedTo = normalizeLanguageCode(to);
+  
+  return SUPPORTED_LANGUAGES.includes(normalizedFrom as SupportedLanguage) &&
+         SUPPORTED_LANGUAGES.includes(normalizedTo as SupportedLanguage) &&
+         normalizedFrom !== normalizedTo;
+}
+
+// Normalize language codes to match our supported format
+function normalizeLanguageCode(languageCode: string): string {
+  const normalized = languageCode.toLowerCase();
+  
+  // Handle common variations
+  switch (normalized) {
+    case 'zh-cn':
+    case 'zh_cn':
+    case 'zh-hans':
+      return 'zh-CN';
+    case 'zh-tw':
+    case 'zh_tw':
+    case 'zh-hant':
+      return 'zh-TW';
+    default:
+      // For other languages, just lowercase should work
+      return normalized;
+  }
 }
 
 // Environment configuration

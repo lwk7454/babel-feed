@@ -120,12 +120,6 @@ fun WebViewScreen(
                             Text(if (isTranslationEnabled) stringResource(R.string.disable_translation) else stringResource(R.string.enable_translation)) 
                         },
                         onClick = {
-                            if (!isTranslationEnabled) {
-                                // First time enabling translation - extract content
-                                Log.d("BabelWebView", "Enabling translation, extracting content...")
-                                bridge?.extractContent()
-                            }
-                            
                             if (isDynamicModeEnabled) {
                                 dynamicBridge?.toggleAllTranslations()
                             } else {
@@ -310,6 +304,8 @@ fun WebViewScreen(
                     // Set initial URL for dynamic bridge
                     dynamicWebViewBridge.setCurrentUrl(url)
                     
+                    Log.d("WebViewScreen", "Loading URL in WebView: '$url'")
+                    Log.d("WebViewScreen", "URL is valid: ${android.util.Patterns.WEB_URL.matcher(url).matches()}")
                     loadUrl(url)
                 }
             },
@@ -322,7 +318,7 @@ fun WebViewScreen(
         )
     }
     
-    // Auto-start translation and dynamic mode when bridges are available
+    // Auto-start dynamic mode when bridges are available (content extraction handled by WebViewClient)
     LaunchedEffect(bridge, dynamicBridge, currentUrl) {
         val currentBridge = bridge
         val currentDynamicBridge = dynamicBridge
@@ -331,21 +327,10 @@ fun WebViewScreen(
             // Add a small delay to ensure page is loaded
             kotlinx.coroutines.delay(1000)
             
-            // Check if auto-translation should be enabled for this URL
-            val shouldAutoTranslate = stateManager.shouldAutoTranslate(currentUrl)
-            
-            if (shouldAutoTranslate || (isTranslationEnabled && isDynamicModeEnabled)) {
-                Log.d("BabelWebView", "Auto-starting translation for $currentUrl")
-                
-                // Start dynamic mode first if enabled
-                if (isDynamicModeEnabled) {
-                    currentDynamicBridge.startDynamicMode()
-                }
-                
-                // Then extract content for translation
-                if (isTranslationEnabled) {
-                    currentBridge.extractContent()
-                }
+            // Only start dynamic mode if enabled - content extraction is handled by BabelWebViewClient
+            if (isDynamicModeEnabled) {
+                Log.d("BabelWebView", "Auto-starting dynamic mode for $currentUrl")
+                currentDynamicBridge.startDynamicMode()
             }
         }
     }

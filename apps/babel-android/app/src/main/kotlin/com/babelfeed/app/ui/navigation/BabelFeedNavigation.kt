@@ -77,7 +77,10 @@ fun BabelFeedNavigation(
                     navController.navigate("article/$articleId")
                 },
                 onReadFullArticle = { url ->
-                    navController.navigate("webview?url=$url")
+                    android.util.Log.d("Navigation", "FeedScreen - Navigating to webview with URL: '$url'")
+                    val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
+                    android.util.Log.d("Navigation", "FeedScreen - URL encoded for navigation: 'webview?url=$encodedUrl'")
+                    navController.navigate("webview?url=$encodedUrl")
                 },
                 onProfileClick = {
                     navController.navigate("profile")
@@ -91,13 +94,20 @@ fun BabelFeedNavigation(
                 articleId = articleId,
                 onBackClick = { navController.popBackStack() },
                 onReadFullArticle = { url ->
-                    navController.navigate("webview?url=$url")
+                    android.util.Log.d("Navigation", "ArticleScreen - Navigating to webview with URL: '$url'")
+                    val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
+                    android.util.Log.d("Navigation", "URL encoded for navigation: 'webview?url=$encodedUrl'")
+                    navController.navigate("webview?url=$encodedUrl")
                 }
             )
         }
         
         composable("webview?url={url}") { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
+            val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""
+            val url = java.net.URLDecoder.decode(encodedUrl, "UTF-8")
+            android.util.Log.d("Navigation", "WebViewScreen - Received encoded URL parameter: '$encodedUrl'")
+            android.util.Log.d("Navigation", "WebViewScreen - Decoded URL: '$url'")
+            android.util.Log.d("Navigation", "URL length: ${url.length}")
             val context = LocalContext.current
             val translationService = EntryPointAccessors
                 .fromActivity(context as android.app.Activity, TranslationServiceEntryPoint::class.java)

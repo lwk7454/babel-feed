@@ -1,6 +1,10 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { eq, sql } from 'drizzle-orm';
 import { DATABASE_CONFIG } from './config.js';
+
+// Import the articles schema from the API project
+import { articles } from '../../../apps/babel-api/src/db/schema.js';
 
 /**
  * Database connection and article storage
@@ -30,8 +34,6 @@ export interface ArticleData {
  */
 export async function saveArticle(article: ArticleData): Promise<void> {
   try {
-    // Note: This would require the actual database schema
-    // For now, this is a placeholder that shows the intended structure
     console.log('Saving article to database:', {
       id: article.id,
       title: article.title,
@@ -40,30 +42,36 @@ export async function saveArticle(article: ArticleData): Promise<void> {
       language: article.sourceLanguage
     });
     
-    // In a real implementation, this would insert into the articles table:
-    // await db.insert(articlesTable).values({
-    //   id: article.id,
-    //   title: article.title,
-    //   titleTranslations: JSON.stringify(article.titleTranslations),
-    //   summary: article.summary,
-    //   summaryTranslations: JSON.stringify(article.summaryTranslations),
-    //   url: article.url,
-    //   source: article.source,
-    //   sourceLanguage: article.sourceLanguage,
-    //   availableLanguages: article.availableLanguages,
-    //   publishedAt: article.publishedAt,
-    //   imageUrl: article.imageUrl,
-    //   createdAt: new Date().toISOString(),
-    //   updatedAt: new Date().toISOString()
-    // }).onConflictDoUpdate({
-    //   target: articlesTable.id,
-    //   set: {
-    //     titleTranslations: JSON.stringify(article.titleTranslations),
-    //     summaryTranslations: JSON.stringify(article.summaryTranslations),
-    //     availableLanguages: article.availableLanguages,
-    //     updatedAt: new Date().toISOString()
-    //   }
-    // });
+    // Insert or update article with translations
+    await db.insert(articles).values({
+      id: article.id,
+      title: article.title,
+      titleTranslations: article.titleTranslations,
+      summary: article.summary,
+      summaryTranslations: article.summaryTranslations,
+      url: article.url,
+      source: article.source,
+      sourceLanguage: article.sourceLanguage,
+      availableLanguages: article.availableLanguages,
+      imageUrl: article.imageUrl,
+      publishedAt: new Date(article.publishedAt),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: articles.url, // Conflict on URL since that's the unique field
+      set: {
+        title: article.title,
+        titleTranslations: article.titleTranslations,
+        summary: article.summary,
+        summaryTranslations: article.summaryTranslations,
+        sourceLanguage: article.sourceLanguage,
+        availableLanguages: article.availableLanguages,
+        imageUrl: article.imageUrl,
+        updatedAt: new Date()
+      }
+    });
+    
+    console.log('Article saved successfully:', article.id);
     
   } catch (error) {
     console.error('Error saving article to database:', error);
@@ -76,11 +84,8 @@ export async function saveArticle(article: ArticleData): Promise<void> {
  */
 export async function articleExists(url: string): Promise<boolean> {
   try {
-    // Placeholder implementation
-    // In real implementation, this would query the database:
-    // const result = await db.select().from(articlesTable).where(eq(articlesTable.url, url)).limit(1);
-    // return result.length > 0;
-    return false;
+    const result = await db.select().from(articles).where(eq(articles.url, url)).limit(1);
+    return result.length > 0;
   } catch (error) {
     console.error('Error checking article existence:', error);
     return false;
@@ -92,14 +97,32 @@ export async function articleExists(url: string): Promise<boolean> {
  */
 export async function getArticlesNeedingTranslation(language: string): Promise<ArticleData[]> {
   try {
-    // Placeholder implementation
-    // In real implementation:
-    // const articles = await db.select().from(articlesTable)
-    //   .where(not(sql`${articlesTable.availableLanguages} @> ${JSON.stringify([language])}`));
-    // return articles.map(mapDbArticleToArticleData);
-    return [];
+    // Get articles that don't have the specified language in their availableLanguages array
+    const result = await db.select().from(articles)
+      .where(sql`NOT (${articles.availableLanguages} @> ${JSON.stringify([language])})`);
+    
+    return result.map(mapDbArticleToArticleData);
   } catch (error) {
     console.error('Error getting articles needing translation:', error);
     return [];
   }
+}
+
+/**
+ * Map database article to ArticleData interface
+ */
+function mapDbArticleToArticleData(dbArticle: any): ArticleData {
+  return {
+    id: dbArticle.id,
+    title: dbArticle.title,
+    titleTranslations: dbArticle.titleTranslations || {},
+    summary: dbArticle.summary,
+    summaryTranslations: dbArticle.summaryTranslations || {},
+    url: dbArticle.url,
+    source: dbArticle.source,
+    sourceLanguage: dbArticle.sourceLanguage,
+    availableLanguages: dbArticle.availableLanguages || ['en'],
+    publishedAt: dbArticle.publishedAt.toISOString(),
+    imageUrl: dbArticle.imageUrl
+  };
 }

@@ -105,10 +105,14 @@ export const translationCache = pgTable('translation_cache', {
 export const articles = pgTable('articles', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),
+  titleTranslations: jsonb('title_translations').default('{}'), // Store translations as JSON object
   summary: text('summary'),
+  summaryTranslations: jsonb('summary_translations').default('{}'), // Store translations as JSON object
   url: varchar('url', { length: 500 }).unique().notNull(),
   source: varchar('source', { length: 100 }).notNull(),
-  language: varchar('language', { length: 10 }).default('en').notNull(),
+  sourceLanguage: varchar('source_language', { length: 10 }).default('en').notNull(), // Renamed from 'language'
+  availableLanguages: jsonb('available_languages').default('["en"]'), // Array of supported languages
+  imageUrl: varchar('image_url', { length: 500 }), // Added image URL field
   publishedAt: timestamp('published_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()

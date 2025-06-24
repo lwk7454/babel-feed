@@ -53,3 +53,50 @@ data class TranslationModelsResponse(
     val defaultSelection: String,
     val timestamp: String
 )
+
+// Batched translation models for NDJSON streaming
+data class BatchedTranslationElement(
+    val id: String,
+    val locator: String,
+    val text: String,
+    val context: ElementContext? = null
+)
+
+data class ElementContext(
+    val beforeText: String? = null,
+    val afterText: String? = null,
+    val parentText: String? = null,
+    val semanticRole: String? = null
+)
+
+data class BatchedTranslationRequest(
+    val batchId: String,
+    val elements: List<BatchedTranslationElement>,
+    val fromLanguage: String,
+    val toLanguage: String,
+    val complexity: String = "contextual",
+    val contentType: String = "mixed_content",
+    val priority: String = "normal",
+    val context: TranslationContext? = null,
+    val requestId: String
+)
+
+data class BatchedTranslationResult(
+    val id: String,
+    val translatedText: String,
+    val confidence: Double,
+    val progress: Double,
+    val isPartial: Boolean = false
+)
+
+data class BatchedStreamingResult(
+    val batchId: String,
+    val requestId: String,
+    val isComplete: Boolean,
+    val totalElements: Int,
+    val processedElements: Int,
+    val tokensUsed: Int? = null,
+    val modelUsed: String,
+    val backendVersion: String,
+    val backendProcessingTime: Long
+)

@@ -9,13 +9,18 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
+import com.babelfeed.app.utils.PreferencesManager
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
 @Serializable
 data class TranslationState(
     val isEnabled: Boolean = false,
     val isDynamicModeEnabled: Boolean = false,
     val isAdBlockingEnabled: Boolean = true,
-    val targetLanguage: String = "zh-cn",
+    val targetLanguage: String = "en",
     val sourceLanguage: String = "auto",
     val lastTranslatedAt: Long = 0L,
     val translationCache: Map<String, String> = emptyMap(), // nodeId -> translatedText
@@ -28,7 +33,7 @@ data class UserTranslationPreferences(
     val persistDynamicMode: Boolean = true,
     val showTranslationProgress: Boolean = true,
     val translationTimeout: Long = 30000L,
-    val preferredLanguages: List<String> = listOf("zh-cn")
+    val preferredLanguages: List<String> = listOf("en")
 )
 
 @Serializable
@@ -77,6 +82,22 @@ class TranslationStateManager(private val context: Context) {
     init {
         loadPersistedState()
         Log.d(TAG, "TranslationStateManager initialized with ${domainConfigs.size} domain configs")
+    }
+    
+    private fun getUserPreferredTargetLanguage(): String {
+        return try {
+            val entryPoint = EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                TranslationStateManagerEntryPoint::class.java
+            )
+            val preferencesManager = entryPoint.preferencesManager()
+            val targetLanguage = preferencesManager.getTranslationTargetLanguage(context)
+            Log.d(TAG, "Using target language from preferences: $targetLanguage")
+            targetLanguage
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get target language from preferences, using default: en", e)
+            "en" // Fallback to English instead of Chinese
+        }
     }
 
     /**
@@ -135,11 +156,11 @@ class TranslationStateManager(private val context: Context) {
             val defaultState = createDefaultState(domainConfig)
             Log.d(TAG, "Using default translation state for $domain: enabled=${defaultState.isEnabled}")
             
-            return defaultState
+            defaultState
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to restore translation state for $url", e)
-            return createDefaultState()
+            createDefaultState()
         }
     }
 
@@ -232,7 +253,7 @@ class TranslationStateManager(private val context: Context) {
                 .putString(KEY_GLOBAL_STATE, prefsJson)
                 .putBoolean(KEY_AUTO_TRANSLATE, preferences.autoTranslateOnNavigation)
                 .putBoolean(KEY_PERSIST_DYNAMIC, preferences.persistDynamicMode)
-                .putString(KEY_TARGET_LANGUAGE, preferences.preferredLanguages.firstOrNull() ?: "zh-cn")
+                .putString(KEY_TARGET_LANGUAGE, preferences.preferredLanguages.firstOrNull() ?: getUserPreferredTargetLanguage())
                 .apply()
                 
             Log.d(TAG, "Updated global translation preferences")
@@ -353,7 +374,7 @@ class TranslationStateManager(private val context: Context) {
             isEnabled = domainConfig?.isTranslationEnabled ?: false,
             isDynamicModeEnabled = globalPrefs.persistDynamicMode,
             isAdBlockingEnabled = true,
-            targetLanguage = globalPrefs.preferredLanguages.firstOrNull() ?: "zh-cn",
+            targetLanguage = globalPrefs.preferredLanguages.firstOrNull() ?: getUserPreferredTargetLanguage(),
             sourceLanguage = domainConfig?.preferredSourceLanguage ?: "auto",
             userPreferences = globalPrefs
         )
@@ -366,4 +387,10 @@ class TranslationStateManager(private val context: Context) {
             preferredSourceLanguage = "auto"
         )
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface TranslationStateManagerEntryPoint {
+    fun preferencesManager(): PreferencesManager
 }

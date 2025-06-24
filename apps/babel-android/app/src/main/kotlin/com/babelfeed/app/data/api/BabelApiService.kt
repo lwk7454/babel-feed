@@ -23,6 +23,10 @@ interface BabelApiService {
     @POST("translation/translate")
     suspend fun translate(@Body request: BackendTranslationRequest): BackendTranslationResponse
     
+    @POST("translation/batch")
+    @Streaming
+    suspend fun translateBatched(@Body request: BatchedTranslationRequest): okhttp3.ResponseBody
+    
     @GET("translation/languages")
     suspend fun getSupportedLanguages(): SupportedLanguagesResponse
     

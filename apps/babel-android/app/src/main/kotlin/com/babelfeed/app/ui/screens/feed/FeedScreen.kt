@@ -22,12 +22,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.babelfeed.app.R
 import com.babelfeed.app.data.models.Article
 import com.babelfeed.app.ui.components.LanguageBadge
+import com.babelfeed.app.utils.LocaleManager
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +122,14 @@ fun ArticleCard(
     onClick: () -> Unit,
     onReadFullArticle: () -> Unit
 ) {
-    Log.d("ArticleCard", "Rendering article card for: ${article.title}")
+    val context = LocalContext.current
+    val localeManager = EntryPointAccessors.fromApplication(
+        context.applicationContext,
+        LocaleManagerEntryPoint::class.java
+    ).localeManager()
+    val currentLocale = localeManager.getCurrentLocale(context)
+    
+    Log.d("ArticleCard", "Rendering article card for: ${article.title} with locale: $currentLocale")
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -131,7 +144,7 @@ fun ArticleCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = article.title,
+                    text = article.getLocalizedTitle(currentLocale),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.weight(1f)
                 )
@@ -140,7 +153,7 @@ fun ArticleCard(
                     languageCode = article.getSourceLanguageCode()
                 )
             }
-            article.summary?.let { summary ->
+            article.getLocalizedSummary(currentLocale)?.let { summary ->
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodyMedium,
@@ -154,4 +167,10 @@ fun ArticleCard(
             )
         }
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface LocaleManagerEntryPoint {
+    fun localeManager(): LocaleManager
 }

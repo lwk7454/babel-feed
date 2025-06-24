@@ -11,6 +11,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import com.babelfeed.app.utils.PreferencesManager
+import com.babelfeed.app.data.models.BatchedTranslationRequest
+import com.babelfeed.app.data.models.BatchedTranslationElement
+import com.babelfeed.app.data.models.BatchedTranslationResult
+import com.babelfeed.app.data.models.ElementContext
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
 @Serializable
 data class TextNode(
@@ -102,6 +111,23 @@ class BabelWebViewBridge(
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
     private val json = Json { ignoreUnknownKeys = true }
+    private var isTranslationInProgress = false
+    
+    private fun getTargetLanguage(): String {
+        return try {
+            val entryPoint = EntryPointAccessors.fromApplication(
+                webView.context.applicationContext,
+                BabelWebViewBridgeEntryPoint::class.java
+            )
+            val preferencesManager = entryPoint.preferencesManager()
+            val targetLanguage = preferencesManager.getTranslationTargetLanguage(webView.context)
+            Log.d(TAG, "Using target language from preferences: $targetLanguage")
+            targetLanguage
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get target language from preferences, using default: zh-cn", e)
+            "zh-cn" // Fallback to default
+        }
+    }
     
     companion object {
         private const val TAG = "BabelWebViewBridge"
@@ -218,6 +244,9 @@ class BabelWebViewBridge(
                     // Add comprehensive checks for BabelContentExtractor
                     console.log('Attempt ${attempt + 1}: Checking BabelContentExtractor availability...');
                     console.log('window.BabelContentExtractor:', typeof window.BabelContentExtractor);
+                    console.log('Document ready state:', document.readyState);
+                    console.log('Document body exists:', !!document.body);
+                    console.log('Page text content preview:', document.body ? document.body.textContent.substring(0, 200) : 'no body');
                     
                     if (typeof window.BabelContentExtractor === 'undefined') {
                         throw new Error('BabelContentExtractor is undefined');
@@ -229,15 +258,25 @@ class BabelWebViewBridge(
                     
                     console.log('BabelContentExtractor is ready, calling extractContent...');
                     const result = window.BabelContentExtractor.extractContent();
-                    console.log('Content extraction completed, result length:', result ? result.length : 'null');
+                    console.log('Content extraction completed, result type:', typeof result);
+                    console.log('Content extraction result preview:', result ? result.substring(0, 500) : 'null');
                     
                     if (!result) {
                         throw new Error('extractContent returned null or undefined');
                     }
                     
+                    // Validate that the result is valid JSON
+                    try {
+                        const parsed = JSON.parse(result);
+                        console.log('Extracted content parsed successfully, text nodes count:', parsed.textNodes ? parsed.textNodes.length : 'no textNodes');
+                    } catch (parseError) {
+                        throw new Error('extractContent returned invalid JSON: ' + parseError.message);
+                    }
+                    
                     window.BabelBridge.onContentExtracted(result);
                 } catch (error) {
                     console.error('Content extraction error (attempt ${attempt + 1}):', error);
+                    console.error('Error stack:', error.stack);
                     
                     // If this is not the last attempt, signal for retry
                     if (${attempt + 1} < $maxAttempts) {
@@ -286,50 +325,109 @@ class BabelWebViewBridge(
     }
 
     private suspend fun processTranslation(content: ExtractedContent) {
+        if (isTranslationInProgress) {
+            Log.d(TAG, "Translation already in progress, skipping duplicate request")
+            return
+        }
+        
+        isTranslationInProgress = true
         try {
-            Log.d(TAG, "Starting translation of ${content.textNodes.size} text nodes from '${content.metadata.language}' to 'zh-cn'")
+            val targetLanguage = getTargetLanguage()
+            Log.d(TAG, "Starting batched translation of ${content.textNodes.size} text nodes from '${content.metadata.language}' to '$targetLanguage'")
+            
+            // Convert text nodes to batched translation elements
+            val batchElements = content.textNodes.map { textNode ->
+                // Generate locator for DOM element mapping
+                val locator = generateElementLocator(textNode)
+                
+                // Register locator in JavaScript for later use
+                registerElementLocator(textNode.id, locator)
+                
+                BatchedTranslationElement(
+                    id = textNode.id,
+                    locator = locator,
+                    text = textNode.text,
+                    context = textNode.context?.let { ctx ->
+                        ElementContext(
+                            beforeText = ctx.beforeText,
+                            afterText = ctx.afterText,
+                            parentText = ctx.parentText,
+                            semanticRole = ctx.semanticRole
+                        )
+                    }
+                )
+            }
+            
+            // Create batched translation request
+            val batchId = "batch_${System.currentTimeMillis()}"
+            val batchRequest = BatchedTranslationRequest(
+                batchId = batchId,
+                elements = batchElements,
+                fromLanguage = content.metadata.language,
+                toLanguage = targetLanguage,
+                complexity = "contextual",
+                contentType = "article_content",
+                priority = "normal",
+                context = null,
+                requestId = "req_${System.currentTimeMillis()}"
+            )
+            
+            // Process batched translation using streaming service
             val translations = mutableListOf<TranslationResult>()
             
-            // Process text nodes in batches for better performance
-            content.textNodes.chunked(10).forEachIndexed { batchIndex, batch ->
-                Log.d(TAG, "Processing translation batch $batchIndex with ${batch.size} items")
-                val batchTranslations = withContext(Dispatchers.IO) {
-                    batch.mapIndexed { itemIndex, textNode ->
-                        Log.d(TAG, "Translating item ${batchIndex * 10 + itemIndex}: '${textNode.text.take(50)}...'")
-                        
-                        val request = StreamingTranslationRequest(
-                            id = textNode.id,
-                            text = textNode.text,
-                            sourceLanguage = content.metadata.language,
-                            targetLanguage = "zh-cn", // Default to simplified Chinese
-                            priority = TranslationPriority.NORMAL,
-                            context = textNode.context
-                        )
-                        
-                        try {
-                            // Get translation result from streaming service
-                            val result = translationService.translateText(request)
-                            Log.d(TAG, "Translation result: '${textNode.text.take(30)}...' -> '${result.translatedText.take(30)}...'")
-                            TranslationResult(
-                                id = textNode.id,
-                                originalText = textNode.text,
-                                translatedText = result.translatedText,
-                                confidence = result.confidence,
-                                language = result.targetLanguage
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Translation failed for text node ${textNode.id}: ${e.message}")
-                            TranslationResult(
-                                id = textNode.id,
-                                originalText = textNode.text,
-                                translatedText = textNode.text, // Fallback to original text
-                                confidence = 0.0,
-                                language = content.metadata.language
-                            )
+            withContext(Dispatchers.IO) {
+                try {
+                    val apiService = translationService.getApiService()
+                    val responseBody = apiService.translateBatched(batchRequest)
+                    
+                    // Process NDJSON streaming response
+                    val ndjsonContent = StringBuilder()
+                    responseBody.byteStream().bufferedReader().use { reader ->
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            line?.let { ndjsonLine ->
+                                ndjsonContent.append(ndjsonLine).append("\n")
+                                
+                                try {
+                                    // Parse each NDJSON line
+                                    val result = json.decodeFromString<BatchedTranslationResult>(ndjsonLine)
+                                    
+                                    // Convert to TranslationResult format
+                                    val originalElement = batchElements.find { it.id == result.id }
+                                    originalElement?.let { element ->
+                                        val translationResult = TranslationResult(
+                                            id = result.id,
+                                            originalText = element.text,
+                                            translatedText = result.translatedText,
+                                            confidence = result.confidence,
+                                            language = targetLanguage
+                                        )
+                                        translations.add(translationResult)
+                                        
+                                        Log.d(TAG, "Received translation for ${result.id}: '${element.text.take(30)}...' -> '${result.translatedText.take(30)}...' (progress: ${(result.progress * 100).toInt()}%)")
+                                        
+                                        // Inject translation immediately using NDJSON method
+                                        withContext(Dispatchers.Main) {
+                                            injectNDJSONTranslations(ndjsonLine)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Failed to parse NDJSON line: $ndjsonLine", e)
+                                }
+                            }
                         }
                     }
+                    
+                    // Final injection with all accumulated translations
+                    withContext(Dispatchers.Main) {
+                        Log.d(TAG, "Injecting final batch of NDJSON translations")
+                        injectNDJSONTranslations(ndjsonContent.toString())
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Batched translation API call failed, falling back to individual requests", e)
+                    // Fallback to original individual translation approach
+                    translations.addAll(processIndividualTranslations(content, targetLanguage))
                 }
-                translations.addAll(batchTranslations)
             }
 
             val translationBatch = TranslationBatch(
@@ -338,7 +436,7 @@ class BabelWebViewBridge(
                 totalProcessed = translations.size
             )
 
-            Log.d(TAG, "Translation processing complete: ${translations.size} items translated")
+            Log.d(TAG, "Batched translation processing complete: ${translations.size} items translated")
             onTranslationComplete(translationBatch)
             injectTranslations(translationBatch)
 
@@ -346,18 +444,169 @@ class BabelWebViewBridge(
             Log.e(TAG, "Translation processing failed", e)
             val errorMsg = "Translation failed: ${e.message}"
             onError(errorMsg)
+        } finally {
+            isTranslationInProgress = false
+        }
+    }
+
+    /**
+     * Generate CSS selector or XPath locator for DOM element identification
+     */
+    private fun generateElementLocator(textNode: TextNode): String {
+        // Generate CSS selector based on node path and parent information
+        val pathSelector = textNode.path.joinToString(" > ") { ":nth-child($it)" }
+        
+        return when {
+            textNode.parentId != null -> "#${textNode.parentId} $pathSelector"
+            textNode.parentClass != null -> ".${textNode.parentClass} $pathSelector"
+            else -> "${textNode.parentTag} $pathSelector"
+        }
+    }
+
+    /**
+     * Inject partial translations for real-time updates
+     */
+    private fun injectPartialTranslations(translationBatch: TranslationBatch) {
+        val translationsJson = json.encodeToString(translationBatch)
+        
+        val escapedJson = translationsJson
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+        
+        val jsCode = """
+            (function() {
+                try {
+                    const translationData = "$escapedJson";
+                    if (window.BabelContentInjector && window.BabelContentInjector.injectPartialTranslations) {
+                        window.BabelContentInjector.injectPartialTranslations(translationData);
+                    }
+                } catch (error) {
+                    console.error('Partial translation injection error:', error);
+                }
+            })();
+        """.trimIndent()
+
+        webView.post {
+            webView.evaluateJavascript(jsCode, null)
+        }
+    }
+
+    /**
+     * Fallback method for individual translations when batch API fails
+     */
+    private suspend fun processIndividualTranslations(content: ExtractedContent, targetLanguage: String): List<TranslationResult> {
+        val translations = mutableListOf<TranslationResult>()
+        
+        content.textNodes.chunked(10).forEach { batch ->
+            val batchTranslations = batch.map { textNode ->
+                val request = StreamingTranslationRequest(
+                    id = textNode.id,
+                    text = textNode.text,
+                    sourceLanguage = content.metadata.language,
+                    targetLanguage = targetLanguage,
+                    priority = TranslationPriority.NORMAL,
+                    context = textNode.context
+                )
+                
+                try {
+                    val result = translationService.translateText(request)
+                    TranslationResult(
+                        id = textNode.id,
+                        originalText = textNode.text,
+                        translatedText = result.translatedText,
+                        confidence = result.confidence,
+                        language = result.targetLanguage
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Individual translation failed for ${textNode.id}: ${e.message}")
+                    TranslationResult(
+                        id = textNode.id,
+                        originalText = textNode.text,
+                        translatedText = textNode.text,
+                        confidence = 0.0,
+                        language = content.metadata.language
+                    )
+                }
+            }
+            translations.addAll(batchTranslations)
+        }
+        
+        return translations
+    }
+
+    /**
+     * Register element locator in JavaScript for NDJSON mapping
+     */
+    private fun registerElementLocator(elementId: String, locator: String) {
+        val jsCode = """
+            (function() {
+                if (window.BabelContentInjector && window.BabelContentInjector.registerElementLocator) {
+                    window.BabelContentInjector.registerElementLocator('$elementId', '$locator');
+                }
+            })();
+        """.trimIndent()
+
+        webView.post {
+            webView.evaluateJavascript(jsCode, null)
+        }
+    }
+
+    /**
+     * Inject NDJSON streaming translations directly
+     */
+    private fun injectNDJSONTranslations(ndjsonContent: String) {
+        // Escape the NDJSON content for JavaScript injection
+        val escapedNdjson = ndjsonContent
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+        
+        val jsCode = """
+            (function() {
+                try {
+                    const ndjsonResults = "$escapedNdjson";
+                    console.log('Injecting NDJSON translations, content length:', ndjsonResults.length);
+                    const result = window.BabelContentInjector.injectTranslationsByLocator(ndjsonResults);
+                    console.log('NDJSON injection result:', result);
+                    window.BabelBridge.onTranslationInjected(JSON.stringify(result));
+                } catch (error) {
+                    console.error('NDJSON translation injection error:', error);
+                    window.BabelBridge.onError('NDJSON translation injection failed: ' + error.message);
+                }
+            })();
+        """.trimIndent()
+
+        webView.post {
+            webView.evaluateJavascript(jsCode, null)
         }
     }
 
     private fun injectTranslations(translationBatch: TranslationBatch) {
         val translationsJson = json.encodeToString(translationBatch)
         
+        // Properly escape JSON for JavaScript injection
+        val escapedJson = translationsJson
+            .replace("\\", "\\\\")  // Escape backslashes first
+            .replace("\"", "\\\"")  // Escape quotes
+            .replace("\n", "\\n")   // Escape newlines
+            .replace("\r", "\\r")   // Escape carriage returns
+            .replace("\t", "\\t")   // Escape tabs
+        
         val jsCode = """
             (function() {
                 try {
-                    const result = window.BabelContentInjector.injectTranslations('${translationsJson.replace("'", "\\'")}');
+                    const translationData = "$escapedJson";
+                    console.log('Injecting translations, data length:', translationData.length);
+                    const result = window.BabelContentInjector.injectTranslations(translationData);
+                    console.log('Injection result:', result);
                     window.BabelBridge.onTranslationInjected(JSON.stringify(result));
                 } catch (error) {
+                    console.error('Translation injection error:', error);
                     window.BabelBridge.onError('Translation injection failed: ' + error.message);
                 }
             })();
@@ -500,4 +749,10 @@ class BabelWebViewBridge(
     fun cleanup() {
         webView.removeJavascriptInterface(BRIDGE_NAME)
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface BabelWebViewBridgeEntryPoint {
+    fun preferencesManager(): PreferencesManager
 }
