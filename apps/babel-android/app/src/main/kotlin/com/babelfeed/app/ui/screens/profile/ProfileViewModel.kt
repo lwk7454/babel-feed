@@ -329,7 +329,8 @@ class ProfileViewModel @Inject constructor(
             message.contains("expired") || message.contains("token expired") -> {
                 getApplication<Application>().getString(R.string.error_verification_code_expired)
             }
-            message.contains("email already exists") || message.contains("user already exists") -> {
+            message.contains("email already exists") || message.contains("user already exists") || 
+            message.contains("email address is already registered") || message.contains("already registered") -> {
                 getApplication<Application>().getString(R.string.error_email_already_exists)
             }
             message.contains("already verified") -> {

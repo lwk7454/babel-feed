@@ -38,10 +38,10 @@ interface BabelApiService {
     suspend fun createGuest(@Body request: CreateGuestRequest): CreateGuestResponse
     
     @POST("auth/create-account")
-    suspend fun createAccount(@Body request: CreateAccountRequest): CreateAccountResponse
+    suspend fun createAccount(@Body request: CreateAccountRequest): retrofit2.Response<CreateAccountResponse>
     
     @POST("auth/verify")
-    suspend fun verifyEmail(@Body request: VerifyEmailRequest): VerifyEmailResponse
+    suspend fun verifyEmail(@Body request: VerifyEmailRequest): retrofit2.Response<VerifyEmailResponse>
     
     @POST("auth/resend-verification")
     suspend fun resendVerificationCode(@Body request: ResendVerificationRequest): ApiResponse<Unit>

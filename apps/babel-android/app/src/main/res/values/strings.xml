@@ -55,9 +55,9 @@
     <string name="use_system_language">Use System Language</string>
     <string name="guest_user">Guest User</string>
     <string name="guest_id">Guest ID: %1$s</string>
-    <string name="add_email_description">Add your email to save your preferences across devices:</string>
+    <string name="email_verification_for_sync">Enter your email to sync preferences across devices. New and existing users use the same verification process.</string>
     <string name="email_address">Email Address</string>
-    <string name="create_account">Create Account</string>
+    <string name="verify_email_address">Verify Email Address</string>
     <string name="email_verification">Email Verification</string>
     <string name="email_verification_instruction">Please check your email (%1$s) for a 4-digit verification code.</string>
     <string name="verification_code">4-Digit Verification Code</string>
@@ -154,11 +154,4 @@
     <string name="success_preferences_saved">Your preferences have been saved.</string>
     <string name="success_account_created">Account created successfully! Please check your email for verification.</string>
     
-    <!-- Account Recovery -->
-    <string name="existing_user_signin">Existing User? Sign In</string>
-    <string name="signin_with_email">Sign In With Email</string>
-    <string name="signin_description">Enter your email to sign in to your existing account</string>
-    <string name="forgot_password">Forgot Password?</string>
-    <string name="send_signin_link">Send Sign-In Link</string>
-    <string name="signin_link_sent">A sign-in link has been sent to your email.</string>
 </resources>

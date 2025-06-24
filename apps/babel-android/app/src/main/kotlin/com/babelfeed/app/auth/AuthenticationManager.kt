@@ -5,6 +5,7 @@ import com.babelfeed.app.data.models.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.google.gson.Gson
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -73,11 +74,26 @@ class AuthenticationManager @Inject constructor(
             val request = CreateAccountRequest(guestId, email)
             val response = apiService.createAccount(request)
             
-            if (response.success) {
-                _authState.value = AuthState.PendingVerification
-                Result.success(Unit)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true) {
+                    _authState.value = AuthState.PendingVerification
+                    Result.success(Unit)
+                } else {
+                    val errorMessage = body?.error?.message ?: body?.message ?: "Unknown error"
+                    Result.failure(Exception(errorMessage))
+                }
             } else {
-                Result.failure(Exception(response.message))
+                // Handle HTTP error response
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = try {
+                    val gson = Gson()
+                    val errorResponse = gson.fromJson(errorBody, CreateAccountResponse::class.java)
+                    errorResponse.error?.message ?: errorResponse.message ?: "Unknown error"
+                } catch (e: Exception) {
+                    "Network error occurred"
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -92,21 +108,36 @@ class AuthenticationManager @Inject constructor(
             val request = VerifyEmailRequest(verificationToken)
             val response = apiService.verifyEmail(request)
             
-            if (response.success) {
-                tokenManager.storeTokens(
-                    accessToken = response.data.accessToken,
-                    refreshToken = response.data.refreshToken,
-                    userId = response.data.user.id,
-                    guestId = response.data.user.guestId,
-                    emailVerified = true
-                )
-                
-                _currentUser.value = response.data.user
-                _authState.value = AuthState.Authenticated
-                
-                Result.success(response.data.user)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body?.success == true && body.data != null) {
+                    tokenManager.storeTokens(
+                        accessToken = body.data.accessToken,
+                        refreshToken = body.data.refreshToken,
+                        userId = body.data.user.id,
+                        guestId = body.data.user.guestId,
+                        emailVerified = true
+                    )
+                    
+                    _currentUser.value = body.data.user
+                    _authState.value = AuthState.Authenticated
+                    
+                    Result.success(body.data.user)
+                } else {
+                    val errorMessage = body?.error?.message ?: body?.message ?: "Email verification failed"
+                    Result.failure(Exception(errorMessage))
+                }
             } else {
-                Result.failure(Exception(response.message))
+                // Handle HTTP error response
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = try {
+                    val gson = Gson()
+                    val errorResponse = gson.fromJson(errorBody, VerifyEmailResponse::class.java)
+                    errorResponse.error?.message ?: errorResponse.message ?: "Email verification failed"
+                } catch (e: Exception) {
+                    "Network error occurred"
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)

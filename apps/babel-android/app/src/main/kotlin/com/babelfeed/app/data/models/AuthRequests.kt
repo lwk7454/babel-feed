@@ -54,10 +54,13 @@ data class CreateAccountResponse(
     val success: Boolean,
     
     @SerializedName("data")
-    val data: AccountData,
+    val data: AccountData? = null,
     
     @SerializedName("message")
-    val message: String
+    val message: String? = null,
+    
+    @SerializedName("error")
+    val error: ApiError? = null
 )
 
 data class AccountData(
@@ -95,10 +98,13 @@ data class VerifyEmailResponse(
     val success: Boolean,
     
     @SerializedName("data")
-    val data: VerificationData,
+    val data: VerificationData? = null,
     
     @SerializedName("message")
-    val message: String
+    val message: String? = null,
+    
+    @SerializedName("error")
+    val error: ApiError? = null
 )
 
 data class VerificationData(

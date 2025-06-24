@@ -263,8 +263,6 @@ private fun GuestUserCard(
     onEmailChange: (String) -> Unit,
     onCreateAccount: () -> Unit
 ) {
-    var showSignInMode by remember { mutableStateOf(false) }
-    
     Card(
         elevation = CardDefaults.cardElevation(
             defaultElevation = 4.dp
@@ -283,57 +281,20 @@ private fun GuestUserCard(
                 style = MaterialTheme.typography.bodySmall
             )
             
-            if (!showSignInMode) {
-                Text(stringResource(R.string.add_email_description))
-                
-                OutlinedTextField(
-                    value = emailInput,
-                    onValueChange = onEmailChange,
-                    label = { Text(stringResource(R.string.email_address)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Button(
-                    onClick = onCreateAccount,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.create_account))
-                }
-                
-                Divider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.small))
-                
-                TextButton(
-                    onClick = { showSignInMode = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.existing_user_signin))
-                }
-            } else {
-                Text(stringResource(R.string.signin_description))
-                
-                OutlinedTextField(
-                    value = emailInput,
-                    onValueChange = onEmailChange,
-                    label = { Text(stringResource(R.string.email_address)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Button(
-                    onClick = {
-                        // For now, use the same create account flow since backend handles existing users
-                        onCreateAccount()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.send_signin_link))
-                }
-                
-                TextButton(
-                    onClick = { showSignInMode = false },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.back))
-                }
+            Text(stringResource(R.string.email_verification_for_sync))
+            
+            OutlinedTextField(
+                value = emailInput,
+                onValueChange = onEmailChange,
+                label = { Text(stringResource(R.string.email_address)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Button(
+                onClick = onCreateAccount,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.verify_email_address))
             }
         }
     }
