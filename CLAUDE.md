@@ -96,6 +96,7 @@ tools/nx-executors/
 - **Always recursively check files and their headers under ./.cursor/rules/**: All files are .mdc with headers to guide when to read their contents. Read contents whenever they are relevant to the current work.
 - **Put task result docs in ./outputs**: If your task end up with md files that relate to your work progress, put them into that fixed folder (which is git ignored), so you don't commit temporary docs into git. 
 - **Always keep tests up to date**: You use tests to confirm your work. When you make code changes, always check if there are related tests. If necessary add new tests for key features. That would include unit and Appium tests. 
+- **Actively use Mobile MCP after major changes**: When working on the mobile app, apart from unit and Appium tests, you should always go through your changes via mobile mcp to confirm your work. 
 - **Always git commit your code at key points**: Use git proactively to record your progress when working on big changes. You are free to create branches, but remember to clean them off when done, I don't like dangling branches. You are welcome to squash commits when merging branches, I like clean, readable and relevant git history. app and tests, make sure your code work as intended. 
 
 ### Key Rule Files

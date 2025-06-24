@@ -23,6 +23,7 @@ data class BackendTranslationResponse(
     val error: TranslationError? = null
 )
 
+@kotlinx.serialization.Serializable
 data class TranslationContext(
     val sourceUrl: String? = null,
     val pageTitle: String? = null,
@@ -55,6 +56,7 @@ data class TranslationModelsResponse(
 )
 
 // Batched translation models for NDJSON streaming
+@kotlinx.serialization.Serializable
 data class BatchedTranslationElement(
     val id: String,
     val locator: String,
@@ -62,6 +64,7 @@ data class BatchedTranslationElement(
     val context: ElementContext? = null
 )
 
+@kotlinx.serialization.Serializable
 data class ElementContext(
     val beforeText: String? = null,
     val afterText: String? = null,
@@ -69,6 +72,7 @@ data class ElementContext(
     val semanticRole: String? = null
 )
 
+@kotlinx.serialization.Serializable
 data class BatchedTranslationRequest(
     val batchId: String,
     val elements: List<BatchedTranslationElement>,
@@ -81,6 +85,7 @@ data class BatchedTranslationRequest(
     val requestId: String
 )
 
+@kotlinx.serialization.Serializable
 data class BatchedTranslationResult(
     val id: String,
     val translatedText: String,
@@ -89,6 +94,7 @@ data class BatchedTranslationResult(
     val isPartial: Boolean = false
 )
 
+@kotlinx.serialization.Serializable
 data class BatchedStreamingResult(
     val batchId: String,
     val requestId: String,
