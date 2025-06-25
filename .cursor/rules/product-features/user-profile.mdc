@@ -3,13 +3,90 @@ description: When working on user profile system
 globs: 
 alwaysApply: false
 ---
-# Babel Feed User Profile
+# Babel Feed User Profile System
 
-## User Experience
-- When user first opens the app, the app create a guest profile that's saved on device. 
-- There is a profile page user could choose to open. There it shows user login status and profile settings.
-- User could choose to bind their guest account to an email address by verifying that address. 
-- Upon requesting verification, it creates an account in the backend service
-- Upon successful verification, it updates the account to verified in the backend
-- Once a user is verified, all requests they make from the app will include authentication header
-- Due to the nature of this app (news feed), we don't want to actively authenticate users frequently. Once they have passed authentication their session on the app should stay indefinitely.
+## User Status Types
+- **guest**: Not logged in, no authentication token
+- **verified**: Logged in with valid authentication token  
+- **vip**: Logged in with premium status
+- **Future**: Additional status types may be added
+
+## Profile Creation & Management
+- When user first opens the app, the app creates a guest profile that's saved on device
+- Guest profile includes language preference and basic settings
+- Profile persists across app sessions until user chooses to logout
+
+## Authentication Flow
+- User can bind their guest account to an email address through verification
+- Upon requesting verification, backend creates an account and sends OTP email
+- Upon successful OTP verification, account status updates to "verified" in backend
+- Once verified, all app requests include authentication header
+- Session persists indefinitely - no frequent re-authentication required
+
+## Profile Screen Requirements
+
+### Navigation
+- Accessible via Profile button from Feed screen
+- Back button returns to Feed screen
+- Screen title: "Profile"
+
+### Account Card - Guest User
+- Display user status: "Guest"
+- Email verification prompt message
+- Email input field with validation
+- Verify button → Navigate to Verification screen (requires valid email)
+
+### Account Card - Verified User  
+- Display user status: "Verified" or "VIP"
+- Display user email address
+- Logout button → Clear profile + clear auth token + navigate to Welcome screen
+
+### Preferences Section
+- **Data Sync**: Save to both local storage AND server via "Save settings" API
+- **Auto-fill**: Pre-populate all settings with current user values
+- **Immediate Apply**: Changes take effect instantly upon modification
+
+#### Required Preference Options
+- Auto translation toggle
+- User language selector (show options in their native language)
+- Light/dark theme toggle  
+- Notification settings
+- Privacy settings
+
+## Verification Screen Requirements
+
+### Entry Conditions
+- User clicks Verify button from Profile screen with valid email
+- Screen automatically calls "send verification email" API on load
+
+### Required Elements
+- Navigation bar with back button and screen title
+- Instruction message: "Verification email with OTP sent"
+- 4-digit OTP input field
+- Submit button for OTP validation
+- Resend button with cooldown timer functionality
+- Error banner for API/validation errors
+
+### Resend Button Behavior
+- Initial cooldown period on screen load
+- New cooldown starts after each resend attempt
+- Button disabled during cooldown periods
+- Display countdown timer
+
+### Success Flow
+1. Valid OTP submission
+2. Hide all UI elements  
+3. Show large success icon + text
+4. Auto-navigate to Profile screen after delay
+5. **IF user was already verified**: Load user preferences from server + overwrite local settings
+
+## Language & Localization
+- All profile UI text displays in user's selected language
+- Language selector shows options in their native language
+- Profile settings persist across language changes
+
+## Data Persistence
+- Guest profile: Local device storage only
+- Verified profile: Local storage + server synchronization
+- Authentication token: Secure local storage
+- Settings changes: Immediate local save + server sync for verified users

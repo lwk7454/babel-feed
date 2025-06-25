@@ -262,4 +262,64 @@ describe('UserService', () => {
       expect(sessions).toHaveLength(0);
     });
   });
+
+  describe('getUserStatus', () => {
+    it('should return user status for existing user', async () => {
+      const guestUser = await userService.createGuestUser();
+      const status = await userService.getUserStatus(guestUser.id);
+      expect(status).toBe('guest');
+    });
+
+    it('should return null for non-existent user', async () => {
+      const status = await userService.getUserStatus('00000000-0000-4000-8000-000000000000');
+      expect(status).toBeNull();
+    });
+
+    it('should return verified status after email verification', async () => {
+      const guestUser = await userService.createGuestUser();
+      const { user } = await userService.createAccountFromGuest(guestUser.guestId!, 'status@example.com');
+      await userService.verifyEmail(user.verificationToken!);
+      
+      const status = await userService.getUserStatus(user.id);
+      expect(status).toBe('verified');
+    });
+  });
+
+  describe('updateUserStatus', () => {
+    it('should update user status successfully', async () => {
+      const guestUser = await userService.createGuestUser();
+      
+      await userService.updateUserStatus(guestUser.id, 'vip');
+      
+      const status = await userService.getUserStatus(guestUser.id);
+      expect(status).toBe('vip');
+    });
+
+    it('should update verified user to vip status', async () => {
+      const guestUser = await userService.createGuestUser();
+      const { user } = await userService.createAccountFromGuest(guestUser.guestId!, 'vip@example.com');
+      await userService.verifyEmail(user.verificationToken!);
+      
+      await userService.updateUserStatus(user.id, 'vip');
+      
+      const status = await userService.getUserStatus(user.id);
+      expect(status).toBe('vip');
+    });
+  });
+
+  describe('user status integration', () => {
+    it('should create guest user with correct status', async () => {
+      const user = await userService.createGuestUser();
+      expect(user.userStatus).toBe('guest');
+    });
+
+    it('should update status to verified after email verification', async () => {
+      const guestUser = await userService.createGuestUser();
+      const { user } = await userService.createAccountFromGuest(guestUser.guestId!, 'integration@example.com');
+      const verifyResult = await userService.verifyEmail(user.verificationToken!);
+      
+      expect(verifyResult.user.userStatus).toBe('verified');
+      expect(verifyResult.user.emailVerified).toBe(true);
+    });
+  });
 });

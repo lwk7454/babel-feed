@@ -14,13 +14,41 @@ describe('Auth Routes', () => {
     testUserService = new UserService(testDb);
     
     // Create test version of auth routes
-    app = new Elysia({ prefix: '/api/auth' })
-      .use(authMiddleware)
+    app = new Elysia()
+      .derive(async ({ headers }) => {
+        const authorization = headers.authorization;
+        
+        if (!authorization || !authorization.startsWith('Bearer ')) {
+          return { user: null };
+        }
+        
+        const token = authorization.substring(7);
+        const user = await testUserService.validateAccessToken(token);
+        
+        return { user };
+      })
+      .macro(({ onBeforeHandle }) => ({
+        requireAuth(enabled: boolean = true) {
+          if (!enabled) return;
+          
+          onBeforeHandle(({ user, set }) => {
+            if (!user) {
+              set.status = 401;
+              return {
+                error: {
+                  code: 'UNAUTHORIZED',
+                  message: 'Authentication required'
+                }
+              };
+            }
+          });
+        }
+      }))
       
       .post('/guest', 
         async ({ body, headers }) => {
           try {
-            const deviceFingerprint = body.deviceFingerprint;
+            const deviceFingerprint = (body as any).deviceFingerprint;
             const user = await testUserService.createGuestUser(deviceFingerprint);
             
             return {
@@ -47,7 +75,7 @@ describe('Auth Routes', () => {
       .post('/create-account',
         async ({ body }) => {
           try {
-            const { guestId, email } = body;
+            const { guestId, email } = body as any;
             const result = await testUserService.createAccountFromGuest(guestId, email);
             
             console.log(`📧 Verification email for ${email}: ${result.verificationToken}`);
@@ -87,7 +115,7 @@ describe('Auth Routes', () => {
       .post('/verify',
         async ({ body }) => {
           try {
-            const { verificationToken } = body;
+            const { verificationToken } = body as any;
             const result = await testUserService.verifyEmail(verificationToken);
             
             return {
@@ -126,6 +154,61 @@ describe('Auth Routes', () => {
         }
       )
       
+      .post('/save-settings',
+        async ({ user, body, set }) => {
+          try {
+            if (user!.userStatus !== 'verified' && user!.userStatus !== 'vip') {
+              set.status = 403;
+              return {
+                success: false,
+                error: {
+                  code: 'SETTINGS_SYNC_FORBIDDEN',
+                  message: 'Settings sync requires verified account'
+                }
+              };
+            }
+
+            await testUserService.updateUserPreferences(user!.id, body as any);
+            const preferences = await testUserService.getUserPreferences(user!.id);
+            
+            return {
+              success: true,
+              data: preferences,
+              message: 'Settings saved and synced to server successfully'
+            };
+          } catch (error) {
+            set.status = 500;
+            return {
+              success: false,
+              error: {
+                code: 'SETTINGS_SAVE_FAILED',
+                message: 'Failed to save settings'
+              }
+            };
+          }
+        },
+        {
+          requireAuth: true,
+          body: t.Object({
+            preferredLanguages: t.Optional(t.Array(t.String())),
+            feedCategories: t.Optional(t.Array(t.String())),
+            translationSettings: t.Optional(t.Object({
+              autoTranslate: t.Optional(t.Boolean()),
+              defaultTargetLanguage: t.Optional(t.String())
+            })),
+            themePreference: t.Optional(t.String()),
+            notificationSettings: t.Optional(t.Object({
+              emailNotifications: t.Optional(t.Boolean()),
+              pushNotifications: t.Optional(t.Boolean())
+            })),
+            privacySettings: t.Optional(t.Object({
+              analytics: t.Optional(t.Boolean()),
+              personalization: t.Optional(t.Boolean())
+            }))
+          })
+        }
+      )
+      
       .get('/status',
         async ({ user }) => {
           return {
@@ -149,7 +232,7 @@ describe('Auth Routes', () => {
   describe('POST /api/auth/guest', () => {
     it('should create guest user successfully', async () => {
       const response = await app.handle(
-        new Request('http://localhost/api/auth/guest', {
+        new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ deviceFingerprint: 'test-device' })
@@ -167,7 +250,7 @@ describe('Auth Routes', () => {
 
     it('should create guest user without device fingerprint', async () => {
       const response = await app.handle(
-        new Request('http://localhost/api/auth/guest', {
+        new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
@@ -186,7 +269,7 @@ describe('Auth Routes', () => {
     it('should create account from guest successfully', async () => {
       // First create a guest user
       const guestResponse = await app.handle(
-        new Request('http://localhost/api/auth/guest', {
+        new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
@@ -198,7 +281,7 @@ describe('Auth Routes', () => {
 
       // Create account from guest
       const response = await app.handle(
-        new Request('http://localhost/api/auth/create-account', {
+        new Request('http://localhost/create-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -219,7 +302,7 @@ describe('Auth Routes', () => {
     it('should return error for duplicate email', async () => {
       // Create first guest and account
       const guestResponse1 = await app.handle(
-        new Request('http://localhost/api/auth/guest', {
+        new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
@@ -228,7 +311,7 @@ describe('Auth Routes', () => {
       const guestData1 = await guestResponse1.json();
 
       await app.handle(
-        new Request('http://localhost/api/auth/create-account', {
+        new Request('http://localhost/create-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -240,7 +323,7 @@ describe('Auth Routes', () => {
 
       // Try to create second account with same email
       const guestResponse2 = await app.handle(
-        new Request('http://localhost/api/auth/guest', {
+        new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
@@ -249,7 +332,7 @@ describe('Auth Routes', () => {
       const guestData2 = await guestResponse2.json();
 
       const response = await app.handle(
-        new Request('http://localhost/api/auth/create-account', {
+        new Request('http://localhost/create-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -267,7 +350,7 @@ describe('Auth Routes', () => {
     it('should verify email and return tokens', async () => {
       // Create guest and account
       const guestResponse = await app.handle(
-        new Request('http://localhost/api/auth/guest', {
+        new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
@@ -276,7 +359,7 @@ describe('Auth Routes', () => {
       const guestData = await guestResponse.json();
 
       await app.handle(
-        new Request('http://localhost/api/auth/create-account', {
+        new Request('http://localhost/create-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -291,7 +374,7 @@ describe('Auth Routes', () => {
       const verificationToken = user.verificationToken!;
 
       const response = await app.handle(
-        new Request('http://localhost/api/auth/verify', {
+        new Request('http://localhost/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationToken })
@@ -309,7 +392,7 @@ describe('Auth Routes', () => {
 
     it('should return error for invalid verification token', async () => {
       const response = await app.handle(
-        new Request('http://localhost/api/auth/verify', {
+        new Request('http://localhost/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationToken: 'invalid-token' })
@@ -323,7 +406,7 @@ describe('Auth Routes', () => {
   describe('GET /api/auth/status', () => {
     it('should return authentication status for unauthenticated user', async () => {
       const response = await app.handle(
-        new Request('http://localhost/api/auth/status')
+        new Request('http://localhost/status')
       );
 
       expect(response.status).toBe(200);
@@ -333,6 +416,154 @@ describe('Auth Routes', () => {
       expect(data.data.authenticated).toBe(false);
       expect(data.data.emailVerified).toBe(false);
       expect(data.data.userId).toBeNull();
+    });
+
+    it('should return authentication status for verified user', async () => {
+      // Create and verify user first
+      const guestResponse = await app.handle(
+        new Request('http://localhost/guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        })
+      );
+      const guestData = await guestResponse.json();
+
+      await app.handle(
+        new Request('http://localhost/create-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestId: guestData.data.guestId,
+            email: 'status-verified@example.com'
+          })
+        })
+      );
+
+      // Get verification token and verify
+      const [user] = await testDb.select().from(users).limit(1);
+      const verifyResponse = await app.handle(
+        new Request('http://localhost/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verificationToken: user.verificationToken })
+        })
+      );
+      const verifyData = await verifyResponse.json();
+
+      // Test status with authentication
+      const response = await app.handle(
+        new Request('http://localhost/status', {
+          headers: { 
+            'Authorization': `Bearer ${verifyData.data.accessToken}`
+          }
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.data.authenticated).toBe(true);
+      expect(data.data.emailVerified).toBe(true);
+      expect(data.data.userId).toBe(verifyData.data.user.id);
+    });
+  });
+
+  describe('POST /api/auth/save-settings', () => {
+    it('should save settings for verified user', async () => {
+      // Create and verify user first
+      const guestResponse = await app.handle(
+        new Request('http://localhost/guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        })
+      );
+      const guestData = await guestResponse.json();
+
+      await app.handle(
+        new Request('http://localhost/create-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestId: guestData.data.guestId,
+            email: 'settings@example.com'
+          })
+        })
+      );
+
+      const [user] = await testDb.select().from(users).limit(1);
+      const verifyResponse = await app.handle(
+        new Request('http://localhost/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verificationToken: user.verificationToken })
+        })
+      );
+      const verifyData = await verifyResponse.json();
+
+      // Test save settings
+      const response = await app.handle(
+        new Request('http://localhost/save-settings', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${verifyData.data.accessToken}`
+          },
+          body: JSON.stringify({
+            preferredLanguages: ['en', 'zh-CN'],
+            themePreference: 'dark'
+          })
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.message).toBe('Settings saved and synced to server successfully');
+      expect(data.data.preferredLanguages).toEqual(['en', 'zh-CN']);
+      expect(data.data.themePreference).toBe('dark');
+    });
+
+    it('should reject settings save for guest user', async () => {
+      // Create guest user only (not verified)
+      const guestResponse = await app.handle(
+        new Request('http://localhost/guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        })
+      );
+      const guestData = await guestResponse.json();
+
+      // Try to save settings without verification
+      const response = await app.handle(
+        new Request('http://localhost/save-settings', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            themePreference: 'dark'
+          })
+        })
+      );
+
+      expect(response.status).toBe(401); // Unauthorized - no auth token
+    });
+
+    it('should require authentication for save settings', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/save-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            themePreference: 'dark'
+          })
+        })
+      );
+
+      expect(response.status).toBe(401);
     });
   });
 });

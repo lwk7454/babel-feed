@@ -9,6 +9,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).unique(),
   guestId: varchar('guest_id', { length: 100 }).unique(),
   emailVerified: boolean('email_verified').default(false),
+  userStatus: varchar('user_status', { length: 20 }).default('guest').notNull(), // guest, verified, vip
   verificationToken: varchar('verification_token', { length: 255 }),
   verificationTokenExpiry: timestamp('verification_token_expiry'),
   deviceFingerprint: varchar('device_fingerprint', { length: 255 }),

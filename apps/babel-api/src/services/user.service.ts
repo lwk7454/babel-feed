@@ -33,7 +33,8 @@ export class UserService {
     const newUser: NewUser = {
       guestId,
       deviceFingerprint,
-      emailVerified: false
+      emailVerified: false,
+      userStatus: 'guest'
     };
 
     const [user] = await this.db.insert(users).values(newUser).returning();
@@ -110,11 +111,12 @@ export class UserService {
       throw new Error('Verification token has expired');
     }
 
-    // Mark email as verified and clear verification token
+    // Mark email as verified, update status to verified, and clear verification token
     const [verifiedUser] = await this.db
       .update(users)
       .set({
         emailVerified: true,
+        userStatus: 'verified',
         verificationToken: null,
         verificationTokenExpiry: null,
         updatedAt: new Date()
@@ -257,6 +259,18 @@ export class UserService {
     try {
       const payload = jwt.verify(accessToken, this.jwtSecret) as any;
       
+      // Check if session exists (for logout invalidation)
+      const accessTokenHash = this.hashToken(accessToken);
+      const [session] = await this.db
+        .select()
+        .from(userSessions)
+        .where(eq(userSessions.accessTokenHash, accessTokenHash))
+        .limit(1);
+      
+      if (!session) {
+        return null; // Session was deleted (logged out)
+      }
+      
       // Get user from database
       const [user] = await this.db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
       
@@ -304,12 +318,47 @@ export class UserService {
    * Update user preferences
    */
   async updateUserPreferences(userId: string, preferences: Partial<NewUserPreferences>): Promise<void> {
+    // Get existing preferences
+    const [existingPrefs] = await this.db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1);
+
+    if (!existingPrefs) {
+      // If no preferences exist, create them
+      await this.createDefaultPreferences(userId);
+      // Retry with the newly created preferences
+      return this.updateUserPreferences(userId, preferences);
+    }
+
+    // Merge nested objects properly - exclude nested objects from initial spread
+    const { translationSettings, notificationSettings, privacySettings, ...otherPrefs } = preferences;
+    
+    const updatedPrefs: any = {
+      ...otherPrefs,
+      updatedAt: new Date()
+    };
+
+    // Handle nested object merging for specific fields
+    if (translationSettings) {
+      const existing = (existingPrefs.translationSettings as any) || {};
+      updatedPrefs.translationSettings = Object.assign({}, existing, translationSettings);
+    }
+
+    if (notificationSettings) {
+      const existing = (existingPrefs.notificationSettings as any) || {};
+      updatedPrefs.notificationSettings = Object.assign({}, existing, notificationSettings);
+    }
+
+    if (privacySettings) {
+      const existing = (existingPrefs.privacySettings as any) || {};
+      updatedPrefs.privacySettings = Object.assign({}, existing, privacySettings);
+    }
+
     await this.db
       .update(userPreferences)
-      .set({
-        ...preferences,
-        updatedAt: new Date()
-      })
+      .set(updatedPrefs)
       .where(eq(userPreferences.userId, userId));
   }
 
@@ -319,6 +368,27 @@ export class UserService {
   async getUserPreferences(userId: string) {
     const [prefs] = await this.db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
     return prefs;
+  }
+
+  /**
+   * Get user status by user ID
+   */
+  async getUserStatus(userId: string): Promise<string | null> {
+    const [user] = await this.db.select({ userStatus: users.userStatus }).from(users).where(eq(users.id, userId)).limit(1);
+    return user?.userStatus || null;
+  }
+
+  /**
+   * Update user status (for admin operations or upgrades)
+   */
+  async updateUserStatus(userId: string, status: 'guest' | 'verified' | 'vip'): Promise<void> {
+    await this.db
+      .update(users)
+      .set({
+        userStatus: status,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
   }
 
   // Private helper methods

@@ -202,6 +202,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
               email: result.user.email,
               guestId: result.user.guestId,
               emailVerified: result.user.emailVerified,
+              userStatus: result.user.userStatus,
               createdAt: result.user.createdAt
             },
             accessToken: result.tokens.accessToken,
@@ -357,6 +358,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
           email: user!.email,
           guestId: user!.guestId,
           emailVerified: user!.emailVerified,
+          userStatus: user!.userStatus,
           createdAt: user!.createdAt,
           updatedAt: user!.updatedAt
         }
@@ -404,15 +406,91 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       body: t.Object({
         preferredLanguages: t.Optional(t.Array(t.String())),
         feedCategories: t.Optional(t.Array(t.String())),
-        translationSettings: t.Optional(t.Object({})),
+        translationSettings: t.Optional(t.Object({
+          autoTranslate: t.Optional(t.Boolean()),
+          defaultTargetLanguage: t.Optional(t.String())
+        })),
         themePreference: t.Optional(t.String()),
-        notificationSettings: t.Optional(t.Object({})),
-        privacySettings: t.Optional(t.Object({}))
+        notificationSettings: t.Optional(t.Object({
+          emailNotifications: t.Optional(t.Boolean()),
+          pushNotifications: t.Optional(t.Boolean())
+        })),
+        privacySettings: t.Optional(t.Object({
+          analytics: t.Optional(t.Boolean()),
+          personalization: t.Optional(t.Boolean())
+        }))
       }),
       detail: {
         tags: ['Authentication'],
         summary: 'Update user preferences',
         description: 'Updates user preferences and settings'
+      }
+    }
+  )
+
+  /**
+   * Save settings (sync to server) - for verified users only
+   */
+  .post('/save-settings',
+    async ({ user, body, set }) => {
+      try {
+        // Only verified users can sync settings to server
+        if (user!.userStatus !== 'verified' && user!.userStatus !== 'vip') {
+          set.status = 403;
+          return {
+            success: false,
+            error: {
+              code: 'SETTINGS_SYNC_FORBIDDEN',
+              message: 'Settings sync requires verified account',
+              details: 'Only verified users can sync settings to server'
+            }
+          };
+        }
+
+        await userService.updateUserPreferences(user!.id, body as any);
+        const preferences = await userService.getUserPreferences(user!.id);
+        
+        return {
+          success: true,
+          data: preferences,
+          message: 'Settings saved and synced to server successfully'
+        };
+      } catch (error) {
+        console.error('Settings save error:', error);
+        set.status = 500;
+        return {
+          success: false,
+          error: {
+            code: 'SETTINGS_SAVE_FAILED',
+            message: 'Failed to save settings',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
+      }
+    },
+    {
+      requireAuth: true,
+      body: t.Object({
+        preferredLanguages: t.Optional(t.Array(t.String())),
+        feedCategories: t.Optional(t.Array(t.String())),
+        translationSettings: t.Optional(t.Object({
+          autoTranslate: t.Optional(t.Boolean()),
+          defaultTargetLanguage: t.Optional(t.String())
+        })),
+        themePreference: t.Optional(t.String()),
+        notificationSettings: t.Optional(t.Object({
+          emailNotifications: t.Optional(t.Boolean()),
+          pushNotifications: t.Optional(t.Boolean())
+        })),
+        privacySettings: t.Optional(t.Object({
+          analytics: t.Optional(t.Boolean()),
+          personalization: t.Optional(t.Boolean())
+        }))
+      }),
+      detail: {
+        tags: ['Authentication'],
+        summary: 'Save settings (verified users only)',
+        description: 'Saves and syncs user settings to server for verified users'
       }
     }
   )
