@@ -81,6 +81,8 @@ alwaysApply: true
 - Content aggregation from news and video sources
 - Assisted translation using OpenRouter free models
 
+### News Aggregation Service
+
 ### Supported Languages
 - English (en)
 - Chinese Simplified (zh-CN)
@@ -99,10 +101,6 @@ alwaysApply: true
 - **App Interface Text**: Hard-coded UI text with full i18n support for all supported languages
 - **News Feed & Summary**: Pre-translated content served in user's preferred language
 - **Article Content**: Real-time translation available in WebView with toggle functionality
-
-### Source Language Indicators
-- **Feed Items**: Small language badge overlay on banner images (e.g., "EN", "ZH", "JA")
-- **Summary Pages**: Source language badge prominently displayed
 
 ### Article Data Model
 - **Multi-language Storage**: Articles stored with translations in all supported languages
