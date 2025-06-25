@@ -18,6 +18,9 @@ data class User(
     @SerializedName("emailVerified")
     val emailVerified: Boolean = false,
     
+    @SerializedName("userStatus")
+    val userStatus: String = "guest", // guest, verified, vip
+    
     @SerializedName("createdAt")
     val createdAt: String,
     

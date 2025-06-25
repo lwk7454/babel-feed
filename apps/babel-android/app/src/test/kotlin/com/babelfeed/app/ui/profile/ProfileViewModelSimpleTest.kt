@@ -1,10 +1,12 @@
 package com.babelfeed.app.ui.profile
 
+import android.app.Application
 import com.babelfeed.app.auth.AuthState
 import com.babelfeed.app.auth.AuthenticationManager
 import com.babelfeed.app.data.models.*
 import com.babelfeed.app.data.repository.UserRepository
 import com.babelfeed.app.ui.screens.profile.ProfileViewModel
+import com.babelfeed.app.utils.LocaleManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,10 +28,16 @@ import kotlin.test.assertTrue
 class ProfileViewModelSimpleTest {
 
     @Mock
+    private lateinit var application: Application
+
+    @Mock
     private lateinit var authManager: AuthenticationManager
 
     @Mock
     private lateinit var userRepository: UserRepository
+
+    @Mock
+    private lateinit var localeManager: LocaleManager
 
     private lateinit var viewModel: ProfileViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -39,6 +47,7 @@ class ProfileViewModelSimpleTest {
         email = "test@example.com",
         guestId = null,
         emailVerified = true,
+        userStatus = "verified",
         createdAt = "2025-06-23T10:00:00Z",
         updatedAt = "2025-06-23T10:00:00Z"
     )
@@ -62,7 +71,7 @@ class ProfileViewModelSimpleTest {
         whenever(authManager.authState).thenReturn(MutableStateFlow(AuthState.Authenticated))
         whenever(authManager.currentUser).thenReturn(MutableStateFlow(mockUser))
         
-        viewModel = ProfileViewModel(authManager, userRepository)
+        viewModel = ProfileViewModel(application, authManager, userRepository, localeManager)
     }
 
     @After

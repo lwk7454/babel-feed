@@ -9,6 +9,7 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import retrofit2.Response
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -90,7 +91,7 @@ class AuthenticationManagerTest {
             message = "Account created successfully"
         )
 
-        whenever(apiService.createAccount(any())).thenReturn(mockResponse)
+        whenever(apiService.createAccount(any())).thenReturn(Response.success(mockResponse))
 
         val result = authManager.createAccountFromGuest(email)
 
@@ -117,6 +118,7 @@ class AuthenticationManagerTest {
             email = "test@example.com",
             guestId = "guest-123",
             emailVerified = true,
+            userStatus = "verified",
             createdAt = "2024-01-01T00:00:00Z",
             updatedAt = "2024-01-01T00:00:00Z"
         )
@@ -131,7 +133,7 @@ class AuthenticationManagerTest {
             message = "Email verified successfully"
         )
 
-        whenever(apiService.verifyEmail(any())).thenReturn(mockResponse)
+        whenever(apiService.verifyEmail(any())).thenReturn(Response.success(mockResponse))
 
         val result = authManager.verifyEmail(verificationToken)
 
@@ -157,6 +159,7 @@ class AuthenticationManagerTest {
             email = "test@example.com",
             guestId = "guest-123",
             emailVerified = true,
+            userStatus = "verified",
             createdAt = "2024-01-01T00:00:00Z",
             updatedAt = "2024-01-01T00:00:00Z"
         )

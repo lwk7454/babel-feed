@@ -26,6 +26,8 @@ import com.babelfeed.app.ui.theme.spacing
 @Composable
 fun ProfileScreen(
     onBackClick: (() -> Unit)? = null,
+    onNavigateToVerification: ((String) -> Unit)? = null,
+    onNavigateToWelcome: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
 
@@ -145,7 +147,7 @@ fun ProfileScreen(
             CircularProgressIndicator()
         }
 
-        // Authentication state display with integrated preferences
+        // Account Card - User Status Dependent
         when (authState) {
             AuthState.None -> {
                 NoAuthCard(
@@ -155,74 +157,63 @@ fun ProfileScreen(
             
             AuthState.Guest -> {
                 GuestUserCard(
-                    guestId = viewModel.getGuestId(),
                     emailInput = emailInput,
                     onEmailChange = { emailInput = it },
-                    onCreateAccount = { 
-                        if (emailInput.isNotBlank()) {
+                    onVerifyClick = { 
+                        if (emailInput.isNotBlank() && viewModel.isValidEmail(emailInput)) {
                             viewModel.createAccount(emailInput)
+                            // Navigation to verification will be handled by state change
                         }
-                    }
-                )
-                
-                // Show preferences for guest users too
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                PreferencesSection(
-                    preferences = userPreferences,
-                    currentLocale = viewModel.localeManager.getCurrentLocale(context),
-                    onUpdatePreferences = { preferences ->
-                        viewModel.updatePreferences(preferences)
                     }
                 )
             }
             
             AuthState.PendingVerification -> {
-                PendingVerificationCard(
-                    email = currentUser?.email ?: "Unknown",
-                    verificationTokenInput = verificationTokenInput,
-                    onTokenChange = { verificationTokenInput = it },
-                    onVerifyEmail = {
-                        if (verificationTokenInput.isNotBlank()) {
-                            viewModel.verifyEmail(verificationTokenInput)
-                        }
-                    },
-                    onResendCode = {
-                        currentUser?.email?.let { email ->
-                            viewModel.resendVerificationCode(email)
-                        }
+                // Navigate to verification screen automatically for pending verification
+                LaunchedEffect(authState) {
+                    currentUser?.email?.let { email ->
+                        onNavigateToVerification?.invoke(email)
                     }
-                )
+                }
                 
-                // Show preferences for pending verification users
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                PreferencesSection(
-                    preferences = userPreferences,
-                    currentLocale = viewModel.localeManager.getCurrentLocale(context),
-                    onUpdatePreferences = { preferences ->
-                        viewModel.updatePreferences(preferences)
-                    }
-                )
+                // Show a card indicating navigation to verification
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.navigating_to_verification),
+                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
             
             AuthState.Authenticated -> {
                 AuthenticatedUserCard(
                     user = currentUser,
-                    onLogout = { viewModel.logout() }
-                )
-                
-                // Show preferences for authenticated users
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                PreferencesSection(
-                    preferences = userPreferences,
-                    currentLocale = viewModel.localeManager.getCurrentLocale(context),
-                    onUpdatePreferences = { preferences ->
-                        viewModel.updatePreferences(preferences)
+                    onLogout = { 
+                        viewModel.logout()
+                        onNavigateToWelcome?.invoke()
                     }
                 )
             }
+        }
+        
+        // Preferences Section - show for all authenticated states
+        if (authState != AuthState.None) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            PreferencesSection(
+                preferences = userPreferences,
+                currentLocale = viewModel.localeManager.getCurrentLocale(context),
+                isVerifiedUser = currentUser?.userStatus == "verified" || currentUser?.userStatus == "vip",
+                onUpdatePreferences = { preferences ->
+                    viewModel.updatePreferences(preferences)
+                }
+            )
         }
     }
 }
@@ -258,10 +249,9 @@ private fun NoAuthCard(
 
 @Composable
 private fun GuestUserCard(
-    guestId: String?,
     emailInput: String,
     onEmailChange: (String) -> Unit,
-    onCreateAccount: () -> Unit
+    onVerifyClick: () -> Unit
 ) {
     Card(
         elevation = CardDefaults.cardElevation(
@@ -272,85 +262,39 @@ private fun GuestUserCard(
             modifier = Modifier.padding(MaterialTheme.spacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
+            // Display user status
             Text(
-                text = stringResource(R.string.guest_user),
+                text = stringResource(R.string.user_status_guest),
                 style = MaterialTheme.typography.titleMedium
             )
+            
+            // Email verification prompt message
             Text(
-                text = stringResource(R.string.guest_id, guestId ?: stringResource(R.string.unknown)),
-                style = MaterialTheme.typography.bodySmall
+                text = stringResource(R.string.email_verification_prompt),
+                style = MaterialTheme.typography.bodyMedium
             )
             
-            Text(stringResource(R.string.email_verification_for_sync))
-            
+            // Email input field with validation
             OutlinedTextField(
                 value = emailInput,
                 onValueChange = onEmailChange,
                 label = { Text(stringResource(R.string.email_address)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = emailInput.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(emailInput).matches()
             )
             
+            // Verify button (requires valid email)
             Button(
-                onClick = onCreateAccount,
+                onClick = onVerifyClick,
+                enabled = emailInput.isNotEmpty() && android.util.Patterns.EMAIL_ADDRESS.matcher(emailInput).matches(),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.verify_email_address))
+                Text(stringResource(R.string.verify))
             }
         }
     }
 }
 
-@Composable
-private fun PendingVerificationCard(
-    email: String,
-    verificationTokenInput: String,
-    onTokenChange: (String) -> Unit,
-    onVerifyEmail: () -> Unit,
-    onResendCode: () -> Unit
-) {
-    Card(
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Text(
-                text = stringResource(R.string.pending_verification),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(stringResource(R.string.verification_email_sent, email))
-            
-            OutlinedTextField(
-                value = verificationTokenInput,
-                onValueChange = onTokenChange,
-                label = { Text(stringResource(R.string.verification_code)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onVerifyEmail,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.verify_email))
-                }
-                
-                OutlinedButton(
-                    onClick = onResendCode,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.resend_code))
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun AuthenticatedUserCard(
@@ -366,18 +310,26 @@ private fun AuthenticatedUserCard(
             modifier = Modifier.padding(MaterialTheme.spacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
-            Text(
-                text = stringResource(R.string.authenticated_user),
-                style = MaterialTheme.typography.titleMedium
-            )
-            
+            // Display user status ("Verified" or "VIP")
             user?.let { u ->
-                Text(stringResource(R.string.user_email, u.email ?: stringResource(R.string.unknown)))
-                Text(stringResource(R.string.user_id, u.id))
-                Text(stringResource(R.string.email_verified, if (u.emailVerified) stringResource(R.string.yes) else stringResource(R.string.no)))
-                Text(stringResource(R.string.member_since, u.createdAt))
+                val statusText = when (u.userStatus) {
+                    "verified" -> stringResource(R.string.user_status_verified)
+                    "vip" -> stringResource(R.string.user_status_vip)
+                    else -> stringResource(R.string.user_status_verified)
+                }
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                // Display user email address
+                Text(
+                    text = u.email ?: stringResource(R.string.unknown),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
             
+            // Logout button → Clear profile + clear auth token + navigate to Welcome screen
             Button(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
@@ -395,6 +347,7 @@ private fun AuthenticatedUserCard(
 private fun PreferencesSection(
     preferences: UserPreferences?,
     currentLocale: String,
+    isVerifiedUser: Boolean,
     onUpdatePreferences: (UserPreferences) -> Unit
 ) {
     Card {

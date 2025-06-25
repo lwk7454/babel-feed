@@ -61,6 +61,9 @@ interface BabelApiService {
     @PUT("auth/preferences")
     suspend fun updatePreferences(@Body preferences: UserPreferences): PreferencesResponse
     
+    @POST("auth/save-settings")
+    suspend fun saveSettings(@Body preferences: UserPreferences): PreferencesResponse
+    
     @GET("auth/status")
     suspend fun getAuthStatus(): AuthStatusResponse
 }

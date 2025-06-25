@@ -154,4 +154,27 @@
     <string name="success_preferences_saved">Your preferences have been saved.</string>
     <string name="success_account_created">Account created successfully! Please check your email for verification.</string>
     
+    <!-- User Status Labels -->
+    <string name="user_status_guest">Guest</string>
+    <string name="user_status_verified">Verified</string>
+    <string name="user_status_vip">VIP</string>
+    
+    <!-- Profile Screen Updates -->
+    <string name="email_verification_prompt">Bind your guest account to an email address through verification</string>
+    <string name="verify">Verify</string>
+    <string name="navigating_to_verification">Navigating to verification…</string>
+    
+    <!-- Verification Screen -->
+    <string name="verification">Verification</string>
+    <string name="verification_email_sent_with_otp">Verification email with OTP sent</string>
+    <string name="email_sent_to">Email sent to %1$s</string>
+    <string name="otp_4_digit_code">4-digit OTP code</string>
+    <string name="submit">Submit</string>
+    <string name="resend_in_seconds">Resend in %1$d seconds</string>
+    <string name="sending_verification_email">Sending verification email…</string>
+    <string name="verifying_code">Verifying code…</string>
+    <string name="verification_successful">Verification Successful!</string>
+    <string name="returning_to_profile">Returning to profile…</string>
+    <string name="success">Success</string>
+    
 </resources>

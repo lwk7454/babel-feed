@@ -274,19 +274,33 @@ class ProfileViewModel @Inject constructor(
                 _shouldRecreateActivity.value = true
             }
             
-            // Save preferences to appropriate storage
-            if (authManager.isAuthenticated()) {
-                // For authenticated users, save to server
-                userRepository.updateUserPreferences(preferences)
+            // Save preferences to appropriate storage based on user status
+            val currentUser = authManager.currentUser.value
+            val isVerifiedUser = currentUser?.userStatus == "verified" || currentUser?.userStatus == "vip"
+            
+            if (authManager.isAuthenticated() && isVerifiedUser) {
+                // For verified users, use save-settings endpoint which syncs to server
+                userRepository.saveUserSettings(preferences)
                     .onSuccess { updatedPreferences ->
                         _userPreferences.value = updatedPreferences
                         // Also apply to local preferences manager
                         preferencesManager.applyPreferences(getApplication(), updatedPreferences)
                     }
                     .onFailure { exception ->
-                        // If save fails for authenticated users, show warning but keep local changes
+                        // If save fails for verified users, show warning but keep local changes
                         _error.value = getApplication<Application>().getString(R.string.error_server_unavailable)
                         // Still apply locally even if server sync fails
+                        preferencesManager.applyPreferences(getApplication(), preferences)
+                    }
+            } else if (authManager.isAuthenticated()) {
+                // For authenticated but not verified users, use regular update (local + basic server)
+                userRepository.updateUserPreferences(preferences)
+                    .onSuccess { updatedPreferences ->
+                        _userPreferences.value = updatedPreferences
+                        preferencesManager.applyPreferences(getApplication(), updatedPreferences)
+                    }
+                    .onFailure { exception ->
+                        _error.value = getApplication<Application>().getString(R.string.error_server_unavailable)
                         preferencesManager.applyPreferences(getApplication(), preferences)
                     }
             } else {
@@ -346,7 +360,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
     
-    private fun isValidEmail(email: String): Boolean {
+    fun isValidEmail(email: String): Boolean {
         val emailPattern = Pattern.compile(
             "[a-zA-Z0-9+._%-+]{1,256}" +
             "@" +

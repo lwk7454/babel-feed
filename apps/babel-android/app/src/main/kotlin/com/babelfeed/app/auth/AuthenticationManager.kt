@@ -287,6 +287,26 @@ class AuthenticationManager @Inject constructor(
     }
 
     /**
+     * Save user settings (sync to server) - for verified users only
+     */
+    suspend fun saveUserSettings(preferences: UserPreferences): Result<UserPreferences> {
+        return try {
+            if (!isAuthenticated()) {
+                return Result.failure(Exception("Authentication required for settings sync"))
+            }
+            
+            val response = apiService.saveSettings(preferences)
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.message ?: "Failed to save settings"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Check if user needs to create guest profile
      */
     fun needsGuestProfile(): Boolean {

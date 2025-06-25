@@ -16,6 +16,7 @@ import com.babelfeed.app.ui.screens.article.ArticleScreen
 import com.babelfeed.app.ui.screens.webview.WebViewScreen
 import com.babelfeed.app.ui.screens.profile.ProfileScreen
 import com.babelfeed.app.ui.screens.welcome.WelcomeScreen
+import com.babelfeed.app.ui.screens.verify.VerificationScreen
 import com.babelfeed.app.ui.screens.welcome.WelcomeViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.EntryPointAccessors
@@ -121,7 +122,30 @@ fun BabelFeedNavigation(
         
         composable("profile") {
             ProfileScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onNavigateToVerification = { email ->
+                    val encodedEmail = java.net.URLEncoder.encode(email, "UTF-8")
+                    navController.navigate("verification/$encodedEmail")
+                },
+                onNavigateToWelcome = {
+                    navController.navigate("welcome") {
+                        popUpTo("feed") { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable("verification/{email}") { backStackEntry ->
+            val encodedEmail = backStackEntry.arguments?.getString("email") ?: ""
+            val email = java.net.URLDecoder.decode(encodedEmail, "UTF-8")
+            VerificationScreen(
+                email = email,
+                onBackClick = { navController.popBackStack() },
+                onVerificationSuccess = {
+                    navController.navigate("profile") {
+                        popUpTo("verification/{email}") { inclusive = true }
+                    }
+                }
             )
         }
     }

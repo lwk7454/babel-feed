@@ -35,4 +35,17 @@ class UserRepository @Inject constructor(
             Result.failure(e)
         }
     }
+    
+    suspend fun saveUserSettings(preferences: UserPreferences): Result<UserPreferences> {
+        return try {
+            val response = apiService.saveSettings(preferences)
+            if (response.success && response.data != null) {
+                Result.success(response.data)
+            } else {
+                Result.failure(Exception(response.message ?: "Failed to save settings"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
