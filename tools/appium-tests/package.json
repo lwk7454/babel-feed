@@ -1,17 +1,15 @@
 {
   "name": "@babel-feed/appium-tests",
-  "version": "1.0.0",
-  "description": "Automated WebView translation testing for Babel Feed Android app",
+  "version": "2.0.0",
+  "description": "Modern Appium tests for Babel Feed Android app using Bun + TypeScript",
   "type": "module",
-  "main": "src/quick-vitest.test.js",
   "scripts": {
-    "test": "vitest run src/quick-vitest.test.js",
-    "test:watch": "vitest src/quick-vitest.test.js",
-    "test:ui": "vitest --ui src/quick-vitest.test.js",
-    "test:webview-translation": "vitest run tests/webview-translation.test.js",
-    "test:webview-translation:watch": "vitest tests/webview-translation.test.js",
-    "test:webview-translation:ui": "vitest --ui tests/webview-translation.test.js",
-    "test:all": "vitest run src/quick-vitest.test.js tests/webview-translation.test.js",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:core": "bun test tests/core-app.test.ts",
+    "test:auth": "bun test tests/authentication.test.ts", 
+    "test:webview": "bun test tests/webview-translation.test.ts",
+    "test:backend": "bun test tests/backend-integration.test.ts",
     "test:local": "./scripts/test-local.sh",
     "test:ci": "./scripts/test-ci.sh",
     "setup": "bun setup.js",
@@ -20,23 +18,21 @@
   "dependencies": {
     "appium": "^2.11.1",
     "appium-uiautomator2-driver": "^3.5.4",
-    "webdriverio": "^8.43.0",
-    "@wdio/cli": "^8.43.0",
-    "@wdio/mocha-framework": "^8.43.0",
-    "@wdio/appium-service": "^8.43.0",
-    "@wdio/globals": "^8.43.0"
+    "webdriverio": "^8.43.0"
   },
   "devDependencies": {
-    "@vitest/ui": "^3.2.4",
-    "vitest": "^3.2.4"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
   "keywords": [
     "appium",
-    "android",
+    "android", 
     "webview",
     "translation",
     "automation",
-    "testing"
+    "testing",
+    "bun",
+    "typescript"
   ],
   "author": "Babel Feed Team",
   "license": "MIT"
