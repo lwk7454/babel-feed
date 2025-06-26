@@ -277,7 +277,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
 
       // Set appropriate headers for NDJSON streaming
       set.headers = {
-        "Content-Type": "application/x-ndjson",
+        "Content-Type": "application/x-ndjson, text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         "Access-Control-Allow-Origin": "*",

@@ -1,0 +1,1 @@
+../../.cursor/rules/news-aggregation-service.md
