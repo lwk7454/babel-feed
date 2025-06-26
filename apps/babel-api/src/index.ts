@@ -6,9 +6,13 @@ import { authRoutes } from "./routes/auth.routes.js";
 import { articleRoutes } from "./routes/article.routes.js";
 import { rateLimitMiddleware, contentValidationMiddleware, securityMiddleware } from "./middleware/rateLimit.js";
 import { cacheMiddleware, cacheStatsRoute } from "./middleware/cache.js";
+import { statsMiddleware, statsRoute } from "./middleware/logging.js";
 import { checkDatabaseHealth, runMigrations } from "./db/index.js";
 
 const app = new Elysia()
+  // Add stats middleware
+  .use(statsMiddleware)
+
   // Add CORS support
   .use(cors({
     origin: true, // Allow all origins in development
@@ -120,6 +124,77 @@ const app = new Elysia()
   
   // Add cache management routes
   .use(cacheStatsRoute)
+  
+  // Add logging stats routes
+  .use(statsRoute)
+
+  // Add detailed logging hooks directly to main app
+  .onRequest(({ request }) => {
+    const timestamp = new Date().toISOString();
+    const method = request.method;
+    const url = request.url;
+    const path = new URL(url).pathname;
+    
+    console.log(`\n🔵 [${timestamp}] ${method} ${path}`);
+    console.log(`   URL: ${url}`);
+    
+    // Log headers (excluding sensitive ones)
+    const headers = Object.fromEntries(
+      Object.entries(request.headers).filter(([key]) => 
+        !key.toLowerCase().includes('authorization') && 
+        !key.toLowerCase().includes('cookie')
+      )
+    );
+    if (Object.keys(headers).length > 0) {
+      console.log(`   Headers:`, headers);
+    }
+  })
+  
+  .onBeforeHandle(({ body, request }) => {
+    // Log request body for non-GET requests (truncate if too long)
+    if (body && typeof body === 'object') {
+      const bodyStr = JSON.stringify(body, null, 2);
+      const truncatedBody = bodyStr.length > 1000 
+        ? bodyStr.substring(0, 1000) + '...\n  [TRUNCATED]'
+        : bodyStr;
+      console.log(`   📄 Request Body:\n${truncatedBody}`);
+    } else if (body && typeof body === 'string' && body.length > 0) {
+      const truncatedBody = body.length > 500 
+        ? body.substring(0, 500) + '...[TRUNCATED]'
+        : body;
+      console.log(`   📄 Request Body: ${truncatedBody}`);
+    }
+  })
+  
+  .onAfterHandle(({ response, request, set }) => {
+    const timestamp = new Date().toISOString();
+    const method = request.method;
+    const url = request.url;
+    const path = new URL(url).pathname;
+    const status = typeof set.status === 'number' ? set.status : 200;
+    
+    // Determine status color
+    const statusColor = status >= 500 ? '🔴' : 
+                       status >= 400 ? '🟡' : 
+                       status >= 300 ? '🟠' : '🟢';
+    
+    console.log(`${statusColor} [${timestamp}] ${method} ${path} - ${status}`);
+    
+    // Log response body (truncate if too long)
+    if (response && typeof response === 'object') {
+      try {
+        const responseStr = JSON.stringify(response, null, 2);
+        const truncatedResponse = responseStr.length > 1000 
+          ? responseStr.substring(0, 1000) + '...\n  [TRUNCATED]'
+          : responseStr;
+        console.log(`   📤 Response Body:\n${truncatedResponse}`);
+      } catch (error) {
+        console.log(`   📤 Response Body: [Unable to stringify response]`);
+      }
+    }
+    
+    console.log(`   ⏱️  Complete\n`);
+  })
 
   // Error handling
   .onError(({ code, error, set }) => {
@@ -160,7 +235,6 @@ const app = new Elysia()
         };
     }
   })
-
   .listen({
     port: process.env.PORT || 3000,
     hostname: process.env.HOST || "0.0.0.0"
