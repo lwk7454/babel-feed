@@ -182,4 +182,45 @@ class SecureTokenManagerTest {
         tokenManager.setEmailVerified(true)
         assertEquals(AuthState.Authenticated, tokenManager.getAuthState())
     }
+
+    @Test
+    fun `getAuthState should return PendingVerification for verified user with expired token`() {
+        // Setup: User was previously verified (email verified = true) with tokens
+        tokenManager.storeTokens(
+            accessToken = "access-token",
+            refreshToken = "refresh-token", 
+            userId = "user-id",
+            guestId = "guest-id",
+            emailVerified = true
+        )
+        
+        // Verify authenticated state initially
+        assertEquals(AuthState.Authenticated, tokenManager.getAuthState())
+        
+        // Simulate token expiry by clearing only access token but keeping refresh token and verified status
+        tokenManager.clearAuthTokens()
+        
+        // Set email verified back to true (since clearAuthTokens sets it to false)
+        tokenManager.setEmailVerified(true)
+        
+        // Should be PendingVerification because user was verified but token expired
+        assertEquals(AuthState.PendingVerification, tokenManager.getAuthState())
+    }
+
+    @Test
+    fun `getAuthState should prioritize email verification over guest status`() {
+        // Setup: Store guest info first
+        tokenManager.storeGuestInfo("guest-id", "user-id")
+        assertEquals(AuthState.Guest, tokenManager.getAuthState())
+        
+        // User completes email verification but token expires
+        tokenManager.setEmailVerified(true)
+        
+        // Should be PendingVerification because email is verified, not Guest
+        assertEquals(AuthState.PendingVerification, tokenManager.getAuthState())
+        
+        // If they get a new access token, they should be Authenticated
+        tokenManager.storeTokens("new-access", "refresh", emailVerified = true)
+        assertEquals(AuthState.Authenticated, tokenManager.getAuthState())
+    }
 }

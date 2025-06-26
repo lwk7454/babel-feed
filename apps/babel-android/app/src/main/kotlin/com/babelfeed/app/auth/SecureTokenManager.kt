@@ -163,12 +163,14 @@ class SecureTokenManager @Inject constructor(
      */
     fun getAuthState(): AuthState {
         val accessToken = getAccessToken()
+        val refreshToken = getRefreshToken()
         val guestId = getGuestId()
         val emailVerified = isEmailVerified()
         
         return when {
             accessToken != null && emailVerified -> AuthState.Authenticated
             accessToken != null -> AuthState.PendingVerification
+            emailVerified && (refreshToken != null || guestId != null) -> AuthState.PendingVerification
             guestId != null -> AuthState.Guest
             else -> AuthState.None
         }
