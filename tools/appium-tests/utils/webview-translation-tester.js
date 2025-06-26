@@ -2156,3 +2156,104 @@ export class WebViewTranslationTester {
   async verifyHighContrastTranslation() { return true; }
   async verifyTouchTargetSizes() { return true; }
 }
+
+/**
+ * Standalone utility functions for authentication tests
+ */
+
+/**
+ * Find element with retry logic
+ */
+export async function findElementWithRetry(selectors, options = {}) {
+  const { timeout = 10000, required = true } = options;
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    try {
+      // Try xpath first
+      if (selectors.xpath) {
+        const element = await driver.$(selectors.xpath);
+        if (await element.isDisplayed()) {
+          return element;
+        }
+      }
+      
+      // Try uiAutomator
+      if (selectors.uiAutomator) {
+        const element = await driver.$(`android=${selectors.uiAutomator}`);
+        if (await element.isDisplayed()) {
+          return element;
+        }
+      }
+      
+      // Try accessibility id
+      if (selectors.accessibilityId) {
+        const element = await driver.$(`~${selectors.accessibilityId}`);
+        if (await element.isDisplayed()) {
+          return element;
+        }
+      }
+      
+      // Try className
+      if (selectors.className) {
+        const element = await driver.$(selectors.className);
+        if (await element.isDisplayed()) {
+          return element;
+        }
+      }
+      
+      // Try text
+      if (selectors.text) {
+        const element = await driver.$(`android=new UiSelector().textContains("${selectors.text}")`);
+        if (await element.isDisplayed()) {
+          return element;
+        }
+      }
+      
+      await driver.pause(500);
+    } catch (error) {
+      if (Date.now() - startTime >= timeout) {
+        if (required) {
+          throw new Error(`Element not found after ${timeout}ms: ${JSON.stringify(selectors)}`);
+        }
+        return null;
+      }
+      await driver.pause(500);
+    }
+  }
+  
+  if (required) {
+    throw new Error(`Element not found after ${timeout}ms: ${JSON.stringify(selectors)}`);
+  }
+  return null;
+}
+
+/**
+ * Take screenshot with timestamp
+ */
+export async function takeScreenshot(filename) {
+  const timestamp = Date.now();
+  const screenshotPath = `./reports/screenshots/${filename}-${timestamp}.png`;
+  await driver.saveScreenshot(screenshotPath);
+  console.log(`📸 Screenshot saved: ${screenshotPath}`);
+  return screenshotPath;
+}
+
+/**
+ * Restart the app
+ */
+export async function restartApp() {
+  console.log('🔄 Restarting app...');
+  
+  await driver.executeScript('mobile: shell', {
+    command: 'am force-stop com.babelfeed.app.debug'
+  });
+  await driver.pause(2000);
+  
+  await driver.executeScript('mobile: shell', {
+    command: 'am start -n com.babelfeed.app.debug/com.babelfeed.app.MainActivity'
+  });
+  await driver.pause(3000);
+  
+  console.log('✅ App restarted');
+}

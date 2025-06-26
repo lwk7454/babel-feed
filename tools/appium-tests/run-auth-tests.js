@@ -97,7 +97,7 @@ async function runTestSuite(suiteName, testFile) {
     log(COLORS.MAGENTA, `\n🧪 Running ${suiteName}...`);
     
     try {
-        const command = `npx wdio run --spec tests/${testFile}`;
+        const command = `npx wdio run wdio.conf.js --spec tests/${testFile}`;
         log(COLORS.WHITE, `Executing: ${command}`);
         
         const output = execSync(command, { 
@@ -212,15 +212,20 @@ if (args.includes('--quick')) {
     checkPrerequisites().then(ok => {
         if (!ok) process.exit(1);
         
-        return runTestSuite(
-            'Core Authentication State Logic', 
-            'auth-state-logic-verification.test.js'
-        );
-    }).then(success => {
-        if (success) {
+        try {
+            const command = `npx wdio run wdio.conf.js --spec tests/auth-state-logic-verification.test.js`;
+            log(COLORS.WHITE, `Executing: ${command}`);
+            
+            const output = execSync(command, { 
+                encoding: 'utf-8',
+                stdio: 'inherit',
+                cwd: process.cwd()
+            });
+            
             log(COLORS.GREEN, '\n🎉 QUICK TESTS PASSED');
             process.exit(0);
-        } else {
+        } catch (err) {
+            error(`Quick tests failed: ${err.message}`);
             log(COLORS.RED, '\n❌ QUICK TESTS FAILED');
             process.exit(1);
         }
