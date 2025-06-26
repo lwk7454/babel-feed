@@ -5,6 +5,9 @@ import com.babelfeed.app.data.models.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.google.gson.Gson
 import java.util.UUID
 import javax.inject.Inject
@@ -36,9 +39,27 @@ class AuthenticationManager @Inject constructor(
         val state = tokenManager.getAuthState()
         _authState.value = state
         
-        // If we have tokens, try to get user profile
+        // If we have tokens, try to get user profile silently in background
         if (state == AuthState.Authenticated || state == AuthState.PendingVerification) {
-            // Will be called when needed
+            // Launch coroutine to restore user profile without blocking initialization
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    // First try to get current user
+                    getCurrentUser()
+                } catch (e: Exception) {
+                    // If it fails, try to refresh tokens first
+                    try {
+                        val refreshed = refreshTokenIfNeeded()
+                        if (refreshed != null) {
+                            // Retry getting user profile after refresh
+                            getCurrentUser()
+                        }
+                    } catch (refreshException: Exception) {
+                        // Both attempts failed - user will need to re-authenticate
+                        // The auth state will be corrected by refreshTokenIfNeeded() calling logout
+                    }
+                }
+            }
         }
     }
 
@@ -153,6 +174,8 @@ class AuthenticationManager @Inject constructor(
             val response = apiService.resendVerificationCode(request)
             
             if (response.success) {
+                // Set auth state to pending verification for navigation
+                _authState.value = AuthState.PendingVerification
                 Result.success(Unit)
             } else {
                 Result.failure(Exception(response.message))

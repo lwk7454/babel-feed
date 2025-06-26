@@ -42,7 +42,6 @@ fun ProfileScreen(
     val context = LocalContext.current
     
     var emailInput by remember { mutableStateOf("") }
-    var verificationTokenInput by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.initializeProfile()
@@ -171,7 +170,9 @@ fun ProfileScreen(
             AuthState.PendingVerification -> {
                 // Navigate to verification screen automatically for pending verification
                 LaunchedEffect(authState) {
-                    currentUser?.email?.let { email ->
+                    // Use pending verification email from ViewModel, fallback to current user email
+                    val emailToUse = viewModel.pendingVerificationEmail.value ?: currentUser?.email
+                    emailToUse?.let { email ->
                         onNavigateToVerification?.invoke(email)
                     }
                 }
@@ -209,7 +210,6 @@ fun ProfileScreen(
             PreferencesSection(
                 preferences = userPreferences,
                 currentLocale = viewModel.localeManager.getCurrentLocale(context),
-                isVerifiedUser = currentUser?.userStatus == "verified" || currentUser?.userStatus == "vip",
                 onUpdatePreferences = { preferences ->
                     viewModel.updatePreferences(preferences)
                 }
@@ -347,7 +347,6 @@ private fun AuthenticatedUserCard(
 private fun PreferencesSection(
     preferences: UserPreferences?,
     currentLocale: String,
-    isVerifiedUser: Boolean,
     onUpdatePreferences: (UserPreferences) -> Unit
 ) {
     Card {

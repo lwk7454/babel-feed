@@ -3,9 +3,27 @@ package com.babelfeed.app.utils
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.babelfeed.app.ui.theme.LocalLocaleContext
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Composable function to get localized string resources using app's locale setting
+ */
+@Composable
+fun localizedStringResource(@StringRes id: Int, vararg formatArgs: Any): String {
+    val localeContext = LocalLocaleContext.current
+    val result = localeContext.getString(id, *formatArgs)
+    
+    // Debug logging - remove after testing
+    android.util.Log.d("LocaleManager", "Getting string resource $id with locale: ${localeContext.resources.configuration.locales[0]} -> $result")
+    
+    return result
+}
 
 /**
  * Manages app locale and language switching functionality
@@ -15,6 +33,11 @@ class LocaleManager @Inject constructor() {
     
     companion object {
         private const val PREFERENCE_LOCALE = "locale_preference"
+        
+        /**
+         * Default app language when no user preference is set
+         */
+        const val DEFAULT_LANGUAGE = "en"
         
         /**
          * Supported language codes mapped to their display names
@@ -46,11 +69,11 @@ class LocaleManager @Inject constructor() {
     }
     
     /**
-     * Get the current app locale
+     * Get the current app locale (user's selected language or default)
      */
     fun getCurrentLocale(context: Context): String {
         val sharedPreferences = context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        return sharedPreferences.getString(PREFERENCE_LOCALE, getSystemLocale()) ?: "en"
+        return sharedPreferences.getString(PREFERENCE_LOCALE, null) ?: DEFAULT_LANGUAGE
     }
     
     /**
@@ -62,23 +85,14 @@ class LocaleManager @Inject constructor() {
     }
     
     /**
-     * Get system locale language code
+     * Check if user has explicitly set a language preference
      */
-    private fun getSystemLocale(): String {
-        val systemLocale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Locale.getDefault()
-        } else {
-            @Suppress("DEPRECATION")
-            Locale.getDefault()
-        }
-        
-        return when {
-            systemLocale.language == "zh" && systemLocale.country == "CN" -> "zh-CN"
-            systemLocale.language == "zh" && systemLocale.country == "TW" -> "zh-TW"
-            systemLocale.language == "ja" -> "ja"
-            else -> "en"
-        }
+    fun hasUserSelectedLanguage(context: Context): Boolean {
+        val sharedPreferences = context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        return sharedPreferences.contains(PREFERENCE_LOCALE)
     }
+    
+
     
     /**
      * Convert language code to Locale object

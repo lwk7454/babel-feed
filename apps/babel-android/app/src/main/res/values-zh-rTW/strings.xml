@@ -123,4 +123,60 @@
     <string name="error_failed_get_user_profile">取得用戶資料失敗</string>
     <string name="error_failed_get_preferences">取得設定失敗</string>
     <string name="error_failed_update_preferences_auth">更新設定失敗</string>
+    
+    <!-- Welcome Screen -->
+    <string name="choose_your_language">選擇您的首選語言開始使用</string>
+    <string name="select_language">選擇語言</string>
+    <string name="continue_button">繼續</string>
+    <string name="use_system_language">使用系統語言</string>
+    <string name="email_verification_for_sync">輸入您的電子郵件以在裝置間同步設定。新用戶和現有用戶使用相同的驗證流程。</string>
+    <string name="verify_email_address">驗證電子郵件地址</string>
+    <string name="resend_code">重新發送驗證碼</string>
+    <string name="pending_verification">待驗證</string>
+    <string name="verification_email_sent">請檢查您的電子郵件（%1$s）以取得4位驗證碼。</string>
+    
+    <!-- WebView -->
+    <string name="dynamic_mode">動態模式</string>
+    <string name="ad_block">廣告攔截</string>
+    
+    <!-- User-Friendly Error Messages -->
+    <string name="error_network_connection">請檢查您的網路連線並重試。</string>
+    <string name="error_server_unavailable">我們的伺服器暫時無法使用。請稍後重試。</string>
+    <string name="error_invalid_email">請輸入有效的電子郵件地址。</string>
+    <string name="error_invalid_verification_code">驗證碼不正確。請檢查後重試。</string>
+    <string name="error_verification_code_expired">您的驗證碼已過期。請重新取得。</string>
+    <string name="error_email_already_exists">此電子郵件已關聯到一個帳戶。請嘗試登入。</string>
+    <string name="error_email_already_verified">您的電子郵件已驗證。您可以直接登入。</string>
+    <string name="error_guest_session_expired">您的訪客會話已過期。請重新開始。</string>
+    <string name="error_account_recovery_needed">需要帳戶恢復。請聯繫客服。</string>
+    
+    <!-- Success Messages -->
+    <string name="success_verification_code_sent">驗證碼已發送到您的電子郵件！</string>
+    <string name="success_email_verified">電子郵件驗證成功！歡迎使用巴別新聞。</string>
+    <string name="success_preferences_saved">您的設定已儲存。</string>
+    <string name="success_account_created">帳戶建立成功！請檢查您的電子郵件進行驗證。</string>
+    
+    <!-- User Status Labels -->
+    <string name="user_status_guest">訪客</string>
+    <string name="user_status_verified">已驗證</string>
+    <string name="user_status_vip">VIP</string>
+    
+    <!-- Profile Screen Updates -->
+    <string name="email_verification_prompt">透過驗證將您的訪客帳戶綁定到電子郵件地址</string>
+    <string name="verify">驗證</string>
+    <string name="navigating_to_verification">正在導航至驗證頁面…</string>
+    
+    <!-- Verification Screen -->
+    <string name="verification">驗證</string>
+    <string name="verification_email_sent_with_otp">驗證電子郵件已發送，包含一次性密碼</string>
+    <string name="email_sent_to">電子郵件已發送至 %1$s</string>
+    <string name="otp_4_digit_code">4位一次性密碼</string>
+    <string name="submit">提交</string>
+    <string name="resend_in_seconds">%1$d 秒後重新發送</string>
+    <string name="sending_verification_email">正在發送驗證電子郵件…</string>
+    <string name="verifying_code">正在驗證驗證碼…</string>
+    <string name="verification_successful">驗證成功！</string>
+    <string name="returning_to_profile">返回個人資料頁面…</string>
+    <string name="success">成功</string>
+    
 </resources>

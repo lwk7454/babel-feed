@@ -4,6 +4,7 @@ import android.webkit.WebView
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,6 +74,14 @@ fun WebViewScreen(
     var isAdBlockingEnabled by remember { mutableStateOf(restoredState.isAdBlockingEnabled) }
     var isDynamicModeEnabled by remember { mutableStateOf(restoredState.isDynamicModeEnabled) }
     var targetLanguage by remember { mutableStateOf(restoredState.targetLanguage) }
+    
+    // Update target language when URL changes or on first load to pick up latest preferences
+    LaunchedEffect(url) {
+        val currentPreferredLanguage = stateManager.getUserPreferredTargetLanguage()
+        if (targetLanguage != currentPreferredLanguage) {
+            targetLanguage = currentPreferredLanguage
+        }
+    }
     var extractedContent by remember { mutableStateOf<ExtractedContent?>(null) }
     var translationBatch by remember { mutableStateOf<TranslationBatch?>(null) }
     var dynamicContentUpdate by remember { mutableStateOf<DynamicContentUpdate?>(null) }

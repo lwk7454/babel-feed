@@ -27,13 +27,19 @@ class MainActivity : ComponentActivity() {
     
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(newBase?.let { context ->
-            val savedLocale = LocaleManager().getCurrentLocale(context)
-            LocaleManager().setLocale(context, savedLocale)
+            // Create LocaleManager instance directly since Hilt injection hasn't happened yet
+            val localeManagerInstance = LocaleManager()
+            val savedLocale = localeManagerInstance.getCurrentLocale(context)
+            localeManagerInstance.setLocale(context, savedLocale)
         })
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Apply locale after Hilt injection is complete
+        val appLocale = localeManager.getCurrentLocale(this)
+        localeManager.setLocale(this, appLocale)
         
         // Configure system bars for dark mode
         enableEdgeToEdge(
@@ -46,7 +52,11 @@ class MainActivity : ComponentActivity() {
         )
         
         setContent {
-            BabelFeedTheme {
+            // Create locale-aware context for the theme
+            val currentLocale = localeManager.getCurrentLocale(this@MainActivity)
+            val localeContext = localeManager.setLocale(this@MainActivity, currentLocale)
+            
+            BabelFeedTheme(localeContext = localeContext) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

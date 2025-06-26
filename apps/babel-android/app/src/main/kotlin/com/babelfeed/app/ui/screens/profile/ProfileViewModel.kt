@@ -43,6 +43,9 @@ class ProfileViewModel @Inject constructor(
     private val _shouldRecreateActivity = MutableStateFlow(false)
     val shouldRecreateActivity: StateFlow<Boolean> = _shouldRecreateActivity.asStateFlow()
 
+    private val _pendingVerificationEmail = MutableStateFlow<String?>(null)
+    val pendingVerificationEmail: StateFlow<String?> = _pendingVerificationEmail.asStateFlow()
+
     private val preferencesManager by lazy { PreferencesManager(localeManager) }
 
     fun initializeProfile() {
@@ -156,13 +159,33 @@ class ProfileViewModel @Inject constructor(
                 return@launch
             }
             
+            // Try to create account first (for new users)
             authManager.createAccountFromGuest(email)
                 .onSuccess {
+                    // Store email for navigation
+                    _pendingVerificationEmail.value = email
                     // Account creation initiated, waiting for verification
                     _successMessage.value = getApplication<Application>().getString(R.string.success_account_created)
                 }
                 .onFailure { exception ->
-                    _error.value = getUserFriendlyErrorMessage(exception)
+                    // If email already exists, try to resend verification code (for existing users)
+                    val errorMessage = exception.message?.lowercase() ?: ""
+                    if (errorMessage.contains("email already") || errorMessage.contains("already registered")) {
+                        // Email already exists - this is an existing user trying to login
+                        authManager.resendVerificationCode(email)
+                            .onSuccess {
+                                // Store email for navigation
+                                _pendingVerificationEmail.value = email
+                                // Verification code sent to existing user
+                                _successMessage.value = getApplication<Application>().getString(R.string.success_verification_code_sent)
+                            }
+                            .onFailure { resendException ->
+                                _error.value = getUserFriendlyErrorMessage(resendException)
+                            }
+                    } else {
+                        // Other error - show original error
+                        _error.value = getUserFriendlyErrorMessage(exception)
+                    }
                 }
             
             _isLoading.value = false

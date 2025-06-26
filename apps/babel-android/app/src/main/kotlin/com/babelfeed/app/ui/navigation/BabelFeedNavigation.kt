@@ -142,9 +142,7 @@ fun BabelFeedNavigation(
                 email = email,
                 onBackClick = { navController.popBackStack() },
                 onVerificationSuccess = {
-                    navController.navigate("profile") {
-                        popUpTo("verification/{email}") { inclusive = true }
-                    }
+                    navController.popBackStack()
                 }
             )
         }

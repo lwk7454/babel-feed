@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.babelfeed.app.R
+import com.babelfeed.app.utils.localizedStringResource
 import com.babelfeed.app.data.models.Article
 import com.babelfeed.app.ui.components.LanguageBadge
 import com.babelfeed.app.utils.LocaleManager
@@ -47,12 +48,12 @@ fun FeedScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(stringResource(R.string.app_name)) },
+            title = { Text(localizedStringResource(R.string.app_name)) },
             actions = {
                 IconButton(onClick = onProfileClick) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = stringResource(R.string.profile)
+                        contentDescription = localizedStringResource(R.string.profile)
                     )
                 }
             },
@@ -78,7 +79,7 @@ fun FeedScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = stringResource(R.string.no_articles_available),
+                            text = localizedStringResource(R.string.no_articles_available),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -161,7 +162,7 @@ fun ArticleCard(
                 )
             }
             Text(
-                text = stringResource(R.string.source, article.source),
+                text = localizedStringResource(R.string.source, article.source),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp)
             )

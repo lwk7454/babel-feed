@@ -123,4 +123,60 @@
     <string name="error_failed_get_user_profile">ユーザープロフィールの取得に失敗</string>
     <string name="error_failed_get_preferences">設定の取得に失敗</string>
     <string name="error_failed_update_preferences_auth">設定の更新に失敗</string>
+    
+    <!-- Welcome Screen -->
+    <string name="choose_your_language">お好みの言語を選択して開始してください</string>
+    <string name="select_language">言語を選択</string>
+    <string name="continue_button">続行</string>
+    <string name="use_system_language">システム言語を使用</string>
+    <string name="email_verification_for_sync">デバイス間で設定を同期するためにメールアドレスを入力してください。新規ユーザーと既存ユーザーは同じ認証プロセスを使用します。</string>
+    <string name="verify_email_address">メールアドレスを認証</string>
+    <string name="resend_code">認証コードを再送信</string>
+    <string name="pending_verification">認証待ち</string>
+    <string name="verification_email_sent">メール（%1$s）をご確認いただき、4桁の認証コードをご入力ください。</string>
+    
+    <!-- WebView -->
+    <string name="dynamic_mode">動的モード</string>
+    <string name="ad_block">広告ブロック</string>
+    
+    <!-- User-Friendly Error Messages -->
+    <string name="error_network_connection">インターネット接続をご確認のうえ、もう一度お試しください。</string>
+    <string name="error_server_unavailable">サーバーが一時的に利用できません。後でもう一度お試しください。</string>
+    <string name="error_invalid_email">有効なメールアドレスを入力してください。</string>
+    <string name="error_invalid_verification_code">認証コードが正しくありません。確認してもう一度入力してください。</string>
+    <string name="error_verification_code_expired">認証コードの有効期限が切れています。新しいコードをリクエストしてください。</string>
+    <string name="error_email_already_exists">このメールアドレスは既にアカウントに関連付けられています。代わりにサインインしてください。</string>
+    <string name="error_email_already_verified">メールアドレスは既に認証済みです。直接サインインできます。</string>
+    <string name="error_guest_session_expired">ゲストセッションの有効期限が切れました。最初からやり直してください。</string>
+    <string name="error_account_recovery_needed">アカウント復旧が必要です。サポートにお問い合わせください。</string>
+    
+    <!-- Success Messages -->
+    <string name="success_verification_code_sent">認証コードがメールに送信されました！</string>
+    <string name="success_email_verified">メール認証が完了しました！バベルフィードへようこそ。</string>
+    <string name="success_preferences_saved">設定が保存されました。</string>
+    <string name="success_account_created">アカウントが正常に作成されました！認証のためメールをご確認ください。</string>
+    
+    <!-- User Status Labels -->
+    <string name="user_status_guest">ゲスト</string>
+    <string name="user_status_verified">認証済み</string>
+    <string name="user_status_vip">VIP</string>
+    
+    <!-- Profile Screen Updates -->
+    <string name="email_verification_prompt">認証を通じてゲストアカウントをメールアドレスにバインド</string>
+    <string name="verify">認証</string>
+    <string name="navigating_to_verification">認証ページに移動中…</string>
+    
+    <!-- Verification Screen -->
+    <string name="verification">認証</string>
+    <string name="verification_email_sent_with_otp">ワンタイムパスワード付きの認証メールを送信しました</string>
+    <string name="email_sent_to">%1$s にメールを送信しました</string>
+    <string name="otp_4_digit_code">4桁のワンタイムパスワード</string>
+    <string name="submit">送信</string>
+    <string name="resend_in_seconds">%1$d 秒後に再送信</string>
+    <string name="sending_verification_email">認証メールを送信中…</string>
+    <string name="verifying_code">コードを認証中…</string>
+    <string name="verification_successful">認証が完了しました！</string>
+    <string name="returning_to_profile">プロフィールに戻ります…</string>
+    <string name="success">成功</string>
+    
 </resources>

@@ -84,7 +84,7 @@ class TranslationStateManager(private val context: Context) {
         Log.d(TAG, "TranslationStateManager initialized with ${domainConfigs.size} domain configs")
     }
     
-    private fun getUserPreferredTargetLanguage(): String {
+    fun getUserPreferredTargetLanguage(): String {
         return try {
             val entryPoint = EntryPointAccessors.fromApplication(
                 context.applicationContext,

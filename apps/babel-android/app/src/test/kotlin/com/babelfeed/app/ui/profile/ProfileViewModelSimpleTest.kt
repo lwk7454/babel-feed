@@ -1,6 +1,8 @@
 package com.babelfeed.app.ui.profile
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import com.babelfeed.app.auth.AuthState
 import com.babelfeed.app.auth.AuthenticationManager
 import com.babelfeed.app.data.models.*
@@ -17,6 +19,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
@@ -38,6 +42,12 @@ class ProfileViewModelSimpleTest {
 
     @Mock
     private lateinit var localeManager: LocaleManager
+
+    @Mock
+    private lateinit var sharedPreferences: SharedPreferences
+
+    @Mock
+    private lateinit var sharedPreferencesEditor: SharedPreferences.Editor
 
     private lateinit var viewModel: ProfileViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -70,6 +80,21 @@ class ProfileViewModelSimpleTest {
         // Mock AuthenticationManager flows
         whenever(authManager.authState).thenReturn(MutableStateFlow(AuthState.Authenticated))
         whenever(authManager.currentUser).thenReturn(MutableStateFlow(mockUser))
+        whenever(authManager.isAuthenticated()).thenReturn(true)
+        
+        // Mock LocaleManager
+        whenever(localeManager.getCurrentLocale(application)).thenReturn("en")
+        whenever(localeManager.isLanguageSupported(any())).thenReturn(true)
+        
+        // Mock Application getString method for error messages
+        whenever(application.getString(any())).thenReturn("Our servers are temporarily unavailable. Please try again later.")
+        
+        // Mock SharedPreferences
+        whenever(application.getSharedPreferences(eq("app_preferences"), eq(Context.MODE_PRIVATE))).thenReturn(sharedPreferences)
+        whenever(sharedPreferences.edit()).thenReturn(sharedPreferencesEditor)
+        whenever(sharedPreferencesEditor.putString(any(), any())).thenReturn(sharedPreferencesEditor)
+        whenever(sharedPreferencesEditor.putBoolean(any(), any())).thenReturn(sharedPreferencesEditor)
+        whenever(sharedPreferencesEditor.apply()).then { }
         
         viewModel = ProfileViewModel(application, authManager, userRepository, localeManager)
     }
@@ -95,7 +120,7 @@ class ProfileViewModelSimpleTest {
     }
 
     @Test
-    fun `getUserPreferences sets error on failure`() = runTest {
+    fun `getUserPreferences uses default preferences on failure`() = runTest {
         // Given
         val errorMessage = "Failed to load preferences"
         whenever(userRepository.getUserPreferences()).thenReturn(
@@ -107,19 +132,22 @@ class ProfileViewModelSimpleTest {
         testScheduler.advanceUntilIdle()
 
         // Then
-        assertNull(viewModel.userPreferences.value)
+        // Should use default preferences instead of setting error
+        assertEquals("en", viewModel.userPreferences.value?.preferredLanguages?.first())
+        assertEquals("system", viewModel.userPreferences.value?.themePreference)
         assertEquals(false, viewModel.isLoading.value)
-        assertTrue(viewModel.error.value?.contains(errorMessage) == true)
+        // No error should be set for preferences loading failures
+        assertNull(viewModel.error.value)
     }
 
     @Test
-    fun `updatePreferences updates state on success`() = runTest {
+    fun `updatePreferences updates state on success for verified user`() = runTest {
         // Given
         val updatedPreferences = mockPreferences.copy(
             themePreference = "dark",
             updatedAt = "2025-06-23T11:00:00Z"
         )
-        whenever(userRepository.updateUserPreferences(updatedPreferences)).thenReturn(
+        whenever(userRepository.saveUserSettings(updatedPreferences)).thenReturn(
             Result.success(updatedPreferences)
         )
 
@@ -131,15 +159,15 @@ class ProfileViewModelSimpleTest {
         assertEquals(updatedPreferences, viewModel.userPreferences.value)
         assertEquals(false, viewModel.isLoading.value)
         assertNull(viewModel.error.value)
-        verify(userRepository).updateUserPreferences(updatedPreferences)
+        verify(userRepository).saveUserSettings(updatedPreferences)
     }
 
     @Test
-    fun `updatePreferences sets error on failure`() = runTest {
+    fun `updatePreferences sets error on failure for verified user`() = runTest {
         // Given
-        val errorMessage = "Failed to update preferences"
+        val errorMessage = "Failed to save settings"
         val updatedPreferences = mockPreferences.copy(themePreference = "dark")
-        whenever(userRepository.updateUserPreferences(updatedPreferences)).thenReturn(
+        whenever(userRepository.saveUserSettings(updatedPreferences)).thenReturn(
             Result.failure(Exception(errorMessage))
         )
 
@@ -149,8 +177,8 @@ class ProfileViewModelSimpleTest {
 
         // Then
         assertEquals(false, viewModel.isLoading.value)
-        assertTrue(viewModel.error.value?.contains(errorMessage) == true)
-        verify(userRepository).updateUserPreferences(updatedPreferences)
+        assertTrue(viewModel.error.value?.contains("Our servers are temporarily unavailable") == true)
+        verify(userRepository).saveUserSettings(updatedPreferences)
     }
 
     @Test

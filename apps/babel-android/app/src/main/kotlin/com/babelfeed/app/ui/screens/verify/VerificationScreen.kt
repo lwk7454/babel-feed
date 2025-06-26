@@ -86,20 +86,6 @@ fun VerificationScreen(
             }
             
             VerificationUiState.EmailSent -> {
-                // Instruction message
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Text(
-                        text = stringResource(R.string.verification_email_sent_with_otp),
-                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                
                 Text(
                     text = stringResource(R.string.email_sent_to, email),
                     style = MaterialTheme.typography.bodyMedium,

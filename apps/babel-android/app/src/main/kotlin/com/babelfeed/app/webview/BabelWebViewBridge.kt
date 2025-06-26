@@ -11,6 +11,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import java.io.EOFException
+import java.io.IOException
 import com.babelfeed.app.utils.PreferencesManager
 import com.babelfeed.app.data.models.BatchedTranslationRequest
 import com.babelfeed.app.data.models.BatchedTranslationElement
@@ -382,27 +384,27 @@ class BabelWebViewBridge(
                     val apiService = translationService.getApiService()
                     val responseBody = apiService.translateBatched(batchRequest)
                     
-                    // Process streaming NDJSON response line by line  
+                    // Process streaming SSE/NDJSON response line by line  
                     responseBody.byteStream().bufferedReader().use { reader ->
                         var line: String?
                         while (reader.readLine().also { line = it } != null) {
-                            line?.let { ndjsonLine ->
-                                if (ndjsonLine.trim().isNotEmpty()) {
-                                    try {
-                                        // Handle Server-Sent Events (SSE) format properly
-                                        val cleanedLine = when {
-                                            ndjsonLine.startsWith("data: ") -> ndjsonLine.removePrefix("data: ").trim()
-                                            ndjsonLine.startsWith("id: ") -> {
-                                                // Skip SSE id lines as they're not JSON data
-                                                Log.d(TAG, "Skipping SSE id line: $ndjsonLine")
-                                                return@let
+                                line?.let { ndjsonLine ->
+                                    if (ndjsonLine.trim().isNotEmpty()) {
+                                        try {
+                                            // Handle Server-Sent Events (SSE) format properly
+                                            val cleanedLine = when {
+                                                ndjsonLine.startsWith("data: ") -> ndjsonLine.removePrefix("data: ").trim()
+                                                ndjsonLine.startsWith("id: ") -> {
+                                                    // Skip SSE id lines as they're not JSON data
+                                                    Log.d(TAG, "Skipping SSE id line: $ndjsonLine")
+                                                    return@let
+                                                }
+                                                ndjsonLine.trim().isEmpty() -> {
+                                                    // Skip empty lines (SSE heartbeat)
+                                                    return@let
+                                                }
+                                                else -> ndjsonLine.trim()
                                             }
-                                            ndjsonLine.trim().isEmpty() -> {
-                                                // Skip empty lines (SSE heartbeat)
-                                                return@let
-                                            }
-                                            else -> ndjsonLine.trim()
-                                        }
                                         
                                         if (cleanedLine.isNotEmpty() && cleanedLine.startsWith("{")) {
                                             // Try to parse as BatchedTranslationResult first (individual translation)
@@ -447,6 +449,10 @@ class BabelWebViewBridge(
                     }
                     
                     Log.d(TAG, "Completed streaming translation: ${translations.size} elements processed")
+                } catch (e: EOFException) {
+                    Log.d(TAG, "Stream ended normally (EOF), completed with ${translations.size} translations")
+                } catch (e: IOException) {
+                    Log.w(TAG, "IO error during batch translation, using ${translations.size} completed translations", e)
                 } catch (e: Exception) {
                     Log.e(TAG, "Batched translation API call failed, falling back to individual requests", e)
                     // Fallback to original individual translation approach
