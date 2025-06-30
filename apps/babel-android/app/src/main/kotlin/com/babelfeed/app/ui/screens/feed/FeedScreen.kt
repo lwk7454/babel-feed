@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -48,12 +50,20 @@ fun FeedScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(localizedStringResource(R.string.app_name)) },
+            title = { 
+                Text(
+                    text = localizedStringResource(R.string.app_name),
+                    modifier = Modifier.semantics { contentDescription = "App Title" }
+                )
+            },
             actions = {
-                IconButton(onClick = onProfileClick) {
+                IconButton(
+                    onClick = onProfileClick,
+                    modifier = Modifier.semantics { contentDescription = "Profile" }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = localizedStringResource(R.string.profile)
+                        contentDescription = "Profile"
                     )
                 }
             },
@@ -66,7 +76,9 @@ fun FeedScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        modifier = Modifier.semantics { contentDescription = "Loading" }
+                    )
                 }
             }
             is FeedUiState.Success -> {
@@ -80,13 +92,14 @@ fun FeedScreen(
                     ) {
                         Text(
                             text = localizedStringResource(R.string.no_articles_available),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.semantics { contentDescription = "No Articles Available" }
                         )
                     }
                 } else {
                     Log.d("FeedScreen", "Rendering LazyColumn with ${articles.size} articles")
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().semantics { contentDescription = "Articles List" },
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -108,7 +121,8 @@ fun FeedScreen(
                 ) {
                     Text(
                         text = (uiState as FeedUiState.Error).message,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.semantics { contentDescription = "Error Message" }
                     )
                 }
             }
@@ -133,7 +147,7 @@ fun ArticleCard(
     Log.d("ArticleCard", "Rendering article card for: ${article.title} with locale: $currentLocale")
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Article Card ${article.getLocalizedTitle(currentLocale)}" },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
@@ -147,7 +161,7 @@ fun ArticleCard(
                 Text(
                     text = article.getLocalizedTitle(currentLocale),
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Article Title" }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 LanguageBadge(
@@ -158,13 +172,13 @@ fun ArticleCard(
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp).semantics { contentDescription = "Article Summary" }
                 )
             }
             Text(
                 text = localizedStringResource(R.string.source, article.source),
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp).semantics { contentDescription = "Article Source" }
             )
         }
     }

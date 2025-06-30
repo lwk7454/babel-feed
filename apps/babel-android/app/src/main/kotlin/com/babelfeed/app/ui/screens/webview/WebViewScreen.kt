@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.babelfeed.app.R
@@ -110,19 +112,31 @@ fun WebViewScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(stringResource(R.string.article)) },
+            title = { 
+                Text(
+                    text = stringResource(R.string.article),
+                    modifier = Modifier.semantics { contentDescription = "Full Article Screen" }
+                )
+            },
             navigationIcon = {
-                IconButton(onClick = onBackClick) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.semantics { contentDescription = "Back" }
+                ) {
                     Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
             },
             actions = {
-                IconButton(onClick = { showDropdown = true }) {
+                IconButton(
+                    onClick = { showDropdown = true },
+                    modifier = Modifier.semantics { contentDescription = "Menu" }
+                ) {
                     Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu))
                 }
                 DropdownMenu(
                     expanded = showDropdown,
-                    onDismissRequest = { showDropdown = false }
+                    onDismissRequest = { showDropdown = false },
+                    modifier = Modifier.semantics { contentDescription = "Translation Options Menu" }
                 ) {
                     DropdownMenuItem(
                         text = { 
@@ -329,7 +343,8 @@ fun WebViewScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .semantics { contentDescription = "Article WebView" },
             update = { _ ->
                 // WebView is updated
             }

@@ -24,7 +24,7 @@ export interface AppiumCapabilities {
   'appium:ignoreUnimportantViews': boolean;
 }
 
-export const getCapabilities = (): AppiumCapabilities => ({
+export const getCapabilities = (preserveAppData: boolean = false): AppiumCapabilities => ({
   'appium:platformName': 'Android',
   'appium:platformVersion': '16',
   'appium:deviceName': 'emulator-5554',
@@ -32,7 +32,7 @@ export const getCapabilities = (): AppiumCapabilities => ({
   'appium:appPackage': 'com.babelfeed.app.debug',
   'appium:appActivity': 'com.babelfeed.app.MainActivity',
   'appium:autoGrantPermissions': true,
-  'appium:noReset': false,
+  'appium:noReset': preserveAppData, // true = preserve app data, false = clear app data
   'appium:fullReset': false,
   'appium:newCommandTimeout': 600000, // 10 minutes
   'appium:androidInstallTimeout': 120000, // 2 minutes
@@ -54,5 +54,5 @@ export const appiumConfig = {
   port: 4723,
   path: '/',
   logLevel: 'info' as const,
-  capabilities: getCapabilities()
+  capabilities: getCapabilities() // default: fresh user (clear app data)
 };

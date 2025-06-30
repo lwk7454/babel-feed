@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.babelfeed.app.R
@@ -55,9 +57,17 @@ fun ArticleScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(stringResource(R.string.article_summary)) },
+            title = { 
+                Text(
+                    text = stringResource(R.string.article_summary),
+                    modifier = Modifier.semantics { contentDescription = "Article Summary Screen" }
+                )
+            },
             navigationIcon = {
-                IconButton(onClick = onBackClick) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.semantics { contentDescription = "Back" }
+                ) {
                     Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
             },
@@ -70,7 +80,9 @@ fun ArticleScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        modifier = Modifier.semantics { contentDescription = "Loading Article" }
+                    )
                 }
             }
             is ArticleUiState.Success -> {
@@ -98,6 +110,7 @@ fun ArticleScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(bottom = 16.dp)
+                                .semantics { contentDescription = "Article Title" }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         LanguageBadge(
@@ -109,14 +122,14 @@ fun ArticleScreen(
                         Text(
                             text = summary,
                             style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier.padding(bottom = 16.dp).semantics { contentDescription = "Article Summary" }
                         )
                     }
                     
                     Text(
                         text = stringResource(R.string.source, article.source),
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 16.dp).semantics { contentDescription = "Article Source" }
                     )
                     
                     Button(
@@ -126,7 +139,7 @@ fun ArticleScreen(
                             android.util.Log.d("ArticleScreen", "URL encoded: ${java.net.URLEncoder.encode(article.url, "UTF-8")}")
                             onReadFullArticle(article.url) 
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Read Full Article" }
                     ) {
                         Text(stringResource(R.string.read_full_article))
                     }
@@ -139,7 +152,8 @@ fun ArticleScreen(
                 ) {
                     Text(
                         text = (uiState as ArticleUiState.Error).message,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.semantics { contentDescription = "Error Message" }
                     )
                 }
             }

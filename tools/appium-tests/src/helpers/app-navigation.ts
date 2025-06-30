@@ -31,6 +31,12 @@ export class AppNavigation {
     await element.click();
   }
 
+  async clickElementByContentDesc(contentDesc: string, timeout = 10000): Promise<void> {
+    const element = await this.driver.$(`//*[@content-desc="${contentDesc}"]`);
+    await element.waitForDisplayed({ timeout });
+    await element.click();
+  }
+
   async enterText(selector: string, text: string, timeout = 10000): Promise<void> {
     const element = await this.driver.$(selector);
     await element.waitForDisplayed({ timeout });

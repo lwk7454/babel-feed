@@ -37,7 +37,7 @@ describe('Authentication Flows', () => {
 
   beforeEach(async () => {
     // Reset app state before each test
-    await driver.terminateApp('com.babelfeed.app.debug');
+    await driver.execute('mobile: terminateApp', { appId: 'com.babelfeed.app.debug' });
     await driver.pause(2000);
     await driver.activateApp('com.babelfeed.app.debug');
     await driver.pause(3000); // Wait for app to fully load
@@ -51,8 +51,8 @@ describe('Authentication Flows', () => {
     try {
       // Step 1: Navigate through welcome screen
       await navigation.waitForScreen('Welcome', 15000);
-      await navigation.clickElementByText('English');
-      await navigation.clickElementByText('Continue');
+      await navigation.clickElementByContentDesc('Select English');
+      await navigation.clickElementByContentDesc('Continue');
       
       // Step 2: Navigate to profile
       await navigation.waitForScreen('Feed', 15000);
@@ -96,8 +96,8 @@ describe('Authentication Flows', () => {
     try {
       // Navigate to verification flow
       await navigation.waitForScreen('Welcome', 15000);
-      await navigation.clickElementByText('English');
-      await navigation.clickElementByText('Continue');
+      await navigation.clickElementByContentDesc('Select English');
+      await navigation.clickElementByContentDesc('Continue');
       
       await navigation.waitForScreen('Feed', 15000);
       await authHelper.navigateToProfile();
@@ -130,8 +130,8 @@ describe('Authentication Flows', () => {
     try {
       // Complete authentication
       await navigation.waitForScreen('Welcome', 15000);
-      await navigation.clickElementByText('English');
-      await navigation.clickElementByText('Continue');
+      await navigation.clickElementByContentDesc('Select English');
+      await navigation.clickElementByContentDesc('Continue');
       
       await navigation.waitForScreen('Feed', 15000);
       await authHelper.navigateToProfile();
@@ -151,7 +151,7 @@ describe('Authentication Flows', () => {
       expect(authenticatedStatus.toLowerCase()).toContain('verified');
       
       // Restart app
-      await driver.terminateApp('com.babelfeed.app.debug');
+      await driver.execute('mobile: terminateApp', { appId: 'com.babelfeed.app.debug' });
       await driver.pause(2000);
       await driver.activateApp('com.babelfeed.app.debug');
       await driver.pause(3000);
@@ -178,8 +178,8 @@ describe('Authentication Flows', () => {
     try {
       // Complete authentication first
       await navigation.waitForScreen('Welcome', 15000);
-      await navigation.clickElementByText('English');
-      await navigation.clickElementByText('Continue');
+      await navigation.clickElementByContentDesc('Select English');
+      await navigation.clickElementByContentDesc('Continue');
       
       await navigation.waitForScreen('Feed', 15000);
       await authHelper.navigateToProfile();
@@ -220,8 +220,8 @@ describe('Authentication Flows', () => {
     try {
       // Start authentication flow
       await navigation.waitForScreen('Welcome', 15000);
-      await navigation.clickElementByText('English');
-      await navigation.clickElementByText('Continue');
+      await navigation.clickElementByContentDesc('Select English');
+      await navigation.clickElementByContentDesc('Continue');
       
       await navigation.waitForScreen('Feed', 15000);
       await authHelper.navigateToProfile();

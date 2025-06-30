@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { NEWS_PROVIDERS, TRANSLATION_CONFIG, AGGREGATION_CONFIG, SUPPORTED_LANGUAGES } from './config.js';
 
 describe('Configuration', () => {

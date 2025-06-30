@@ -301,10 +301,10 @@ Opens popup drawer with:
 - TranslationCoordinator: Integration of multiple components
 - ModelSelector: Model selection based on complexity
 
-### 2. Backend API Tests (ElysiaJS + Vitest)
+### 2. Backend API Tests (ElysiaJS + Bun Test)
 **Purpose**: Test API endpoints and business logic with comprehensive database scenarios
 **Location**: `apps/babel-api/src/tests/`
-**Framework**: Vitest with BDD structure (describe/it blocks)
+**Framework**: Bun test with BDD structure (describe/it blocks)
 
 #### 2.1 Unit Tests (Mock Data)
 **Coverage**: All API endpoints with mocked dependencies
@@ -341,9 +341,8 @@ Opens popup drawer with:
 - Seed data management for consistent test scenarios
 - Transaction rollback support for complex test scenarios
 
-### 3. Mobile E2E Tests (Vitest + Appium)
+### 3. Mobile E2E Tests (Bun + Appium + WebdriverIO v9)
 **Purpose**: Test complete mobile app functionality with modern test framework
-**Commands**: `bun run test:appium`, `bun run test:appium:watch`, `bun run test:appium:ui`
 **Architecture**: Self-contained test environment with automated service management
 
 **Key Test Areas:**
@@ -355,12 +354,6 @@ Opens popup drawer with:
 
 ## Modern Testing Architecture
 
-**Framework Choice: Vitest**
-- Industry-standard BDD testing framework (describe/it blocks)
-- Built-in assertions, mocking, and watch mode capabilities
-- Modern developer experience with IDE integration
-- Proper test reporting and CI/CD integration
-
 **Self-Contained Environment:**
 - Automated service startup (Backend API, Appium Server)
 - Health monitoring and verification
@@ -368,7 +361,6 @@ Opens popup drawer with:
 - Zero manual dependency management
 
 **Quality Gates:**
-- Success Threshold: ≥80% test pass rate
 - Service Management: 100% automated lifecycle
 - Developer Experience: Modern tooling with watch/UI modes
 - Test Structure: Proper BDD organization
@@ -415,7 +407,7 @@ bun run lint:android    # Code quality
 - Database Isolation: Complete test isolation with fresh DB per run
 
 **Mobile E2E Tests:**
-- Success Rate: ≥80% (account for environmental variations)
+- Success Rate: 100%
 - Performance: Full suite <60 seconds (including service startup)
 - Coverage: Core mobile app functionality and service integration
 - Automation: Zero manual service management required
@@ -423,14 +415,14 @@ bun run lint:android    # Code quality
 **Quality Gates:**
 1. All unit tests must pass (Android + Backend)
 2. All backend integration tests must pass
-3. Mobile E2E tests ≥80% success rate
+3. Mobile E2E tests 100% success rate
 4. Service management 100% automated
 5. Modern test framework standards maintained
 
 ## Testing Principles
 
 **Modern Framework Standards:**
-- Use Vitest for BDD structure (describe/it blocks)
+- Use Bun tests for BDD structure (describe/it blocks)
 - Proper assertions with meaningful error messages
 - Graceful handling of service dependencies
 - Self-contained test environments

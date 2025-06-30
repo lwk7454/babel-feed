@@ -1,0 +1,77 @@
+{
+  "name": "news-aggregator",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/news-aggregator/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "platform": "node",
+        "outputPath": "../../dist/news-aggregator",
+        "format": ["cjs"],
+        "bundle": false,
+        "main": "apps/news-aggregator/src/index.ts",
+        "tsConfig": "apps/news-aggregator/tsconfig.app.json",
+        "assets": ["apps/news-aggregator/src/assets"],
+        "generatePackageJson": true,
+        "esbuildOptions": {
+          "sourcemap": true,
+          "outExtension": {
+            ".js": ".js"
+          }
+        }
+      },
+      "configurations": {
+        "development": {},
+        "production": {
+          "generateLockfile": true,
+          "esbuildOptions": {
+            "sourcemap": false,
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        }
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun --watch src/index.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/index.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "test:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test --watch",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "test:coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test --coverage",
+        "cwd": "apps/news-aggregator"
+      }
+    }
+  }
+} 

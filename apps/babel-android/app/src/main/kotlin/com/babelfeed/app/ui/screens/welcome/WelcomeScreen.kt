@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
@@ -51,7 +53,8 @@ fun WelcomeScreen(
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { contentDescription = "Welcome" }
         )
         
         // Subtitle
@@ -80,7 +83,7 @@ fun WelcomeScreen(
                     text = stringResource(R.string.select_language),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp).semantics { contentDescription = "Select Language" }
                 )
                 
                 LocaleManager.SUPPORTED_LANGUAGES.forEach { (code, name) ->
@@ -91,12 +94,14 @@ fun WelcomeScreen(
                                 selected = selectedLanguage == code,
                                 onClick = { selectedLanguage = code }
                             )
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 4.dp)
+                            .semantics { contentDescription = "Language Option $name" },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = selectedLanguage == code,
-                            onClick = { selectedLanguage = code }
+                            onClick = { selectedLanguage = code },
+                            modifier = Modifier.semantics { contentDescription = "Select $name" }
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
@@ -126,6 +131,7 @@ fun WelcomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
+                .semantics { contentDescription = "Continue" }
         ) {
             Icon(
                 imageVector = Icons.Default.ArrowForward,
@@ -146,7 +152,8 @@ fun WelcomeScreen(
                 val systemLanguage = viewModel.getSystemLanguage()
                 viewModel.saveLanguagePreference(context, systemLanguage)
                 onLanguageSelected(systemLanguage)
-            }
+            },
+            modifier = Modifier.semantics { contentDescription = "Use System Language" }
         ) {
             Text(
                 text = stringResource(R.string.use_system_language),

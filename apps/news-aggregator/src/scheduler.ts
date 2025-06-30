@@ -85,7 +85,14 @@ export async function runOnce(): Promise<void> {
 /**
  * Get status information
  */
-export function getStatus(): object {
+export function getStatus(): {
+  isRunning: boolean;
+  interval: number;
+  batchSize: number;
+  maxArticlesPerProvider: number;
+  enabledProviders: number;
+  supportedLanguages: string[];
+} {
   return {
     isRunning,
     interval: AGGREGATION_CONFIG.intervalMinutes,

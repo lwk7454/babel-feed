@@ -39,7 +39,7 @@ describe('WebView Translation Functionality', () => {
 
   beforeEach(async () => {
     // Reset app state before each test
-    await driver.terminateApp('com.babelfeed.app.debug');
+    await driver.execute('mobile: terminateApp', { appId: 'com.babelfeed.app.debug' });
     await driver.pause(2000);
     await driver.activateApp('com.babelfeed.app.debug');
     await driver.pause(3000);

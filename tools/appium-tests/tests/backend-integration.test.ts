@@ -5,7 +5,7 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
 import { DriverManager } from '../src/driver-manager.js';
-import { AppNavigation, AuthHelper, BackendHelper } from '../src/helpers/index.js';
+import { AppNavigation, AuthHelper, BackendHelper, type ApiResponse } from '../src/helpers/index.js';
 
 describe('Backend Integration', () => {
   let driverManager: DriverManager;
@@ -37,7 +37,7 @@ describe('Backend Integration', () => {
 
   beforeEach(async () => {
     // Reset app state before each test
-    await driver.terminateApp('com.babelfeed.app.debug');
+    await driver.execute('mobile: terminateApp', { appId: 'com.babelfeed.app.debug' });
     await driver.pause(2000);
     await driver.activateApp('com.babelfeed.app.debug');
     await driver.pause(3000);
@@ -175,7 +175,7 @@ describe('Backend Integration', () => {
       }
       
       // Restart app to verify preferences persisted
-      await driver.terminateApp('com.babelfeed.app.debug');
+      await driver.execute('mobile: terminateApp', { appId: 'com.babelfeed.app.debug' });
       await driver.pause(2000);
       await driver.activateApp('com.babelfeed.app.debug');
       await driver.pause(3000);
@@ -248,9 +248,9 @@ describe('Backend Integration', () => {
     
     // Verify all requests completed successfully
     results.forEach((result, index) => {
-      if (index < 4) { // First 4 are API calls that should return success
-        expect(result.success).toBe(true);
-      } else { // Last one is health check
+      if (index < 4) { // First 4 are API calls that should return ApiResponse
+        expect((result as ApiResponse).success).toBe(true);
+      } else { // Last one is health check returning boolean
         expect(result).toBe(true);
       }
     });

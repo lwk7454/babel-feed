@@ -6,6 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +61,10 @@ fun VerificationScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBackClick) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.semantics { contentDescription = "Back" }
+            ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = stringResource(R.string.back)
@@ -70,7 +75,7 @@ fun VerificationScreen(
                 text = stringResource(R.string.verification),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).semantics { contentDescription = "Verification Screen" }
             )
             
             Spacer(modifier = Modifier.size(48.dp))
@@ -78,10 +83,13 @@ fun VerificationScreen(
 
         when (uiState) {
             VerificationUiState.SendingEmail -> {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    modifier = Modifier.semantics { contentDescription = "Sending Email" }
+                )
                 Text(
                     text = stringResource(R.string.sending_verification_email),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { contentDescription = "Sending Verification Email" }
                 )
             }
             
@@ -89,7 +97,8 @@ fun VerificationScreen(
                 Text(
                     text = stringResource(R.string.email_sent_to, email),
                     style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { contentDescription = "Email Sent Message" }
                 )
                 
                 // OTP Input Field
@@ -101,8 +110,10 @@ fun VerificationScreen(
                         }
                     },
                     label = { Text(stringResource(R.string.otp_4_digit_code)) },
-                    placeholder = { Text("0000") },
-                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("OTP") },
+                    modifier = Modifier.fillMaxWidth().semantics { 
+                        contentDescription = "OTP"
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
@@ -115,7 +126,7 @@ fun VerificationScreen(
                         }
                     },
                     enabled = otpInput.length == 4 && !isLoading,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Submit" }
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -131,7 +142,7 @@ fun VerificationScreen(
                 Button(
                     onClick = { viewModel.resendVerificationCode(email) },
                     enabled = resendCooldown == 0 && !isLoading,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Resend Code" },
                     colors = ButtonDefaults.outlinedButtonColors()
                 ) {
                     if (resendCooldown > 0) {
@@ -143,10 +154,13 @@ fun VerificationScreen(
             }
             
             VerificationUiState.Verifying -> {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    modifier = Modifier.semantics { contentDescription = "Verifying" }
+                )
                 Text(
                     text = stringResource(R.string.verifying_code),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { contentDescription = "Verifying Code" }
                 )
             }
             
@@ -159,20 +173,22 @@ fun VerificationScreen(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = stringResource(R.string.success),
-                        modifier = Modifier.size(120.dp),
+                        modifier = Modifier.size(120.dp).semantics { contentDescription = "Success Icon" },
                         tint = MaterialTheme.colorScheme.primary
                     )
                     
                     Text(
                         text = stringResource(R.string.verification_successful),
                         style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.semantics { contentDescription = "Verification Successful" }
                     )
                     
                     Text(
                         text = stringResource(R.string.returning_to_profile),
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.semantics { contentDescription = "Returning to Profile" }
                     )
                 }
             }
@@ -193,10 +209,11 @@ fun VerificationScreen(
                     Text(
                         text = errorMessage,
                         color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).semantics { contentDescription = "Error Message" }
                     )
                     TextButton(
-                        onClick = { viewModel.clearError() }
+                        onClick = { viewModel.clearError() },
+                        modifier = Modifier.semantics { contentDescription = "Dismiss Error" }
                     ) {
                         Text(stringResource(R.string.dismiss))
                     }
@@ -219,10 +236,11 @@ fun VerificationScreen(
                     Text(
                         text = message,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).semantics { contentDescription = "Success Message" }
                     )
                     TextButton(
-                        onClick = { viewModel.clearSuccessMessage() }
+                        onClick = { viewModel.clearSuccessMessage() },
+                        modifier = Modifier.semantics { contentDescription = "Dismiss Success" }
                     ) {
                         Text(stringResource(R.string.dismiss))
                     }

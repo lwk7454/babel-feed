@@ -1,0 +1,56 @@
+{
+  "name": "appium-tests",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tools/appium-tests/src",
+  "projectType": "application",
+  "tags": ["scope:tools", "type:e2e"],
+  "targets": {
+    "test": {
+      "executor": "@nx/bun:test",
+      "options": {
+        "bunConfigPath": "tools/appium-tests/bunfig.toml"
+      },
+      "configurations": {
+        "watch": {
+          "args": ["--watch"]
+        },
+        "core": {
+          "testPathPattern": ["tests/core-app.test.ts"]
+        },
+        "auth": {
+          "testPathPattern": ["tests/authentication.test.ts"]
+        },
+        "webview": {
+          "testPathPattern": ["tests/webview-translation.test.ts"]
+        },
+        "backend": {
+          "testPathPattern": ["tests/backend-integration.test.ts"]
+        },
+        "scenarios": {
+          "testPathPattern": ["tests/user-scenarios.test.ts"]
+        }
+      }
+    },
+    "setup": {
+      "executor": "@nx/bun:run",
+      "options": {
+        "script": "setup.js"
+      }
+    },
+    "doctor": {
+      "executor": "@nx/bun:run",
+      "options": {
+        "script": "doctor.js"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": [
+          "tools/appium-tests/**/*.{ts,js}"
+        ]
+      }
+    }
+  }
+}

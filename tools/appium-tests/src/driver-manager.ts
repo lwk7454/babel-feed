@@ -4,13 +4,19 @@
  */
 
 import { remote, type RemoteOptions } from 'webdriverio';
-import { appiumConfig } from './capabilities.js';
+import { appiumConfig, getCapabilities } from './capabilities.js';
 import { spawn, type ChildProcess } from 'child_process';
 
 export class DriverManager {
   private driver: WebdriverIO.Browser | null = null;
   private appiumProcess: ChildProcess | null = null;
   private backendProcess: ChildProcess | null = null;
+  private preserveAppData: boolean;
+
+  constructor(preserveAppData: boolean = false) {
+    this.preserveAppData = preserveAppData;
+    console.log(`🎯 App data mode: ${preserveAppData ? 'preserve (existing user)' : 'clear (fresh user)'}`);
+  }
 
   async startAppiumServer(): Promise<void> {
     console.log('🚀 Starting Appium server...');
@@ -35,8 +41,7 @@ export class DriverManager {
 
       this.appiumProcess.on('error', reject);
       
-      // Timeout after 30 seconds
-      setTimeout(() => reject(new Error('Appium server startup timeout')), 30000);
+      setTimeout(() => reject(new Error('Appium server startup timeout')), 10000);
     });
   }
 
@@ -65,34 +70,56 @@ export class DriverManager {
 
       this.backendProcess.on('error', reject);
       
-      // Timeout after 60 seconds
-      setTimeout(() => reject(new Error('Backend service startup timeout')), 60000);
+      setTimeout(() => reject(new Error('Backend service startup timeout')), 10000);
     });
   }
 
-  async createDriver(): Promise<WebdriverIO.Browser> {
+  async createDriver(preserveAppData?: boolean): Promise<WebdriverIO.Browser> {
     if (this.driver) {
       return this.driver;
     }
 
     console.log('📱 Creating WebDriver session...');
     
+    // Use provided preserveAppData or fall back to constructor setting
+    const shouldPreserveData = preserveAppData !== undefined ? preserveAppData : this.preserveAppData;
+    const capabilities = getCapabilities(shouldPreserveData);
+    
     const options: RemoteOptions = {
       protocol: 'http',
       hostname: appiumConfig.host,
       port: appiumConfig.port,
       path: appiumConfig.path,
-      capabilities: appiumConfig.capabilities,
+      capabilities,
       logLevel: appiumConfig.logLevel,
       waitforTimeout: 10000,
-      connectionRetryTimeout: 120000,
+      connectionRetryTimeout: 60000,
       connectionRetryCount: 3
     };
 
     this.driver = await remote(options);
-    console.log('✅ WebDriver session created');
+    console.log(`✅ WebDriver session created (${shouldPreserveData ? 'preserving' : 'clearing'} app data)`);
     
     return this.driver;
+  }
+
+  /**
+   * Reset app data by creating new session with noReset: false
+   */
+  async resetAppData(): Promise<void> {
+    if (this.driver) {
+      console.log('🔄 Resetting app data...');
+      await this.quitDriver();
+      // Next createDriver call will use fresh capabilities
+      this.preserveAppData = false;
+    }
+  }
+
+  /**
+   * Preserve app data for subsequent sessions
+   */
+  async preserveAppDataForNext(): Promise<void> {
+    this.preserveAppData = true;
   }
 
   async quitDriver(): Promise<void> {

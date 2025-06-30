@@ -2,6 +2,8 @@ package com.babelfeed.app.ui.screens.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -82,7 +84,7 @@ fun ProfileScreen(
                 text = stringResource(R.string.profile),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).semantics { contentDescription = "Profile Screen" }
             )
             
             // Placeholder for symmetry
@@ -143,7 +145,9 @@ fun ProfileScreen(
 
         // Loading indicator
         if (isLoading) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(
+                modifier = Modifier.semantics { contentDescription = "Loading" }
+            )
         }
 
         // Account Card - User Status Dependent
@@ -185,7 +189,7 @@ fun ProfileScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.navigating_to_verification),
-                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                        modifier = Modifier.padding(MaterialTheme.spacing.medium).semantics { contentDescription = "Navigating to Verification" },
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         textAlign = TextAlign.Center
                     )
@@ -234,13 +238,18 @@ private fun NoAuthCard(
         ) {
             Text(
                 text = stringResource(R.string.welcome_to_babel_feed),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { contentDescription = "Welcome to Babel Feed" }
             )
             Text(
                 text = stringResource(R.string.create_guest_profile_description),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { contentDescription = "Create Guest Profile Description" }
             )
-            Button(onClick = onCreateGuest) {
+            Button(
+                onClick = onCreateGuest,
+                modifier = Modifier.semantics { contentDescription = "Start as Guest" }
+            ) {
                 Text(stringResource(R.string.start_as_guest))
             }
         }
@@ -264,14 +273,16 @@ private fun GuestUserCard(
         ) {
             // Display user status
             Text(
-                text = stringResource(R.string.user_status_guest),
-                style = MaterialTheme.typography.titleMedium
+                text = "Status: ${stringResource(R.string.user_status_guest)}",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { contentDescription = "Status: Guest" }
             )
             
             // Email verification prompt message
             Text(
                 text = stringResource(R.string.email_verification_prompt),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics { contentDescription = "Email Verification Prompt" }
             )
             
             // Email input field with validation
@@ -279,7 +290,11 @@ private fun GuestUserCard(
                 value = emailInput,
                 onValueChange = onEmailChange,
                 label = { Text(stringResource(R.string.email_address)) },
-                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Email") },
+                modifier = Modifier.fillMaxWidth().semantics { 
+                    contentDescription = "Email"
+                    // Add hint text for Appium detection
+                },
                 isError = emailInput.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(emailInput).matches()
             )
             
@@ -287,7 +302,7 @@ private fun GuestUserCard(
             Button(
                 onClick = onVerifyClick,
                 enabled = emailInput.isNotEmpty() && android.util.Patterns.EMAIL_ADDRESS.matcher(emailInput).matches(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Verify" }
             ) {
                 Text(stringResource(R.string.verify))
             }
@@ -318,21 +333,23 @@ private fun AuthenticatedUserCard(
                     else -> stringResource(R.string.user_status_verified)
                 }
                 Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.titleMedium
+                    text = "Status: $statusText",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.semantics { contentDescription = "Status: $statusText" }
                 )
                 
                 // Display user email address
                 Text(
                     text = u.email ?: stringResource(R.string.unknown),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.semantics { contentDescription = "User Email" }
                 )
             }
             
             // Logout button → Clear profile + clear auth token + navigate to Welcome screen
             Button(
                 onClick = onLogout,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Logout" },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 )
@@ -356,7 +373,8 @@ private fun PreferencesSection(
         ) {
             Text(
                 text = stringResource(R.string.preferences),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { contentDescription = "Preferences" }
             )
             
             preferences?.let { prefs ->

@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.babelfeed.app.R
 import com.babelfeed.app.data.models.UserPreferences
@@ -32,13 +34,14 @@ fun PreferenceSection(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(20.dp).semantics { contentDescription = "$title Icon" },
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { contentDescription = "$title Section" }
             )
         }
         
@@ -87,7 +90,7 @@ fun PreferencesContent(
                 ) {
                     Text(
                         text = stringResource(R.string.auto_translate_content),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).semantics { contentDescription = "Auto Translate Content" }
                     )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Switch(
@@ -99,7 +102,8 @@ fun PreferencesContent(
                                 )
                             )
                             onUpdatePreferences(currentPreferences)
-                        }
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Auto Translate Toggle" }
                     )
                 }
                 
@@ -109,7 +113,7 @@ fun PreferencesContent(
                     Text(
                         text = stringResource(R.string.choose_your_language),
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = MaterialTheme.spacing.small)
+                        modifier = Modifier.padding(bottom = MaterialTheme.spacing.small).semantics { contentDescription = "Choose Your Language" }
                     )
                     
                     val targetLanguageOptions = listOf(
@@ -139,15 +143,20 @@ fun PreferencesContent(
                                             )
                                             onUpdatePreferences(currentPreferences)
                                         }
-                                    ),
+                                    )
+                                    .semantics { contentDescription = "Language Option $name" },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
                                     selected = currentPreferences.translationSettings.defaultTargetLanguage == code,
-                                    onClick = null
+                                    onClick = null,
+                                    modifier = Modifier.semantics { contentDescription = "Select $name" }
                                 )
                                 Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
-                                Text(name)
+                                Text(
+                                    text = name,
+                                    modifier = Modifier.semantics { contentDescription = "$name Language" }
+                                )
                             }
                         }
                     }
@@ -182,15 +191,20 @@ fun PreferencesContent(
                                     )
                                     onUpdatePreferences(currentPreferences)
                                 }
-                            ),
+                            )
+                            .semantics { contentDescription = "Theme Option $name" },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = currentPreferences.themePreference == code,
-                            onClick = null
+                            onClick = null,
+                            modifier = Modifier.semantics { contentDescription = "Select $name Theme" }
                         )
                         Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
-                        Text(name)
+                        Text(
+                            text = name,
+                            modifier = Modifier.semantics { contentDescription = "$name Theme Option" }
+                        )
                     }
                 }
             }
