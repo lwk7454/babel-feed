@@ -155,6 +155,7 @@
     <string name="success_account_created">Account created successfully! Please check your email for verification.</string>
     
     <!-- User Status Labels -->
+    <string name="user_status">Status</string>
     <string name="user_status_guest">Guest</string>
     <string name="user_status_verified">Verified</string>
     <string name="user_status_vip">VIP</string>

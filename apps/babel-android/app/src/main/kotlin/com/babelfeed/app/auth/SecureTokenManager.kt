@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.babelfeed.app.data.models.User
+import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +25,7 @@ class SecureTokenManager @Inject constructor(
         private const val USER_ID_KEY = "user_id"
         private const val GUEST_ID_KEY = "guest_id"
         private const val EMAIL_VERIFIED_KEY = "email_verified"
+        private const val USER_PROFILE_KEY = "user_profile"
     }
 
     private val encryptedPrefs: SharedPreferences by lazy {
@@ -38,6 +41,8 @@ class SecureTokenManager @Inject constructor(
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     }
+
+    private val gson = Gson()
 
     /**
      * Store authentication tokens securely
@@ -56,7 +61,7 @@ class SecureTokenManager @Inject constructor(
             userId?.let { putString(USER_ID_KEY, it) }
             guestId?.let { putString(GUEST_ID_KEY, it) }
             putBoolean(EMAIL_VERIFIED_KEY, emailVerified)
-            apply()
+            commit() // Use commit() for synchronous write in critical auth flows
         }
     }
 
@@ -68,7 +73,7 @@ class SecureTokenManager @Inject constructor(
             putString(GUEST_ID_KEY, guestId)
             putString(USER_ID_KEY, userId)
             putBoolean(EMAIL_VERIFIED_KEY, false)
-            apply()
+            commit() // Use commit() for synchronous write in critical auth flows
         }
     }
 
@@ -79,7 +84,7 @@ class SecureTokenManager @Inject constructor(
         val token = encryptedPrefs.getString(ACCESS_TOKEN_KEY, null)
         val expiry = encryptedPrefs.getLong(TOKEN_EXPIRY_KEY, 0)
         
-        return if (token != null && System.currentTimeMillis() < expiry) {
+        return if (token != null && token.isNotBlank() && System.currentTimeMillis() < expiry) {
             token
         } else {
             null
@@ -90,7 +95,8 @@ class SecureTokenManager @Inject constructor(
      * Get refresh token
      */
     fun getRefreshToken(): String? {
-        return encryptedPrefs.getString(REFRESH_TOKEN_KEY, null)
+        val token = encryptedPrefs.getString(REFRESH_TOKEN_KEY, null)
+        return if (token != null && token.isNotBlank()) token else null
     }
 
     /**
@@ -134,7 +140,39 @@ class SecureTokenManager @Inject constructor(
     fun setEmailVerified(verified: Boolean) {
         encryptedPrefs.edit().apply {
             putBoolean(EMAIL_VERIFIED_KEY, verified)
-            apply()
+            commit() // Use commit() for synchronous write in critical auth flows
+        }
+    }
+
+    /**
+     * Store user profile locally
+     */
+    fun storeUserProfile(user: User) {
+        try {
+            val userJson = gson.toJson(user)
+            encryptedPrefs.edit().apply {
+                putString(USER_PROFILE_KEY, userJson)
+                commit()
+            }
+        } catch (e: Exception) {
+            // Silently ignore JSON serialization errors
+        }
+    }
+
+    /**
+     * Get stored user profile
+     */
+    fun getUserProfile(): User? {
+        return try {
+            val userJson = encryptedPrefs.getString(USER_PROFILE_KEY, null)
+            if (userJson != null) {
+                gson.fromJson(userJson, User::class.java)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            // Silently ignore JSON deserialization errors
+            null
         }
     }
 
@@ -142,7 +180,7 @@ class SecureTokenManager @Inject constructor(
      * Clear all stored tokens and user data
      */
     fun clearAll() {
-        encryptedPrefs.edit().clear().apply()
+        encryptedPrefs.edit().clear().commit()
     }
 
     /**
@@ -154,7 +192,7 @@ class SecureTokenManager @Inject constructor(
             remove(REFRESH_TOKEN_KEY)
             remove(TOKEN_EXPIRY_KEY)
             putBoolean(EMAIL_VERIFIED_KEY, false)
-            apply()
+            commit() // Use commit() for synchronous write in critical auth flows
         }
     }
 
@@ -164,15 +202,19 @@ class SecureTokenManager @Inject constructor(
     fun getAuthState(): AuthState {
         val accessToken = getAccessToken()
         val refreshToken = getRefreshToken()
+        val storedAccessToken = encryptedPrefs.getString(ACCESS_TOKEN_KEY, null)
         val guestId = getGuestId()
         val emailVerified = isEmailVerified()
         
         return when {
-            accessToken != null && emailVerified -> AuthState.Authenticated
+            // If user is verified and has any auth tokens (valid or expired), they are authenticated
+            emailVerified && (storedAccessToken != null || refreshToken != null) -> AuthState.Authenticated
+            // If user has valid access token but not verified, they are pending verification
             accessToken != null -> AuthState.PendingVerification
-            emailVerified && (refreshToken != null || guestId != null) -> AuthState.PendingVerification
-            guestId != null -> AuthState.Guest
-            else -> AuthState.None
+            // If user is verified but has no tokens, they need to re-verify
+            emailVerified && guestId != null -> AuthState.PendingVerification
+            // Otherwise they are guest
+            else -> AuthState.Guest
         }
     }
 }
@@ -181,7 +223,6 @@ class SecureTokenManager @Inject constructor(
  * Authentication states
  */
 enum class AuthState {
-    None,           // No authentication or guest data
     Guest,          // Guest user without email
     PendingVerification, // Email provided but not verified
     Authenticated   // Fully authenticated with verified email

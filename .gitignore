@@ -8,7 +8,7 @@ dist
 /tmp
 /out-tsc
 /bazel-out
-/outputs/*.md
+/outputs/*
 
 # Node
 node_modules

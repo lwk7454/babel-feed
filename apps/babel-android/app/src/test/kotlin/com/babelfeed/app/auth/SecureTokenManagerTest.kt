@@ -168,7 +168,7 @@ class SecureTokenManagerTest {
     @Test
     fun `getAuthState should return correct authentication state`() {
         // None state
-        assertEquals(AuthState.None, tokenManager.getAuthState())
+        assertEquals(AuthState.Guest, tokenManager.getAuthState())
 
         // Guest state
         tokenManager.storeGuestInfo("guest-id", "user-id")

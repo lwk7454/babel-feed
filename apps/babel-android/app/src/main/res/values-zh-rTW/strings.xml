@@ -150,6 +150,9 @@
     <string name="error_guest_session_expired">您的訪客會話已過期。請重新開始。</string>
     <string name="error_account_recovery_needed">需要帳戶恢復。請聯繫客服。</string>
     
+    <!-- User Status Labels -->
+    <string name="user_status">狀態</string>
+    
     <!-- Success Messages -->
     <string name="success_verification_code_sent">驗證碼已發送到您的電子郵件！</string>
     <string name="success_email_verified">電子郵件驗證成功！歡迎使用巴別新聞。</string>

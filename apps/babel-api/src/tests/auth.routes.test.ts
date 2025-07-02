@@ -72,36 +72,36 @@ describe('Auth Routes', () => {
         }
       )
       
-      .post('/create-account',
+      .post('/start-verification',
         async ({ body }) => {
           try {
             const { guestId, email } = body as any;
-            const result = await testUserService.createAccountFromGuest(guestId, email);
+            const result = await testUserService.startVerification(guestId, email);
             
-            console.log(`📧 Verification email for ${email}: ${result.verificationToken}`);
+            console.log(`📧 Verification email for ${email}: OTP sent (${result.isExistingUser ? 'existing' : 'new'} user)`);
             
             return {
               success: true,
               data: {
                 userId: result.user.id,
                 email: result.user.email,
-                verificationSent: true
+                verificationSent: true,
+                isExistingUser: result.isExistingUser
               },
-              message: 'Account created successfully. Please check your email for verification.'
+              message: result.isExistingUser 
+                ? 'Verification code sent to your email address.'
+                : 'Account created successfully. Please check your email for verification.'
             };
           } catch (error) {
-            console.error('Account creation error:', error);
+            console.error('Start verification error:', error);
             
             if (error instanceof Error) {
-              if (error.message === 'Email already registered') {
-                throw new Error('Email address is already registered');
-              }
               if (error.message === 'Guest user not found') {
                 throw new Error('Invalid guest user');
               }
             }
             
-            throw new Error('Failed to create account');
+            throw new Error('Failed to start verification');
           }
         },
         {
@@ -118,18 +118,25 @@ describe('Auth Routes', () => {
             const { verificationToken } = body as any;
             const result = await testUserService.verifyEmail(verificationToken);
             
+            const responseData: any = {
+              user: {
+                id: result.user.id,
+                email: result.user.email,
+                emailVerified: result.user.emailVerified,
+                createdAt: result.user.createdAt
+              },
+              accessToken: result.tokens.accessToken,
+              refreshToken: result.tokens.refreshToken
+            };
+
+            // Include preferences for existing users
+            if (result.preferences) {
+              responseData.preferences = result.preferences;
+            }
+            
             return {
               success: true,
-              data: {
-                user: {
-                  id: result.user.id,
-                  email: result.user.email,
-                  emailVerified: result.user.emailVerified,
-                  createdAt: result.user.createdAt
-                },
-                accessToken: result.tokens.accessToken,
-                refreshToken: result.tokens.refreshToken
-              },
+              data: responseData,
               message: 'Email verified successfully'
             };
           } catch (error) {
@@ -265,8 +272,8 @@ describe('Auth Routes', () => {
     });
   });
 
-  describe('POST /api/auth/create-account', () => {
-    it('should create account from guest successfully', async () => {
+  describe('POST /api/auth/start-verification', () => {
+    it('should start verification for new user successfully', async () => {
       // First create a guest user
       const guestResponse = await app.handle(
         new Request('http://localhost/guest', {
@@ -279,9 +286,9 @@ describe('Auth Routes', () => {
       const guestData = await guestResponse.json();
       const guestId = guestData.data.guestId;
 
-      // Create account from guest
+      // Start verification for new user
       const response = await app.handle(
-        new Request('http://localhost/create-account', {
+        new Request('http://localhost/start-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -297,9 +304,11 @@ describe('Auth Routes', () => {
       expect(data.success).toBe(true);
       expect(data.data.email).toBe('test@example.com');
       expect(data.data.verificationSent).toBe(true);
+      expect(data.data.isExistingUser).toBe(false);
+      expect(data.message).toBe('Account created successfully. Please check your email for verification.');
     });
 
-    it('should return error for duplicate email', async () => {
+    it('should handle existing user verification flow', async () => {
       // Create first guest and account
       const guestResponse1 = await app.handle(
         new Request('http://localhost/guest', {
@@ -310,18 +319,29 @@ describe('Auth Routes', () => {
       );
       const guestData1 = await guestResponse1.json();
 
+      // Create and verify first user
       await app.handle(
-        new Request('http://localhost/create-account', {
+        new Request('http://localhost/start-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             guestId: guestData1.data.guestId,
-            email: 'duplicate@example.com'
+            email: 'existing@example.com'
           })
         })
       );
 
-      // Try to create second account with same email
+      // Get verification token and verify first user
+      const [user] = await testDb.select().from(users).limit(1);
+      await app.handle(
+        new Request('http://localhost/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verificationToken: user.verificationToken })
+        })
+      );
+
+      // Try with existing email from new guest
       const guestResponse2 = await app.handle(
         new Request('http://localhost/guest', {
           method: 'POST',
@@ -332,23 +352,27 @@ describe('Auth Routes', () => {
       const guestData2 = await guestResponse2.json();
 
       const response = await app.handle(
-        new Request('http://localhost/create-account', {
+        new Request('http://localhost/start-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             guestId: guestData2.data.guestId,
-            email: 'duplicate@example.com'
+            email: 'existing@example.com'
           })
         })
       );
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+      expect(data.data.isExistingUser).toBe(true);
+      expect(data.message).toBe('Verification code sent to your email address.');
     });
   });
 
   describe('POST /api/auth/verify', () => {
     it('should verify email and return tokens', async () => {
-      // Create guest and account
+      // Create guest and start verification
       const guestResponse = await app.handle(
         new Request('http://localhost/guest', {
           method: 'POST',
@@ -359,7 +383,7 @@ describe('Auth Routes', () => {
       const guestData = await guestResponse.json();
 
       await app.handle(
-        new Request('http://localhost/create-account', {
+        new Request('http://localhost/start-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -430,7 +454,7 @@ describe('Auth Routes', () => {
       const guestData = await guestResponse.json();
 
       await app.handle(
-        new Request('http://localhost/create-account', {
+        new Request('http://localhost/start-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -482,7 +506,7 @@ describe('Auth Routes', () => {
       const guestData = await guestResponse.json();
 
       await app.handle(
-        new Request('http://localhost/create-account', {
+        new Request('http://localhost/start-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -1,5 +1,6 @@
 package com.babelfeed.app.ui.screens.welcome
 
+import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.babelfeed.app.R
 import com.babelfeed.app.utils.LocaleManager
 
@@ -28,7 +30,16 @@ fun WelcomeScreen(
     viewModel: WelcomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    var selectedLanguage by remember { mutableStateOf("en") }
+    val shouldRecreateActivity by viewModel.shouldRecreateActivity.collectAsStateWithLifecycle()
+    var selectedLanguage by remember { mutableStateOf(viewModel.localeManager.getCurrentLocale(context)) }
+    
+    // Handle activity recreation when language changes
+    LaunchedEffect(shouldRecreateActivity) {
+        if (shouldRecreateActivity) {
+            (context as? Activity)?.recreate()
+            viewModel.onActivityRecreated()
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -92,7 +103,11 @@ fun WelcomeScreen(
                             .fillMaxWidth()
                             .selectable(
                                 selected = selectedLanguage == code,
-                                onClick = { selectedLanguage = code }
+                                onClick = { 
+                                    selectedLanguage = code
+                                    // Immediately apply language change for UI reflection
+                                    viewModel.previewLanguageChange(context, code)
+                                }
                             )
                             .padding(vertical = 4.dp)
                             .semantics { contentDescription = "Language Option $name" },
@@ -100,7 +115,11 @@ fun WelcomeScreen(
                     ) {
                         RadioButton(
                             selected = selectedLanguage == code,
-                            onClick = { selectedLanguage = code },
+                            onClick = { 
+                                selectedLanguage = code
+                                // Immediately apply language change for UI reflection
+                                viewModel.previewLanguageChange(context, code)
+                            },
                             modifier = Modifier.semantics { contentDescription = "Select $name" }
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -142,22 +161,6 @@ fun WelcomeScreen(
             Text(
                 text = stringResource(R.string.continue_button),
                 style = MaterialTheme.typography.titleMedium
-            )
-        }
-        
-        // Skip option
-        TextButton(
-            onClick = { 
-                // Use system language as default
-                val systemLanguage = viewModel.getSystemLanguage()
-                viewModel.saveLanguagePreference(context, systemLanguage)
-                onLanguageSelected(systemLanguage)
-            },
-            modifier = Modifier.semantics { contentDescription = "Use System Language" }
-        ) {
-            Text(
-                text = stringResource(R.string.use_system_language),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

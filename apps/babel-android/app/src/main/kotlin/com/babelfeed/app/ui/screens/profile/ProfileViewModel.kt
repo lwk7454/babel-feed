@@ -159,57 +159,13 @@ class ProfileViewModel @Inject constructor(
                 return@launch
             }
             
-            // Try to create account first (for new users)
-            authManager.createAccountFromGuest(email)
+            // Use unified start verification flow
+            authManager.startVerification(email)
                 .onSuccess {
                     // Store email for navigation
                     _pendingVerificationEmail.value = email
-                    // Account creation initiated, waiting for verification
-                    _successMessage.value = getApplication<Application>().getString(R.string.success_account_created)
-                }
-                .onFailure { exception ->
-                    // If email already exists, try to resend verification code (for existing users)
-                    val errorMessage = exception.message?.lowercase() ?: ""
-                    if (errorMessage.contains("email already") || errorMessage.contains("already registered")) {
-                        // Email already exists - this is an existing user trying to login
-                        authManager.resendVerificationCode(email)
-                            .onSuccess {
-                                // Store email for navigation
-                                _pendingVerificationEmail.value = email
-                                // Verification code sent to existing user
-                                _successMessage.value = getApplication<Application>().getString(R.string.success_verification_code_sent)
-                            }
-                            .onFailure { resendException ->
-                                _error.value = getUserFriendlyErrorMessage(resendException)
-                            }
-                    } else {
-                        // Other error - show original error
-                        _error.value = getUserFriendlyErrorMessage(exception)
-                    }
-                }
-            
-            _isLoading.value = false
-        }
-    }
-
-    fun verifyEmail(verificationToken: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            _successMessage.value = null
-            
-            // Validate verification code format (4 digits)
-            if (!isValidVerificationCode(verificationToken)) {
-                _error.value = getApplication<Application>().getString(R.string.error_invalid_verification_code)
-                _isLoading.value = false
-                return@launch
-            }
-            
-            authManager.verifyEmail(verificationToken)
-                .onSuccess { user ->
-                    // Email verified successfully, reload preferences for the authenticated user
-                    _successMessage.value = getApplication<Application>().getString(R.string.success_email_verified)
-                    loadUserPreferencesAsync()
+                    // Verification started successfully
+                    _successMessage.value = getApplication<Application>().getString(R.string.success_verification_code_sent)
                 }
                 .onFailure { exception ->
                     _error.value = getUserFriendlyErrorMessage(exception)
@@ -254,30 +210,6 @@ class ProfileViewModel @Inject constructor(
     fun getUserPreferences() {
         viewModelScope.launch {
             loadUserPreferencesAsync()
-        }
-    }
-
-    fun resendVerificationCode(email: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            _successMessage.value = null
-            
-            try {
-                // Call backend to resend verification code
-                authManager.resendVerificationCode(email)
-                    .onSuccess {
-                        // Show success message
-                        _successMessage.value = getApplication<Application>().getString(R.string.success_verification_code_sent)
-                    }
-                    .onFailure { exception ->
-                        _error.value = getUserFriendlyErrorMessage(exception)
-                    }
-            } catch (e: Exception) {
-                _error.value = getUserFriendlyErrorMessage(e)
-            }
-            
-            _isLoading.value = false
         }
     }
 
@@ -387,17 +319,13 @@ class ProfileViewModel @Inject constructor(
         val emailPattern = Pattern.compile(
             "[a-zA-Z0-9+._%-+]{1,256}" +
             "@" +
-            "[a-zA-Z0-9][a-zA-Z0-9-]{0,64}" +
+            "[a-zA-Z0-9][a-zA-Z0-9-]{1,64}" +
             "(" +
             "." +
-            "[a-zA-Z0-9][a-zA-Z0-9-]{0,25}" +
+            "[a-zA-Z0-9][a-zA-Z0-9-]{2,25}" +
             ")+"
         )
         return emailPattern.matcher(email).matches()
     }
     
-    private fun isValidVerificationCode(code: String): Boolean {
-        // Verification code should be 4 digits
-        return code.length == 4 && code.all { it.isDigit() }
-    }
 }

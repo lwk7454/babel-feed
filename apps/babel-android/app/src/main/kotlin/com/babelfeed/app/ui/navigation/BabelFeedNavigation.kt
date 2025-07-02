@@ -24,6 +24,7 @@ import dagger.hilt.android.components.ActivityComponent
 import androidx.compose.ui.platform.LocalContext
 import com.babelfeed.app.webview.StreamingTranslationService
 import com.babelfeed.app.utils.LocaleManager
+import com.babelfeed.app.auth.AuthenticationManager
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 
@@ -31,6 +32,12 @@ import dagger.hilt.InstallIn
 @InstallIn(ActivityComponent::class)
 interface TranslationServiceEntryPoint {
     fun translationService(): StreamingTranslationService
+}
+
+@EntryPoint
+@InstallIn(ActivityComponent::class)
+interface AuthenticationEntryPoint {
+    fun authenticationManager(): AuthenticationManager
 }
 
 @Composable
@@ -44,6 +51,14 @@ fun BabelFeedNavigation(
     var isCheckingWelcome by remember { mutableStateOf(true) }
     
     LaunchedEffect(Unit) {
+        // Initialize AuthenticationManager early to ensure proper token state
+        val authManager = EntryPointAccessors
+            .fromActivity(context as android.app.Activity, AuthenticationEntryPoint::class.java)
+            .authenticationManager()
+        
+        // Trigger initialization by accessing the auth state
+        authManager.authState.value
+        
         isWelcomeCompleted = welcomeViewModel.isWelcomeCompleted(context)
         isCheckingWelcome = false
     }
@@ -109,9 +124,9 @@ fun BabelFeedNavigation(
             android.util.Log.d("Navigation", "WebViewScreen - Received encoded URL parameter: '$encodedUrl'")
             android.util.Log.d("Navigation", "WebViewScreen - Decoded URL: '$url'")
             android.util.Log.d("Navigation", "URL length: ${url.length}")
-            val context = LocalContext.current
+            val webViewContext = LocalContext.current
             val translationService = EntryPointAccessors
-                .fromActivity(context as android.app.Activity, TranslationServiceEntryPoint::class.java)
+                .fromActivity(webViewContext as android.app.Activity, TranslationServiceEntryPoint::class.java)
                 .translationService()
             WebViewScreen(
                 url = url,

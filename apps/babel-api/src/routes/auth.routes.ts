@@ -52,38 +52,30 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   )
   
   /**
-   * Create account from guest
+   * Start verification (unified endpoint for new and existing users)
    */
-  .post('/create-account',
+  .post('/start-verification',
     async ({ body, set }) => {
       try {
         const { guestId, email } = body as any;
-        const result = await userService.createAccountFromGuest(guestId, email);
+        const result = await userService.startVerification(guestId, email);
         
         return {
           success: true,
           data: {
             userId: result.user.id,
             email: result.user.email,
-            verificationSent: true
+            verificationSent: true,
+            isExistingUser: result.isExistingUser
           },
-          message: 'Account created successfully. Please check your email for verification.'
+          message: result.isExistingUser 
+            ? 'Verification code sent to your email address.'
+            : 'Account created successfully. Please check your email for verification.'
         };
       } catch (error) {
-        console.error('Account creation error:', error);
+        console.error('Start verification error:', error);
         
         if (error instanceof Error) {
-          if (error.message === 'Email already registered') {
-            set.status = 409; // Conflict
-            return {
-              success: false,
-              error: {
-                code: 'EMAIL_ALREADY_REGISTERED',
-                message: 'Email address is already registered',
-                details: 'This email is already associated with an account. Try logging in instead.'
-              }
-            };
-          }
           if (error.message === 'Guest user not found') {
             set.status = 404; // Not found
             return {
@@ -101,8 +93,8 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         return {
           success: false,
           error: {
-            code: 'ACCOUNT_CREATION_FAILED',
-            message: 'Failed to create account',
+            code: 'VERIFICATION_START_FAILED',
+            message: 'Failed to start verification',
             details: error instanceof Error ? error.message : 'Unknown error'
           }
         };
@@ -115,8 +107,8 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       }),
       detail: {
         tags: ['Authentication'],
-        summary: 'Create account from guest',
-        description: 'Links a guest profile to an email address and sends verification email'
+        summary: 'Start verification (unified)',
+        description: 'Handles both new account creation and existing user verification with single endpoint'
       }
     }
   )
@@ -194,20 +186,27 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         const { verificationToken } = body as any;
         const result = await userService.verifyEmail(verificationToken);
         
+        const responseData: any = {
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            guestId: result.user.guestId,
+            emailVerified: result.user.emailVerified,
+            userStatus: result.user.userStatus,
+            createdAt: result.user.createdAt
+          },
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken
+        };
+
+        // Include preferences for existing users
+        if (result.preferences) {
+          responseData.preferences = result.preferences;
+        }
+        
         return {
           success: true,
-          data: {
-            user: {
-              id: result.user.id,
-              email: result.user.email,
-              guestId: result.user.guestId,
-              emailVerified: result.user.emailVerified,
-              userStatus: result.user.userStatus,
-              createdAt: result.user.createdAt
-            },
-            accessToken: result.tokens.accessToken,
-            refreshToken: result.tokens.refreshToken
-          },
+          data: responseData,
           message: 'Email verified successfully'
         };
       } catch (error) {
@@ -256,7 +255,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       detail: {
         tags: ['Authentication'],
         summary: 'Verify email address',
-        description: 'Verifies email address and returns authentication tokens'
+        description: 'Verifies email address and returns authentication tokens, includes preferences for existing users'
       }
     }
   )
@@ -350,22 +349,33 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Get current user profile
    */
   .get('/profile',
-    async ({ user }) => {
+    async ({ user, set }) => {
+      if (!user) {
+        set.status = 401;
+        return {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+            details: null
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+      
       return {
         success: true,
         data: {
-          id: user!.id,
-          email: user!.email,
-          guestId: user!.guestId,
-          emailVerified: user!.emailVerified,
-          userStatus: user!.userStatus,
-          createdAt: user!.createdAt,
-          updatedAt: user!.updatedAt
+          id: user.id,
+          email: user.email,
+          guestId: user.guestId,
+          emailVerified: user.emailVerified,
+          userStatus: user.userStatus,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
         }
       };
     },
     {
-      requireAuth: true,
       detail: {
         tags: ['Authentication'],
         summary: 'Get user profile',
@@ -379,9 +389,21 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    */
   .put('/preferences',
     async ({ user, body, set }) => {
+      if (!user) {
+        set.status = 401;
+        return {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+            details: null
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+      
       try {
-        await userService.updateUserPreferences(user!.id, body as any);
-        const preferences = await userService.getUserPreferences(user!.id);
+        await userService.updateUserPreferences(user.id, body as any);
+        const preferences = await userService.getUserPreferences(user.id);
         
         return {
           success: true,
@@ -402,7 +424,6 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       }
     },
     {
-      requireAuth: true,
       body: t.Object({
         preferredLanguages: t.Optional(t.Array(t.String())),
         feedCategories: t.Optional(t.Array(t.String())),
@@ -433,9 +454,21 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    */
   .post('/save-settings',
     async ({ user, body, set }) => {
+      if (!user) {
+        set.status = 401;
+        return {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+            details: null
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+      
       try {
         // Only verified users can sync settings to server
-        if (user!.userStatus !== 'verified' && user!.userStatus !== 'vip') {
+        if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
           set.status = 403;
           return {
             success: false,
@@ -447,8 +480,8 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
           };
         }
 
-        await userService.updateUserPreferences(user!.id, body as any);
-        const preferences = await userService.getUserPreferences(user!.id);
+        await userService.updateUserPreferences(user.id, body as any);
+        const preferences = await userService.getUserPreferences(user.id);
         
         return {
           success: true,
@@ -469,7 +502,6 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       }
     },
     {
-      requireAuth: true,
       body: t.Object({
         preferredLanguages: t.Optional(t.Array(t.String())),
         feedCategories: t.Optional(t.Array(t.String())),
@@ -500,8 +532,20 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    */
   .get('/preferences',
     async ({ user, set }) => {
+      if (!user) {
+        set.status = 401;
+        return {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+            details: null
+          },
+          timestamp: new Date().toISOString()
+        };
+      }
+      
       try {
-        const preferences = await userService.getUserPreferences(user!.id);
+        const preferences = await userService.getUserPreferences(user.id);
         
         return {
           success: true,
@@ -521,7 +565,6 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       }
     },
     {
-      requireAuth: true,
       detail: {
         tags: ['Authentication'],
         summary: 'Get user preferences',

@@ -30,7 +30,7 @@ class AuthenticationManagerTest {
         MockitoAnnotations.openMocks(this)
         
         // Set up default token manager behavior
-        whenever(tokenManager.getAuthState()).thenReturn(AuthState.None)
+        whenever(tokenManager.getAuthState()).thenReturn(AuthState.Guest)
         whenever(tokenManager.hasTokens()).thenReturn(false)
         whenever(tokenManager.isAuthenticated()).thenReturn(false)
         whenever(tokenManager.isEmailVerified()).thenReturn(false)
@@ -75,39 +75,40 @@ class AuthenticationManagerTest {
     }
 
     @Test
-    fun `createAccountFromGuest should upgrade guest successfully`() = runTest {
+    fun `startVerification should upgrade guest successfully`() = runTest {
         val guestId = "guest-123"
         val email = "test@example.com"
         
         whenever(tokenManager.getGuestId()).thenReturn(guestId)
         
-        val mockResponse = CreateAccountResponse(
+        val mockResponse = StartVerificationResponse(
             success = true,
-            data = AccountData(
+            data = StartVerificationData(
                 userId = "user-456",
                 email = email,
-                verificationSent = true
+                verificationSent = true,
+                isExistingUser = false
             ),
-            message = "Account created successfully"
+            message = "Verification email sent"
         )
 
-        whenever(apiService.createAccount(any())).thenReturn(Response.success(mockResponse))
+        whenever(apiService.startVerification(any())).thenReturn(Response.success(mockResponse))
 
-        val result = authManager.createAccountFromGuest(email)
+        val result = authManager.startVerification(email)
 
         assertTrue(result.isSuccess)
-        verify(apiService).createAccount(CreateAccountRequest(guestId, email))
+        verify(apiService).startVerification(StartVerificationRequest(guestId, email))
         assertEquals(AuthState.PendingVerification, authManager.authState.first())
     }
 
     @Test
-    fun `createAccountFromGuest should fail when no guest user exists`() = runTest {
+    fun `startVerification should fail when no guest user exists`() = runTest {
         whenever(tokenManager.getGuestId()).thenReturn(null)
 
-        val result = authManager.createAccountFromGuest("test@example.com")
+        val result = authManager.startVerification("test@example.com")
 
         assertTrue(result.isFailure)
-        verify(apiService, never()).createAccount(any())
+        verify(apiService, never()).startVerification(any())
     }
 
     @Test
@@ -138,7 +139,7 @@ class AuthenticationManagerTest {
         val result = authManager.verifyEmail(verificationToken)
 
         assertTrue(result.isSuccess)
-        assertEquals(mockUser, result.getOrNull())
+        assertEquals(mockUser, result.getOrNull()?.user)
         
         verify(tokenManager).storeTokens(
             accessToken = "access-token",
@@ -228,13 +229,31 @@ class AuthenticationManagerTest {
         val refreshToken = "refresh-token"
 
         whenever(tokenManager.getRefreshToken()).thenReturn(refreshToken)
+        whenever(tokenManager.isEmailVerified()).thenReturn(false) // Guest user
         whenever(apiService.refreshToken(any())).thenThrow(RuntimeException("Refresh failed"))
 
         val result = authManager.refreshTokenIfNeeded()
 
         assertEquals(null, result)
-        verify(tokenManager).clearAll()
-        assertEquals(AuthState.None, authManager.authState.first())
+        verify(tokenManager).clearAuthTokens() // Should preserve verification status
+        verify(tokenManager).isEmailVerified() // Should check verification status
+        assertEquals(AuthState.Guest, authManager.authState.first())
+    }
+
+    @Test
+    fun `refreshTokenIfNeeded should preserve verification status for verified user`() = runTest {
+        val refreshToken = "refresh-token"
+
+        whenever(tokenManager.getRefreshToken()).thenReturn(refreshToken)
+        whenever(tokenManager.isEmailVerified()).thenReturn(true) // Verified user
+        whenever(apiService.refreshToken(any())).thenThrow(RuntimeException("Refresh failed"))
+
+        val result = authManager.refreshTokenIfNeeded()
+
+        assertEquals(null, result)
+        verify(tokenManager).clearAuthTokens() // Should preserve verification status
+        verify(tokenManager).isEmailVerified() // Should check verification status
+        assertEquals(AuthState.PendingVerification, authManager.authState.first()) // Verified user should remain in pending verification
     }
 
     @Test
@@ -246,7 +265,7 @@ class AuthenticationManagerTest {
 
         verify(apiService).logout()
         verify(tokenManager).clearAll()
-        assertEquals(AuthState.None, authManager.authState.first())
+        assertEquals(AuthState.Guest, authManager.authState.first())
         assertEquals(null, authManager.currentUser.first())
     }
 

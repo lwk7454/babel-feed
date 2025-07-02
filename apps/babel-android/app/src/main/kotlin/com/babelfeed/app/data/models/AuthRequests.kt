@@ -36,9 +36,9 @@ data class GuestData(
 )
 
 /**
- * Request to create account from guest
+ * Request to start verification (unified for new and existing users)
  */
-data class CreateAccountRequest(
+data class StartVerificationRequest(
     @SerializedName("guestId")
     val guestId: String,
     
@@ -47,14 +47,14 @@ data class CreateAccountRequest(
 )
 
 /**
- * Response from creating account
+ * Response from starting verification
  */
-data class CreateAccountResponse(
+data class StartVerificationResponse(
     @SerializedName("success")
     val success: Boolean,
     
     @SerializedName("data")
-    val data: AccountData? = null,
+    val data: StartVerificationData? = null,
     
     @SerializedName("message")
     val message: String? = null,
@@ -63,7 +63,7 @@ data class CreateAccountResponse(
     val error: ApiError? = null
 )
 
-data class AccountData(
+data class StartVerificationData(
     @SerializedName("userId")
     val userId: String,
     
@@ -71,7 +71,10 @@ data class AccountData(
     val email: String,
     
     @SerializedName("verificationSent")
-    val verificationSent: Boolean
+    val verificationSent: Boolean,
+    
+    @SerializedName("isExistingUser")
+    val isExistingUser: Boolean
 )
 
 /**
@@ -115,7 +118,18 @@ data class VerificationData(
     val accessToken: String,
     
     @SerializedName("refreshToken")
-    val refreshToken: String
+    val refreshToken: String,
+    
+    @SerializedName("preferences")
+    val preferences: UserPreferences? = null
+)
+
+/**
+ * Result of email verification for internal use
+ */
+data class VerificationResult(
+    val user: User,
+    val preferences: UserPreferences? = null
 )
 
 /**

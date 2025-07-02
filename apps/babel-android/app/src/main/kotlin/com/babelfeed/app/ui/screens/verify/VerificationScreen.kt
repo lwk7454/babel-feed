@@ -36,10 +36,7 @@ fun VerificationScreen(
     val resendCooldown by viewModel.resendCooldown.collectAsStateWithLifecycle()
     
     var otpInput by remember { mutableStateOf("") }
-    
-    LaunchedEffect(email) {
-        viewModel.sendVerificationEmail(email)
-    }
+
     
     LaunchedEffect(uiState) {
         if (uiState == VerificationUiState.Success) {

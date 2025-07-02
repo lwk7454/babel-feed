@@ -38,11 +38,10 @@ fun ProfileScreen(
     val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
-    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
     val shouldRecreateActivity by viewModel.shouldRecreateActivity.collectAsStateWithLifecycle()
-    
+
     val context = LocalContext.current
-    
+
     var emailInput by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -79,43 +78,45 @@ fun ProfileScreen(
                     )
                 }
             } ?: Spacer(modifier = Modifier.size(48.dp))
-            
+
             Text(
                 text = stringResource(R.string.profile),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).semantics { contentDescription = "Profile Screen" }
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = "Profile Screen" }
             )
-            
+
             // Placeholder for symmetry
             Spacer(modifier = Modifier.size(48.dp))
         }
 
         // Success message display
-        successMessage?.let { message ->
-            if (!isLoading) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(
-                            onClick = { viewModel.clearSuccessMessage() }
+        /*        successMessage?.let { message ->
+                    if (!isLoading) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
-                            Text(stringResource(R.string.dismiss))
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = message,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                TextButton(
+                                    onClick = { viewModel.clearSuccessMessage() }
+                                ) {
+                                    Text(stringResource(R.string.dismiss))
+                                }
+                            }
                         }
                     }
-                }
-            }
-        }
+                }*/
 
         // Error display - only show non-loading errors
         error?.let { errorMessage ->
@@ -152,17 +153,11 @@ fun ProfileScreen(
 
         // Account Card - User Status Dependent
         when (authState) {
-            AuthState.None -> {
-                NoAuthCard(
-                    onCreateGuest = { viewModel.createGuestUser() }
-                )
-            }
-            
             AuthState.Guest -> {
                 GuestUserCard(
                     emailInput = emailInput,
                     onEmailChange = { emailInput = it },
-                    onVerifyClick = { 
+                    onVerifyClick = {
                         if (emailInput.isNotBlank() && viewModel.isValidEmail(emailInput)) {
                             viewModel.createAccount(emailInput)
                             // Navigation to verification will be handled by state change
@@ -170,7 +165,7 @@ fun ProfileScreen(
                     }
                 )
             }
-            
+
             AuthState.PendingVerification -> {
                 // Navigate to verification screen automatically for pending verification
                 LaunchedEffect(authState) {
@@ -180,79 +175,43 @@ fun ProfileScreen(
                         onNavigateToVerification?.invoke(email)
                     }
                 }
-                
+
                 // Show a card indicating navigation to verification
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Text(
-                        text = stringResource(R.string.navigating_to_verification),
-                        modifier = Modifier.padding(MaterialTheme.spacing.medium).semantics { contentDescription = "Navigating to Verification" },
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                /*                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.navigating_to_verification),
+                                        modifier = Modifier.padding(MaterialTheme.spacing.medium).semantics { contentDescription = "Navigating to Verification" },
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }*/
             }
-            
+
             AuthState.Authenticated -> {
                 AuthenticatedUserCard(
                     user = currentUser,
-                    onLogout = { 
+                    onLogout = {
                         viewModel.logout()
                         onNavigateToWelcome?.invoke()
                     }
                 )
             }
         }
-        
-        // Preferences Section - show for all authenticated states
-        if (authState != AuthState.None) {
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            PreferencesSection(
-                preferences = userPreferences,
-                currentLocale = viewModel.localeManager.getCurrentLocale(context),
-                onUpdatePreferences = { preferences ->
-                    viewModel.updatePreferences(preferences)
-                }
-            )
-        }
-    }
-}
 
-@Composable
-private fun NoAuthCard(
-    onCreateGuest: () -> Unit
-) {
-    Card(
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.medium),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-        ) {
-            Text(
-                text = stringResource(R.string.welcome_to_babel_feed),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { contentDescription = "Welcome to Babel Feed" }
-            )
-            Text(
-                text = stringResource(R.string.create_guest_profile_description),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.semantics { contentDescription = "Create Guest Profile Description" }
-            )
-            Button(
-                onClick = onCreateGuest,
-                modifier = Modifier.semantics { contentDescription = "Start as Guest" }
-            ) {
-                Text(stringResource(R.string.start_as_guest))
+        // Preferences Section - show for all authenticated states
+        Spacer(modifier = Modifier.height(8.dp))
+
+        PreferencesSection(
+            preferences = userPreferences,
+            currentLocale = viewModel.localeManager.getCurrentLocale(context),
+            onUpdatePreferences = { preferences ->
+                viewModel.updatePreferences(preferences)
             }
-        }
+        )
     }
 }
 
@@ -273,36 +232,44 @@ private fun GuestUserCard(
         ) {
             // Display user status
             Text(
-                text = "Status: ${stringResource(R.string.user_status_guest)}",
+                text = "${stringResource(R.string.user_status)}: ${stringResource(R.string.user_status_guest)}",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.semantics { contentDescription = "Status: Guest" }
             )
-            
+
             // Email verification prompt message
             Text(
                 text = stringResource(R.string.email_verification_prompt),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.semantics { contentDescription = "Email Verification Prompt" }
             )
-            
+
             // Email input field with validation
             OutlinedTextField(
                 value = emailInput,
                 onValueChange = onEmailChange,
                 label = { Text(stringResource(R.string.email_address)) },
                 placeholder = { Text("Email") },
-                modifier = Modifier.fillMaxWidth().semantics { 
-                    contentDescription = "Email"
-                    // Add hint text for Appium detection
-                },
-                isError = emailInput.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(emailInput).matches()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = "Email"
+                        // Add hint text for Appium detection
+                    },
+                isError = emailInput.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(
+                    emailInput
+                ).matches()
             )
-            
+
             // Verify button (requires valid email)
             Button(
                 onClick = onVerifyClick,
-                enabled = emailInput.isNotEmpty() && android.util.Patterns.EMAIL_ADDRESS.matcher(emailInput).matches(),
-                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Verify" }
+                enabled = emailInput.isNotEmpty() && android.util.Patterns.EMAIL_ADDRESS.matcher(
+                    emailInput
+                ).matches(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Verify" }
             ) {
                 Text(stringResource(R.string.verify))
             }
@@ -337,7 +304,7 @@ private fun AuthenticatedUserCard(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.semantics { contentDescription = "Status: $statusText" }
                 )
-                
+
                 // Display user email address
                 Text(
                     text = u.email ?: stringResource(R.string.unknown),
@@ -345,11 +312,13 @@ private fun AuthenticatedUserCard(
                     modifier = Modifier.semantics { contentDescription = "User Email" }
                 )
             }
-            
+
             // Logout button → Clear profile + clear auth token + navigate to Welcome screen
             Button(
                 onClick = onLogout,
-                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Logout" },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Logout" },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 )
@@ -376,7 +345,7 @@ private fun PreferencesSection(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.semantics { contentDescription = "Preferences" }
             )
-            
+
             preferences?.let { prefs ->
                 PreferencesContent(
                     preferences = prefs,

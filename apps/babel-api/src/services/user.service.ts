@@ -89,17 +89,61 @@ export class UserService {
   }
 
   /**
+   * Start verification - unified method for both new and existing users
+   */
+  async startVerification(guestId: string, email: string): Promise<{ user: User; isExistingUser: boolean }> {
+    // Check if email already exists with a verified user
+    const existingEmailUser = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    
+    if (existingEmailUser.length > 0) {
+      const existingUser = existingEmailUser[0];
+      
+      // If user is already verified, send verification code directly
+      if (existingUser.emailVerified) {
+        // Generate new verification token for existing verified user
+        const verificationToken = this.generateVerificationToken();
+        const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // Update existing user with new verification token (temporarily mark as unverified for re-verification)
+        const [updatedUser] = await this.db
+          .update(users)
+          .set({
+            verificationToken,
+            verificationTokenExpiry,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, existingUser.id))
+          .returning();
+
+        // Send OTP email
+        try {
+          await emailService.sendOTPEmail(email, verificationToken);
+        } catch (error) {
+          console.error('Failed to send OTP email:', error);
+        }
+
+        return { user: updatedUser, isExistingUser: true };
+      } else {
+        // User exists but not verified - resend verification
+        await this.resendVerificationCode(email);
+        return { user: existingUser, isExistingUser: true };
+      }
+    }
+
+    // Email doesn't exist - create new account from guest
+    const result = await this.createAccountFromGuest(guestId, email);
+    return { user: result.user, isExistingUser: false };
+  }
+
+  /**
    * Verify email and complete account creation
    */
-  async verifyEmail(verificationToken: string): Promise<{ user: User; tokens: { accessToken: string; refreshToken: string } }> {
-    // Find user by verification token
+  async verifyEmail(verificationToken: string): Promise<{ user: User; tokens: { accessToken: string; refreshToken: string }; preferences?: any }> {
+    // Find user by verification token (allow already verified users for existing user flow)
     const [user] = await this.db
       .select()
       .from(users)
-      .where(and(
-        eq(users.verificationToken, verificationToken),
-        eq(users.emailVerified, false)
-      ))
+      .where(eq(users.verificationToken, verificationToken))
       .limit(1);
 
     if (!user) {
@@ -110,6 +154,8 @@ export class UserService {
     if (user.verificationTokenExpiry && user.verificationTokenExpiry < new Date()) {
       throw new Error('Verification token has expired');
     }
+
+    const wasAlreadyVerified = user.emailVerified;
 
     // Mark email as verified, update status to verified, and clear verification token
     const [verifiedUser] = await this.db
@@ -127,15 +173,23 @@ export class UserService {
     // Create session and generate tokens
     const tokens = await this.createSession(verifiedUser);
 
-    // Send welcome email
-    try {
-      await emailService.sendWelcomeEmail(verifiedUser.email!);
-    } catch (error) {
-      console.error('Failed to send welcome email:', error);
-      // Don't throw here - verification succeeded, welcome email failure shouldn't block it
+    // Get user preferences (for existing users to sync back to client)
+    let preferences = null;
+    if (wasAlreadyVerified) {
+      preferences = await this.getUserPreferences(verifiedUser.id);
     }
 
-    return { user: verifiedUser, tokens };
+    // Send welcome email only for new users
+    if (!wasAlreadyVerified) {
+      try {
+        await emailService.sendWelcomeEmail(verifiedUser.email!);
+      } catch (error) {
+        console.error('Failed to send welcome email:', error);
+        // Don't throw here - verification succeeded, welcome email failure shouldn't block it
+      }
+    }
+
+    return { user: verifiedUser, tokens, preferences };
   }
 
   /**
@@ -446,5 +500,15 @@ export class UserService {
   }
 }
 
-// Export singleton instance
-export const userService = new UserService();
+// Export singleton instance with lazy initialization
+let _userServiceInstance: UserService | null = null;
+
+export const userService = new Proxy({} as UserService, {
+  get(target, prop) {
+    // Initialize the singleton on first access
+    if (!_userServiceInstance) {
+      _userServiceInstance = new UserService();
+    }
+    return (_userServiceInstance as any)[prop];
+  }
+});

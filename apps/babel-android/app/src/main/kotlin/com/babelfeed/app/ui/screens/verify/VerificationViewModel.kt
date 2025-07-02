@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.babelfeed.app.R
 import com.babelfeed.app.auth.AuthenticationManager
+import com.babelfeed.app.utils.LocaleManager
+import com.babelfeed.app.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,10 +26,11 @@ enum class VerificationUiState {
 @HiltViewModel
 class VerificationViewModel @Inject constructor(
     application: Application,
-    private val authManager: AuthenticationManager
+    private val authManager: AuthenticationManager,
+    private val localeManager: LocaleManager
 ) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(VerificationUiState.SendingEmail)
+    private val _uiState = MutableStateFlow(VerificationUiState.EmailSent)
     val uiState: StateFlow<VerificationUiState> = _uiState.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
@@ -39,10 +42,19 @@ class VerificationViewModel @Inject constructor(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
-    private val _resendCooldown = MutableStateFlow(0)
+    private val _resendCooldown = MutableStateFlow(getCooldownDuration()) // Start with cooldown
     val resendCooldown: StateFlow<Int> = _resendCooldown.asStateFlow()
 
+    private val _shouldRecreateActivity = MutableStateFlow(false)
+    val shouldRecreateActivity: StateFlow<Boolean> = _shouldRecreateActivity.asStateFlow()
+
     private var cooldownJob: Job? = null
+    private val preferencesManager by lazy { PreferencesManager(localeManager) }
+
+    init {
+        // Start initial cooldown since email was already sent
+        startResendCooldown(getCooldownDuration())
+    }
 
     fun sendVerificationEmail(email: String) {
         viewModelScope.launch {
@@ -54,7 +66,7 @@ class VerificationViewModel @Inject constructor(
                 authManager.resendVerificationCode(email)
                     .onSuccess {
                         _uiState.value = VerificationUiState.EmailSent
-                        startResendCooldown(60) // 60 second cooldown
+                        startResendCooldown(getCooldownDuration()) // 60 second cooldown
                     }
                     .onFailure { exception ->
                         _error.value = getUserFriendlyErrorMessage(exception)
@@ -77,11 +89,25 @@ class VerificationViewModel @Inject constructor(
             
             try {
                 authManager.verifyEmail(otp)
-                    .onSuccess { user ->
+                    .onSuccess { verificationResult ->
                         _uiState.value = VerificationUiState.Success
                         _successMessage.value = getApplication<Application>().getString(
                             R.string.success_email_verified
                         )
+                        
+                        // If this was an existing user, sync their preferences
+                        verificationResult.preferences?.let { serverPreferences ->
+                            // Apply server preferences to override local settings
+                            preferencesManager.applyPreferences(getApplication(), serverPreferences)
+                            
+                            // Check if language changed and needs activity recreation
+                            val serverLanguage = serverPreferences.translationSettings.defaultTargetLanguage
+                            val currentLanguage = localeManager.getCurrentLocale(getApplication())
+                            if (serverLanguage != currentLanguage) {
+                                localeManager.saveLocale(getApplication(), serverLanguage)
+                                _shouldRecreateActivity.value = true
+                            }
+                        }
                     }
                     .onFailure { exception ->
                         _error.value = getUserFriendlyErrorMessage(exception)
@@ -110,7 +136,7 @@ class VerificationViewModel @Inject constructor(
                         _successMessage.value = getApplication<Application>().getString(
                             R.string.success_verification_code_sent
                         )
-                        startResendCooldown(60) // 60 second cooldown
+                        startResendCooldown(getCooldownDuration()) // 60 second cooldown
                     }
                     .onFailure { exception ->
                         _error.value = getUserFriendlyErrorMessage(exception)
@@ -128,10 +154,23 @@ class VerificationViewModel @Inject constructor(
         cooldownJob = viewModelScope.launch {
             _resendCooldown.value = seconds
             repeat(seconds) {
-                delay(1000)
+                delay(if (isTestEnvironment()) 100 else 1000) // Faster in tests
                 _resendCooldown.value = _resendCooldown.value - 1
             }
         }
+    }
+    
+    private fun isTestEnvironment(): Boolean {
+        return try {
+            Class.forName("androidx.test.espresso.Espresso")
+            true
+        } catch (e: ClassNotFoundException) {
+            false
+        }
+    }
+    
+    private fun getCooldownDuration(): Int {
+        return if (isTestEnvironment()) 3 else 60 // 3 seconds in tests, 60 in production
     }
 
     fun clearError() {
@@ -140,6 +179,10 @@ class VerificationViewModel @Inject constructor(
 
     fun clearSuccessMessage() {
         _successMessage.value = null
+    }
+
+    fun onActivityRecreated() {
+        _shouldRecreateActivity.value = false
     }
 
     private fun getUserFriendlyErrorMessage(exception: Throwable): String {

@@ -57,7 +57,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
-    "@nx/bun": "^21.1.2",
     "@nx/devkit": "^21.1.2",
     "@nx/esbuild": "21.1.2",
     "@nx/eslint": "21.1.2",

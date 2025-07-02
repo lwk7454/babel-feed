@@ -1,0 +1,2053 @@
+$ bun scripts/start-dev-db.ts && nx dev babel-api
+✅ Database is already running and healthy
+
+> nx run babel-api:dev
+
+> bun --watch src/main.ts
+
+🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:18:06.446Z] GET /debug-jwt
+   URL: http://localhost:3000/debug-jwt
+🟢 [2025-07-02T01:18:06.446Z] GET /debug-jwt - 200
+   📤 Response Body:
+{
+  "envJwtSecret": "dbebce2c...",
+  "serviceJwtSecret": "dbebce2c...",
+  "secretsMatch": true,
+  "nodeEnv": "development",
+  "timestamp": "2025-07-02T01:18:06.446Z"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:18:13.172Z] POST /api/auth/guest
+   URL: http://localhost:3000/api/auth/guest
+Query: insert into "users" ("id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at") values (default, default, $1, $2, $3, default, default, $4, default, default) returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: ["guest_fbc90915a12c27e6e3a01ee334dfd0e1", false, "guest", "test_device_new"]
+Query: insert into "user_preferences" ("user_id", "preferred_languages", "feed_categories", "translation_settings", "theme_preference", "notification_settings", "privacy_settings", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, default) -- params: ["cf104c37-4c3c-439d-9246-e980c1efe359", "[\"en\"]", "[]", "{\"autoTranslate\":false,\"defaultTargetLanguage\":\"en\"}", "system", "{\"emailNotifications\":false,\"pushNotifications\":false}", "{\"analytics\":false,\"personalization\":true}"]
+🟢 [2025-07-02T01:18:13.184Z] POST /api/auth/guest - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "guestId": "guest_fbc90915a12c27e6e3a01ee334dfd0e1",
+    "userId": "cf104c37-4c3c-439d-9246-e980c1efe359",
+    "createdAt": "2025-07-02T01:18:13.283Z"
+  },
+  "message": "Guest profile created successfully"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:18:22.319Z] POST /api/auth/start-verification
+   URL: http://localhost:3000/api/auth/start-verification
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."email" = $1 limit $2 -- params: ["test-new@example.com", 1]
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."email" = $1 limit $2 -- params: ["test-new@example.com", 1]
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."guest_id" = $1 limit $2 -- params: ["guest_fbc90915a12c27e6e3a01ee334dfd0e1", 1]
+Query: update "users" set "email" = $1, "verification_token" = $2, "verification_token_expiry" = $3, "updated_at" = $4 where "users"."id" = $5 returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: ["test-new@example.com", "9237", "2025-07-02T01:28:22.328Z", "2025-07-02T01:18:22.328Z", "cf104c37-4c3c-439d-9246-e980c1efe359"]
+📧 ===== OTP EMAIL (Development Mode) =====
+To: test-new@example.com
+Subject: Your Babel Feed Verification Code
+OTP Code: 9237
+📧 ========================================
+🟢 [2025-07-02T01:18:22.339Z] POST /api/auth/start-verification - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "userId": "cf104c37-4c3c-439d-9246-e980c1efe359",
+    "email": "test-new@example.com",
+    "verificationSent": true,
+    "isExistingUser": false
+  },
+  "message": "Account created successfully. Please check your email for verification."
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:18:28.946Z] POST /api/auth/verify
+   URL: http://localhost:3000/api/auth/verify
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."verification_token" = $1 limit $2 -- params: ["9237", 1]
+Query: update "users" set "email_verified" = $1, "user_status" = $2, "verification_token" = $3, "verification_token_expiry" = $4, "updated_at" = $5 where "users"."id" = $6 returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: [true, "verified", null, null, "2025-07-02T01:18:28.949Z", "cf104c37-4c3c-439d-9246-e980c1efe359"]
+Query: insert into "user_sessions" ("id", "user_id", "access_token_hash", "refresh_token_hash", "expires_at", "device_info", "ip_address", "user_agent", "last_accessed_at", "created_at") values (default, $1, $2, $3, $4, default, default, default, default, default) -- params: ["cf104c37-4c3c-439d-9246-e980c1efe359", "443fe15ace3618dfea8fccc2aeb8ce29c3a5aa1a72296afed7c70c18bff7f18d", "d98768131b626cac0596245b4c13fda474fe342bc6fe8914d27280d4300954e1", "2026-07-02T01:18:28.956Z"]
+📧 ===== WELCOME EMAIL (Development Mode) =====
+To: test-new@example.com
+Subject: Welcome to Babel Feed!
+📧 ==========================================
+🟢 [2025-07-02T01:18:28.958Z] POST /api/auth/verify - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "cf104c37-4c3c-439d-9246-e980c1efe359",
+      "email": "test-new@example.com",
+      "guestId": "guest_fbc90915a12c27e6e3a01ee334dfd0e1",
+      "emailVerified": true,
+      "userStatus": "verified",
+      "createdAt": "2025-07-02T01:18:13.283Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjZjEwNGMzNy00YzNjLTQzOWQtOTI0Ni1lOTgwYzFlZmUzNTkiLCJlbWFpbCI6InRlc3QtbmV3QGV4YW1wbGUuY29tIiwiZW1haWxWZXJpZmllZCI6dHJ1ZSwianRpIjoiNDgzOTIwMzA2MWUxNmI3ZSIsImlhdCI6MTc1MTQxOTEwOCwiZXhwIjoxNzU0MDExMTA4fQ.Onz7g8zKzgA4-BqtLwU5OyVWKxmdywoJa4vgYDWrpec",
+    "refreshToken": "a2aa106fb047bba6232f7ab1c84b52aa3c2ad3eb62d889d45fedfd6b383321ac"
+  },
+  "message": "Email verified successfully"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:18:43.934Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:18:43.934Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:18:43.934Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:19:05.467Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:19:05.468Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:19:05.467Z"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:19:24.780Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:19:24.780Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:19:24.780Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:19:52.214Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:19:52.214Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:19:52.214Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+[0m[1m369 |[0m         summary: [0m[32m'Get user profile'[0m,
+[0m[1m370 |[0m         description: [0m[32m'Returns current user profile information'[0m
+[0m[1m371 |[0m       }
+[0m[1m372 |[0m     }
+[0m[1m373 |[0m   )
+[0m[1m374 |[0m   [0m[3m[1m.requireAuth[0m()
+         [31m[1m^[0m
+[0m[31mTypeError[0m[2m:[0m [1mnew Elysia({ prefix: "/api/auth" }).use(authMiddleware).post("/guest", async ({ body, headers, set }) => {
+  try {
+    const deviceFingerprint = body.deviceFingerprint, user = await userService.createGuestUser(deviceFingerprint);
+    return {
+      success: !0,
+      data: {
+        guestId: user.guestId,
+        userId: user.id,
+        createdAt: user.createdAt
+      },
+      message: "Guest profile created successfully"
+    };
+  } catch (error) {
+    console.error("Guest creation error:", error);
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "GUEST_CREATION_FAILED",
+        message: "Failed to create guest profile",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    deviceFingerprint: t.Optional(t.String())
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Create guest profile",
+    description: "Creates a new guest user profile for anonymous usage"
+  }
+}).post("/start-verification", async ({ body, set }) => {
+  try {
+    const { guestId, email } = body, result = await userService.startVerification(guestId, email);
+    return {
+      success: !0,
+      data: {
+        userId: result.user.id,
+        email: result.user.email,
+        verificationSent: !0,
+        isExistingUser: result.isExistingUser
+      },
+      message: result.isExistingUser ? "Verification code sent to your email address." : "Account created successfully. Please check your email for verification."
+    };
+  } catch (error) {
+    console.error("Start verification error:", error);
+    if (error instanceof Error) {
+      if (error.message === "Guest user not found") {
+        set.status = 404;
+        return {
+          success: !1,
+          error: {
+            code: "GUEST_USER_NOT_FOUND",
+            message: "Invalid guest user",
+            details: "The guest user ID provided was not found."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "VERIFICATION_START_FAILED",
+        message: "Failed to start verification",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    guestId: t.String(),
+    email: t.String({ format: "email" })
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Start verification (unified)",
+    description: "Handles both new account creation and existing user verification with single endpoint"
+  }
+}).post("/resend-verification", async ({ body, set }) => {
+  try {
+    const { email } = body;
+    await userService.resendVerificationCode(email);
+    return {
+      success: !0,
+      message: "Verification code sent successfully"
+    };
+  } catch (error) {
+    console.error("Resend verification error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("User not found")) {
+        set.status = 404;
+        return {
+          success: !1,
+          error: {
+            code: "USER_NOT_FOUND",
+            message: "User not found",
+            details: "No account found with this email address."
+          }
+        };
+      }
+      if (error.message.includes("already verified")) {
+        set.status = 400;
+        return {
+          success: !1,
+          error: {
+            code: "ALREADY_VERIFIED",
+            message: "Email already verified",
+            details: "This email address is already verified. You can log in directly."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "RESEND_FAILED",
+        message: "Failed to resend verification code",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    email: t.String({ format: "email" })
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Resend verification code",
+    description: "Resends verification code to the email address"
+  }
+}).post("/verify", async ({ body, set }) => {
+  try {
+    const { verificationToken } = body, result = await userService.verifyEmail(verificationToken), responseData = {
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        guestId: result.user.guestId,
+        emailVerified: result.user.emailVerified,
+        userStatus: result.user.userStatus,
+        createdAt: result.user.createdAt
+      },
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken
+    };
+    if (result.preferences)
+      responseData.preferences = result.preferences;
+    return {
+      success: !0,
+      data: responseData,
+      message: "Email verified successfully"
+    };
+  } catch (error) {
+    console.error("Email verification error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("Invalid or expired")) {
+        set.status = 400;
+        return {
+          success: !1,
+          error: {
+            code: "INVALID_VERIFICATION_TOKEN",
+            message: "Invalid or expired verification token",
+            details: "Please request a new verification code."
+          }
+        };
+      }
+      if (error.message.includes("expired")) {
+        set.status = 410;
+        return {
+          success: !1,
+          error: {
+            code: "VERIFICATION_TOKEN_EXPIRED",
+            message: "Verification token has expired",
+            details: "Please request a new verification code."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "EMAIL_VERIFICATION_FAILED",
+        message: "Email verification failed",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    verificationToken: t.String()
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Verify email address",
+    description: "Verifies email address and returns authentication tokens, includes preferences for existing users"
+  }
+}).post("/refresh", async ({ body, set }) => {
+  try {
+    const { refreshToken } = body, tokens = await userService.refreshToken(refreshToken);
+    if (!tokens) {
+      set.status = 401;
+      return {
+        success: !1,
+        error: {
+          code: "INVALID_REFRESH_TOKEN",
+          message: "Invalid or expired refresh token",
+          details: "Please log in again."
+        }
+      };
+    }
+    return {
+      success: !0,
+      data: tokens,
+      message: "Tokens refreshed successfully"
+    };
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "TOKEN_REFRESH_FAILED",
+        message: "Failed to refresh tokens",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    refreshToken: t.String()
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Refresh access token",
+    description: "Refreshes access token using refresh token"
+  }
+}).post("/logout", async ({ headers, set }) => {
+  try {
+    const authorization = headers.authorization;
+    if (authorization && authorization.startsWith("Bearer ")) {
+      const accessToken = authorization.substring(7);
+      await userService.logout(accessToken);
+    }
+    return {
+      success: !0,
+      message: "Logged out successfully"
+    };
+  } catch (error) {
+    console.error("Logout error:", error);
+    return {
+      success: !0,
+      message: "Logged out successfully"
+    };
+  }
+}, {
+  detail: {
+    tags: ["Authentication"],
+    summary: "Logout user",
+    description: "Invalidates current session and logs out user"
+  }
+}).get("/profile", async ({ user }) => {
+  return {
+    success: !0,
+    data: {
+      id: user.id,
+      email: user.email,
+      guestId: user.guestId,
+      emailVerified: user.emailVerified,
+      userStatus: user.userStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }
+  };
+}, {
+  detail: {
+    tags: ["Authentication"],
+    summary: "Get user profile",
+    description: "Returns current user profile information"
+  }
+}).requireAuth is not a function. (In 'new Elysia({ prefix: "/api/auth" }).use(authMiddleware).post("/guest", async ({ body, headers, set }) => {
+  try {
+    const deviceFingerprint = body.deviceFingerprint, user = await userService.createGuestUser(deviceFingerprint);
+    return {
+      success: !0,
+      data: {
+        guestId: user.guestId,
+        userId: user.id,
+        createdAt: user.createdAt
+      },
+      message: "Guest profile created successfully"
+    };
+  } catch (error) {
+    console.error("Guest creation error:", error);
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "GUEST_CREATION_FAILED",
+        message: "Failed to create guest profile",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    deviceFingerprint: t.Optional(t.String())
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Create guest profile",
+    description: "Creates a new guest user profile for anonymous usage"
+  }
+}).post("/start-verification", async ({ body, set }) => {
+  try {
+    const { guestId, email } = body, result = await userService.startVerification(guestId, email);
+    return {
+      success: !0,
+      data: {
+        userId: result.user.id,
+        email: result.user.email,
+        verificationSent: !0,
+        isExistingUser: result.isExistingUser
+      },
+      message: result.isExistingUser ? "Verification code sent to your email address." : "Account created successfully. Please check your email for verification."
+    };
+  } catch (error) {
+    console.error("Start verification error:", error);
+    if (error instanceof Error) {
+      if (error.message === "Guest user not found") {
+        set.status = 404;
+        return {
+          success: !1,
+          error: {
+            code: "GUEST_USER_NOT_FOUND",
+            message: "Invalid guest user",
+            details: "The guest user ID provided was not found."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "VERIFICATION_START_FAILED",
+        message: "Failed to start verification",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    guestId: t.String(),
+    email: t.String({ format: "email" })
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Start verification (unified)",
+    description: "Handles both new account creation and existing user verification with single endpoint"
+  }
+}).post("/resend-verification", async ({ body, set }) => {
+  try {
+    const { email } = body;
+    await userService.resendVerificationCode(email);
+    return {
+      success: !0,
+      message: "Verification code sent successfully"
+    };
+  } catch (error) {
+    console.error("Resend verification error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("User not found")) {
+        set.status = 404;
+        return {
+          success: !1,
+          error: {
+            code: "USER_NOT_FOUND",
+            message: "User not found",
+            details: "No account found with this email address."
+          }
+        };
+      }
+      if (error.message.includes("already verified")) {
+        set.status = 400;
+        return {
+          success: !1,
+          error: {
+            code: "ALREADY_VERIFIED",
+            message: "Email already verified",
+            details: "This email address is already verified. You can log in directly."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "RESEND_FAILED",
+        message: "Failed to resend verification code",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    email: t.String({ format: "email" })
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Resend verification code",
+    description: "Resends verification code to the email address"
+  }
+}).post("/verify", async ({ body, set }) => {
+  try {
+    const { verificationToken } = body, result = await userService.verifyEmail(verificationToken), responseData = {
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        guestId: result.user.guestId,
+        emailVerified: result.user.emailVerified,
+        userStatus: result.user.userStatus,
+        createdAt: result.user.createdAt
+      },
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken
+    };
+    if (result.preferences)
+      responseData.preferences = result.preferences;
+    return {
+      success: !0,
+      data: responseData,
+      message: "Email verified successfully"
+    };
+  } catch (error) {
+    console.error("Email verification error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("Invalid or expired")) {
+        set.status = 400;
+        return {
+          success: !1,
+          error: {
+            code: "INVALID_VERIFICATION_TOKEN",
+            message: "Invalid or expired verification token",
+            details: "Please request a new verification code."
+          }
+        };
+      }
+      if (error.message.includes("expired")) {
+        set.status = 410;
+        return {
+          success: !1,
+          error: {
+            code: "VERIFICATION_TOKEN_EXPIRED",
+            message: "Verification token has expired",
+            details: "Please request a new verification code."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "EMAIL_VERIFICATION_FAILED",
+        message: "Email verification failed",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    verificationToken: t.String()
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Verify email address",
+    description: "Verifies email address and returns authentication tokens, includes preferences for existing users"
+  }
+}).post("/refresh", async ({ body, set }) => {
+  try {
+    const { refreshToken } = body, tokens = await userService.refreshToken(refreshToken);
+    if (!tokens) {
+      set.status = 401;
+      return {
+        success: !1,
+        error: {
+          code: "INVALID_REFRESH_TOKEN",
+          message: "Invalid or expired refresh token",
+          details: "Please log in again."
+        }
+      };
+    }
+    return {
+      success: !0,
+      data: tokens,
+      message: "Tokens refreshed successfully"
+    };
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "TOKEN_REFRESH_FAILED",
+        message: "Failed to refresh tokens",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    refreshToken: t.String()
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Refresh access token",
+    description: "Refreshes access token using refresh token"
+  }
+}).post("/logout", async ({ headers, set }) => {
+  try {
+    const authorization = headers.authorization;
+    if (authorization && authorization.startsWith("Bearer ")) {
+      const accessToken = authorization.substring(7);
+      await userService.logout(accessToken);
+    }
+    return {
+      success: !0,
+      message: "Logged out successfully"
+    };
+  } catch (error) {
+    console.error("Logout error:", error);
+    return {
+      success: !0,
+      message: "Logged out successfully"
+    };
+  }
+}, {
+  detail: {
+    tags: ["Authentication"],
+    summary: "Logout user",
+    description: "Invalidates current session and logs out user"
+  }
+}).get("/profile", async ({ user }) => {
+  return {
+    success: !0,
+    data: {
+      id: user.id,
+      email: user.email,
+      guestId: user.guestId,
+      emailVerified: user.emailVerified,
+      userStatus: user.userStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }
+  };
+}, {
+  detail: {
+    tags: ["Authentication"],
+    summary: "Get user profile",
+    description: "Returns current user profile information"
+  }
+}).requireAuth()', 'new Elysia({ prefix: "/api/auth" }).use(authMiddleware).post("/guest", async ({ body, headers, set }) => {
+  try {
+    const deviceFingerprint = body.deviceFingerprint, user = await userService.createGuestUser(deviceFingerprint);
+    return {
+      success: !0,
+      data: {
+        guestId: user.guestId,
+        userId: user.id,
+        createdAt: user.createdAt
+      },
+      message: "Guest profile created successfully"
+    };
+  } catch (error) {
+    console.error("Guest creation error:", error);
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "GUEST_CREATION_FAILED",
+        message: "Failed to create guest profile",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    deviceFingerprint: t.Optional(t.String())
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Create guest profile",
+    description: "Creates a new guest user profile for anonymous usage"
+  }
+}).post("/start-verification", async ({ body, set }) => {
+  try {
+    const { guestId, email } = body, result = await userService.startVerification(guestId, email);
+    return {
+      success: !0,
+      data: {
+        userId: result.user.id,
+        email: result.user.email,
+        verificationSent: !0,
+        isExistingUser: result.isExistingUser
+      },
+      message: result.isExistingUser ? "Verification code sent to your email address." : "Account created successfully. Please check your email for verification."
+    };
+  } catch (error) {
+    console.error("Start verification error:", error);
+    if (error instanceof Error) {
+      if (error.message === "Guest user not found") {
+        set.status = 404;
+        return {
+          success: !1,
+          error: {
+            code: "GUEST_USER_NOT_FOUND",
+            message: "Invalid guest user",
+            details: "The guest user ID provided was not found."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "VERIFICATION_START_FAILED",
+        message: "Failed to start verification",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    guestId: t.String(),
+    email: t.String({ format: "email" })
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Start verification (unified)",
+    description: "Handles both new account creation and existing user verification with single endpoint"
+  }
+}).post("/resend-verification", async ({ body, set }) => {
+  try {
+    const { email } = body;
+    await userService.resendVerificationCode(email);
+    return {
+      success: !0,
+      message: "Verification code sent successfully"
+    };
+  } catch (error) {
+    console.error("Resend verification error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("User not found")) {
+        set.status = 404;
+        return {
+          success: !1,
+          error: {
+            code: "USER_NOT_FOUND",
+            message: "User not found",
+            details: "No account found with this email address."
+          }
+        };
+      }
+      if (error.message.includes("already verified")) {
+        set.status = 400;
+        return {
+          success: !1,
+          error: {
+            code: "ALREADY_VERIFIED",
+            message: "Email already verified",
+            details: "This email address is already verified. You can log in directly."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "RESEND_FAILED",
+        message: "Failed to resend verification code",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    email: t.String({ format: "email" })
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Resend verification code",
+    description: "Resends verification code to the email address"
+  }
+}).post("/verify", async ({ body, set }) => {
+  try {
+    const { verificationToken } = body, result = await userService.verifyEmail(verificationToken), responseData = {
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        guestId: result.user.guestId,
+        emailVerified: result.user.emailVerified,
+        userStatus: result.user.userStatus,
+        createdAt: result.user.createdAt
+      },
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken
+    };
+    if (result.preferences)
+      responseData.preferences = result.preferences;
+    return {
+      success: !0,
+      data: responseData,
+      message: "Email verified successfully"
+    };
+  } catch (error) {
+    console.error("Email verification error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("Invalid or expired")) {
+        set.status = 400;
+        return {
+          success: !1,
+          error: {
+            code: "INVALID_VERIFICATION_TOKEN",
+            message: "Invalid or expired verification token",
+            details: "Please request a new verification code."
+          }
+        };
+      }
+      if (error.message.includes("expired")) {
+        set.status = 410;
+        return {
+          success: !1,
+          error: {
+            code: "VERIFICATION_TOKEN_EXPIRED",
+            message: "Verification token has expired",
+            details: "Please request a new verification code."
+          }
+        };
+      }
+    }
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "EMAIL_VERIFICATION_FAILED",
+        message: "Email verification failed",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    verificationToken: t.String()
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Verify email address",
+    description: "Verifies email address and returns authentication tokens, includes preferences for existing users"
+  }
+}).post("/refresh", async ({ body, set }) => {
+  try {
+    const { refreshToken } = body, tokens = await userService.refreshToken(refreshToken);
+    if (!tokens) {
+      set.status = 401;
+      return {
+        success: !1,
+        error: {
+          code: "INVALID_REFRESH_TOKEN",
+          message: "Invalid or expired refresh token",
+          details: "Please log in again."
+        }
+      };
+    }
+    return {
+      success: !0,
+      data: tokens,
+      message: "Tokens refreshed successfully"
+    };
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    set.status = 500;
+    return {
+      success: !1,
+      error: {
+        code: "TOKEN_REFRESH_FAILED",
+        message: "Failed to refresh tokens",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }
+    };
+  }
+}, {
+  body: t.Object({
+    refreshToken: t.String()
+  }),
+  detail: {
+    tags: ["Authentication"],
+    summary: "Refresh access token",
+    description: "Refreshes access token using refresh token"
+  }
+}).post("/logout", async ({ headers, set }) => {
+  try {
+    const authorization = headers.authorization;
+    if (authorization && authorization.startsWith("Bearer ")) {
+      const accessToken = authorization.substring(7);
+      await userService.logout(accessToken);
+    }
+    return {
+      success: !0,
+      message: "Logged out successfully"
+    };
+  } catch (error) {
+    console.error("Logout error:", error);
+    return {
+      success: !0,
+      message: "Logged out successfully"
+    };
+  }
+}, {
+  detail: {
+    tags: ["Authentication"],
+    summary: "Logout user",
+    description: "Invalidates current session and logs out user"
+  }
+}).get("/profile", async ({ user }) => {
+  return {
+    success: !0,
+    data: {
+      id: user.id,
+      email: user.email,
+      guestId: user.guestId,
+      emailVerified: user.emailVerified,
+      userStatus: user.userStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }
+  };
+}, {
+  detail: {
+    tags: ["Authentication"],
+    summary: "Get user profile",
+    description: "Returns current user profile information"
+  }
+}).requireAuth' is undefined)[0m
+[0m      [2mat [0m[0m[36m/Users/pooh/dev/babel-feed/apps/babel-api/src/routes/auth.routes.ts[0m[2m:[0m[33m374[0m[2m:[33m4[0m
+[0m      [2mat [0m[0m[1m[3mloadAndEvaluateModule[0m[2m ([0m[0m[36m[0m[33m2[0m[2m:[33m1[0m[2m)[0m
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:21:45.481Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:21:45.481Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:21:45.481Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:22:09.566Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:22:09.566Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:22:09.566Z"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:22:25.233Z] GET /api/auth/status
+   URL: http://localhost:3000/api/auth/status
+🟢 [2025-07-02T01:22:25.233Z] GET /api/auth/status - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "authenticated": false,
+    "emailVerified": false,
+    "userId": null
+  }
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:22:34.365Z] POST /api/auth/guest
+   URL: http://localhost:3000/api/auth/guest
+Query: insert into "users" ("id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at") values (default, default, $1, $2, $3, default, default, $4, default, default) returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: ["guest_4075e8ec7550ee1322fa36fe099bc6bb", false, "guest", "test_device_fresh"]
+Query: insert into "user_preferences" ("user_id", "preferred_languages", "feed_categories", "translation_settings", "theme_preference", "notification_settings", "privacy_settings", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, default) -- params: ["f66c33cc-e37c-4686-a613-955cf2a7eb7f", "[\"en\"]", "[]", "{\"autoTranslate\":false,\"defaultTargetLanguage\":\"en\"}", "system", "{\"emailNotifications\":false,\"pushNotifications\":false}", "{\"analytics\":false,\"personalization\":true}"]
+🟢 [2025-07-02T01:22:34.388Z] POST /api/auth/guest - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "guestId": "guest_4075e8ec7550ee1322fa36fe099bc6bb",
+    "userId": "f66c33cc-e37c-4686-a613-955cf2a7eb7f",
+    "createdAt": "2025-07-02T01:22:34.487Z"
+  },
+  "message": "Guest profile created successfully"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:22:41.343Z] POST /api/auth/start-verification
+   URL: http://localhost:3000/api/auth/start-verification
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."email" = $1 limit $2 -- params: ["test-fresh@example.com", 1]
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."email" = $1 limit $2 -- params: ["test-fresh@example.com", 1]
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."guest_id" = $1 limit $2 -- params: ["guest_4075e8ec7550ee1322fa36fe099bc6bb", 1]
+Query: update "users" set "email" = $1, "verification_token" = $2, "verification_token_expiry" = $3, "updated_at" = $4 where "users"."id" = $5 returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: ["test-fresh@example.com", "2844", "2025-07-02T01:32:41.353Z", "2025-07-02T01:22:41.353Z", "f66c33cc-e37c-4686-a613-955cf2a7eb7f"]
+📧 ===== OTP EMAIL (Development Mode) =====
+To: test-fresh@example.com
+Subject: Your Babel Feed Verification Code
+OTP Code: 2844
+📧 ========================================
+🟢 [2025-07-02T01:22:41.355Z] POST /api/auth/start-verification - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "userId": "f66c33cc-e37c-4686-a613-955cf2a7eb7f",
+    "email": "test-fresh@example.com",
+    "verificationSent": true,
+    "isExistingUser": false
+  },
+  "message": "Account created successfully. Please check your email for verification."
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:22:49.872Z] POST /api/auth/verify
+   URL: http://localhost:3000/api/auth/verify
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."verification_token" = $1 limit $2 -- params: ["2844", 1]
+Query: update "users" set "email_verified" = $1, "user_status" = $2, "verification_token" = $3, "verification_token_expiry" = $4, "updated_at" = $5 where "users"."id" = $6 returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: [true, "verified", null, null, "2025-07-02T01:22:49.875Z", "f66c33cc-e37c-4686-a613-955cf2a7eb7f"]
+Query: insert into "user_sessions" ("id", "user_id", "access_token_hash", "refresh_token_hash", "expires_at", "device_info", "ip_address", "user_agent", "last_accessed_at", "created_at") values (default, $1, $2, $3, $4, default, default, default, default, default) -- params: ["f66c33cc-e37c-4686-a613-955cf2a7eb7f", "f84dc70de26d135be56f777211229517c93cba19b9dd9579be7438c68b67d141", "49086a19997683a736133a7de1d41a2136889eaa7c5c622ffb6d90356505d6a3", "2026-07-02T01:22:49.878Z"]
+📧 ===== WELCOME EMAIL (Development Mode) =====
+To: test-fresh@example.com
+Subject: Welcome to Babel Feed!
+📧 ==========================================
+🟢 [2025-07-02T01:22:49.882Z] POST /api/auth/verify - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "f66c33cc-e37c-4686-a613-955cf2a7eb7f",
+      "email": "test-fresh@example.com",
+      "guestId": "guest_4075e8ec7550ee1322fa36fe099bc6bb",
+      "emailVerified": true,
+      "userStatus": "verified",
+      "createdAt": "2025-07-02T01:22:34.487Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNjZjMzNjYy1lMzdjLTQ2ODYtYTYxMy05NTVjZjJhN2ViN2YiLCJlbWFpbCI6InRlc3QtZnJlc2hAZXhhbXBsZS5jb20iLCJlbWFpbFZlcmlmaWVkIjp0cnVlLCJqdGkiOiJkZDg3NDcwNjJiMzEzZTYwIiwiaWF0IjoxNzUxNDE5MzY5LCJleHAiOjE3NTQwMTEzNjl9.buzQI1P-cBdHsZC41z5A0v5JbVd5YwyX6HYKzic-kNE",
+    "refreshToken": "b116bf9d69ba4d2684ccb11f4d96dec14383c79612cbc1131355490233642c44"
+  },
+  "message": "Email verified successfully"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:22:59.228Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:22:59.228Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:22:59.228Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:23:40.511Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:23:40.512Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:23:40.512Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:24:18.361Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:24:18.361Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:24:18.361Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:24:46.399Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:24:46.399Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:24:46.399Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+🔧 Loading environment variables...
+✅ Environment loaded: JWT_SECRET=dbebce2c...
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:25:40.112Z] GET /api/auth/profile
+   URL: http://localhost:3000/api/auth/profile
+🟡 [2025-07-02T01:25:40.112Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:25:40.112Z"
+}
+   ⏱️  Complete
+
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+[2J[3J[H[2J[3J[H🗄️  Database connection established (development)
+📧 Mailgun not configured - using console logging for development
+🗄️  Initializing database...
+🔄 Running database migrations...
+Query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+🦊 Babel Feed Translation API is running at 0.0.0.0:3000
+📚 API Documentation available at http://0.0.0.0:3000/swagger
+🏥 Health check available at http://0.0.0.0:3000/health
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P06"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"schema \"drizzle\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"schemacmds.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"131"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"CreateSchemaCommand"[0m[0m[0m[2m,[0m
+}
+Query: 
+			CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		
+{
+  [0mseverity_local[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mseverity[2m:[0m [0m[32m[0m[32m"NOTICE"[0m[0m[0m[2m,[0m
+  [0mcode[2m:[0m [0m[32m[0m[32m"42P07"[0m[0m[0m[2m,[0m
+  [0mmessage[2m:[0m [0m[32m[0m[32m"relation \"__drizzle_migrations\" already exists, skipping"[0m[0m[0m[2m,[0m
+  [0mfile[2m:[0m [0m[32m[0m[32m"parse_utilcmd.c"[0m[0m[0m[2m,[0m
+  [0mline[2m:[0m [0m[32m[0m[32m"207"[0m[0m[0m[2m,[0m
+  [0mroutine[2m:[0m [0m[32m[0m[32m"transformCreateStmt"[0m[0m[0m[2m,[0m
+}
+Query: select id, hash, created_at from "drizzle"."__drizzle_migrations" order by created_at desc limit 1
+✅ Database migrations completed successfully
+✅ Database initialized successfully
+
+🔵 [2025-07-02T01:33:05.797Z] GET /api/articles
+   URL: http://10.0.2.2:3000/api/articles?limit=20&offset=0
+Query: select "id", "title", "title_translations", "summary", "summary_translations", "url", "source", "source_language", "available_languages", "image_url", "published_at", "created_at", "updated_at" from "articles" order by "articles"."published_at" desc limit $1 -- params: [20]
+Query: select count(*) from "articles"
+🟢 [2025-07-02T01:33:05.870Z] GET /api/articles - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "6b59e2d9-fc81-41a8-885d-aa1ee9e78b0e",
+      "title": "中国建成世界最高太阳观测站取得重大进展",
+      "titleTranslations": {
+        "en": "China makes major progress in building world's highest solar observatory",
+        "ja": "中国、世界最高の太陽観測所の建設で大きな進展",
+        "zh-TW": "中國建成世界最高太陽觀測站取得重大進展"
+      },
+      "summary": "中国在四川省稻城太阳射电望远镜（DSRT）的建设上取得了重大进展。该望远镜建成后，将成为世界上规模最大、灵敏度最高的太阳射电望远镜，为太阳物理研究提供宝贵数据。",
+      "summaryTranslations": {
+        "en": "China has made significant strides in the construction of the Daocheng Solar Radio Telescope (DSRT) in Sichuan province. Once completed, it will be the world's largest and most sensitive solar radio telescope, providing valuable data for solar physics research.",
+        "ja": "中国は四川省にある稲城太陽電波望遠鏡（DSRT）の建設で大きな進歩を遂げました。完成すれば、世界最大かつ最高感度の太陽電波望遠鏡となり、太陽物理学研究に貴重なデータを提供します。",
+        "zh-TW": "中國在四川省稻城太陽射電望遠鏡（DSRT）的建設上取得了重大進展。該望遠鏡建成後，將成為世界上規模最大、靈敏度最高的太陽射電望遠鏡，為太陽物理研究提供寶貴數據。"
+      },
+      "url": "https://english.news.cn...
+  [TRUNCATED]
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:16.736Z] POST /api/auth/guest
+   URL: http://10.0.2.2:3000/api/auth/guest
+Query: insert into "users" ("id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at") values (default, default, $1, $2, $3, default, default, $4, default, default) returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: ["guest_610209a6d90cb9d21e04910ca254cdfa", false, "guest", "android_af45183b-379d-4e3d-aa6b-eaf818a36485"]
+Query: insert into "user_preferences" ("user_id", "preferred_languages", "feed_categories", "translation_settings", "theme_preference", "notification_settings", "privacy_settings", "updated_at") values ($1, $2, $3, $4, $5, $6, $7, default) -- params: ["cf6507fe-d0fe-404a-9c0b-b4822888c5e5", "[\"en\"]", "[]", "{\"autoTranslate\":false,\"defaultTargetLanguage\":\"en\"}", "system", "{\"emailNotifications\":false,\"pushNotifications\":false}", "{\"analytics\":false,\"personalization\":true}"]
+🟢 [2025-07-02T01:33:16.779Z] POST /api/auth/guest - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "guestId": "guest_610209a6d90cb9d21e04910ca254cdfa",
+    "userId": "cf6507fe-d0fe-404a-9c0b-b4822888c5e5",
+    "createdAt": "2025-07-02T01:33:16.859Z"
+  },
+  "message": "Guest profile created successfully"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:27.053Z] POST /api/auth/start-verification
+   URL: http://10.0.2.2:3000/api/auth/start-verification
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."email" = $1 limit $2 -- params: ["asd@asd.asd", 1]
+Query: update "users" set "verification_token" = $1, "verification_token_expiry" = $2, "updated_at" = $3 where "users"."id" = $4 returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: ["4956", "2025-07-02T01:43:27.081Z", "2025-07-02T01:33:27.082Z", "38a7e313-20da-42dc-9010-fce2bf84a979"]
+📧 ===== OTP EMAIL (Development Mode) =====
+To: asd@asd.asd
+Subject: Your Babel Feed Verification Code
+OTP Code: 4956
+📧 ========================================
+🟢 [2025-07-02T01:33:27.098Z] POST /api/auth/start-verification - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "userId": "38a7e313-20da-42dc-9010-fce2bf84a979",
+    "email": "asd@asd.asd",
+    "verificationSent": true,
+    "isExistingUser": true
+  },
+  "message": "Verification code sent to your email address."
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:40.792Z] POST /api/auth/verify
+   URL: http://10.0.2.2:3000/api/auth/verify
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."verification_token" = $1 limit $2 -- params: ["4956", 1]
+Query: update "users" set "email_verified" = $1, "user_status" = $2, "verification_token" = $3, "verification_token_expiry" = $4, "updated_at" = $5 where "users"."id" = $6 returning "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" -- params: [true, "verified", null, null, "2025-07-02T01:33:40.805Z", "38a7e313-20da-42dc-9010-fce2bf84a979"]
+Query: insert into "user_sessions" ("id", "user_id", "access_token_hash", "refresh_token_hash", "expires_at", "device_info", "ip_address", "user_agent", "last_accessed_at", "created_at") values (default, $1, $2, $3, $4, default, default, default, default, default) -- params: ["38a7e313-20da-42dc-9010-fce2bf84a979", "5b65ff32b3fa5ff074df088dc0bf6a12107d176ea54a34764804c4076a2dccec", "8dbb7c1b1436bb8410133ab61134fc59a7ea84f0d458e78ad0356bac5d280a2c", "2026-07-02T01:33:40.817Z"]
+Query: select "user_id", "preferred_languages", "feed_categories", "translation_settings", "theme_preference", "notification_settings", "privacy_settings", "updated_at" from "user_preferences" where "user_preferences"."user_id" = $1 limit $2 -- params: ["38a7e313-20da-42dc-9010-fce2bf84a979", 1]
+🟢 [2025-07-02T01:33:40.841Z] POST /api/auth/verify - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "38a7e313-20da-42dc-9010-fce2bf84a979",
+      "email": "asd@asd.asd",
+      "guestId": "guest_ec240e1203ca02aaacae81dc450d783d",
+      "emailVerified": true,
+      "userStatus": "verified",
+      "createdAt": "2025-06-30T09:21:10.734Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzOGE3ZTMxMy0yMGRhLTQyZGMtOTAxMC1mY2UyYmY4NGE5NzkiLCJlbWFpbCI6ImFzZEBhc2QuYXNkIiwiZW1haWxWZXJpZmllZCI6dHJ1ZSwianRpIjoiY2RmODg2YjkxZGJlYzhhOSIsImlhdCI6MTc1MTQyMDAyMCwiZXhwIjoxNzU0MDEyMDIwfQ.eE6NvX58WoqnQha1aSSc4dEYppXhFEv6lZIfWOYBSzw",
+    "refreshToken": "161e4db65d9d3f2b6016069f577687589973a9e2c462c027751111f35d62f86f",
+    "preferences": {
+      "userId": "38a7e313-20da-42dc-9010-fce2bf84a979",
+      "preferredLanguages": [
+        "en"
+      ],
+      "feedCategories": [],
+      "translationSettings": {
+        "autoTranslate": false,
+        "defaultTargetLanguage": "en"
+      },
+      "themePreference": "system",
+  ...
+  [TRUNCATED]
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:43.044Z] GET /api/auth/preferences
+   URL: http://10.0.2.2:3000/api/auth/preferences
+🟡 [2025-07-02T01:33:43.045Z] GET /api/auth/preferences - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:33:43.045Z"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:43.058Z] GET /api/auth/profile
+   URL: http://10.0.2.2:3000/api/auth/profile
+🟡 [2025-07-02T01:33:43.058Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:33:43.058Z"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:43.059Z] POST /api/auth/refresh
+   URL: http://10.0.2.2:3000/api/auth/refresh
+Query: select "id", "user_id", "access_token_hash", "refresh_token_hash", "expires_at", "device_info", "ip_address", "user_agent", "last_accessed_at", "created_at" from "user_sessions" where "user_sessions"."refresh_token_hash" = $1 limit $2 -- params: ["8dbb7c1b1436bb8410133ab61134fc59a7ea84f0d458e78ad0356bac5d280a2c", 1]
+Query: select "id", "email", "guest_id", "email_verified", "user_status", "verification_token", "verification_token_expiry", "device_fingerprint", "created_at", "updated_at" from "users" where "users"."id" = $1 limit $2 -- params: ["38a7e313-20da-42dc-9010-fce2bf84a979", 1]
+Query: update "user_sessions" set "access_token_hash" = $1, "refresh_token_hash" = $2, "last_accessed_at" = $3 where "user_sessions"."id" = $4 -- params: ["8688419584244caf27f839eb40b9bc882340e7bfed82d13edc0bb90a55308abb", "71f5bda0d3f6b495168413e50bc0598a3108c38ead7c5442db780295446f41a2", "2025-07-02T01:33:43.071Z", "7d1a9a3c-748a-4f3f-b8b1-153228949084"]
+🟢 [2025-07-02T01:33:43.076Z] POST /api/auth/refresh - 200
+   📤 Response Body:
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzOGE3ZTMxMy0yMGRhLTQyZGMtOTAxMC1mY2UyYmY4NGE5NzkiLCJlbWFpbCI6ImFzZEBhc2QuYXNkIiwiZW1haWxWZXJpZmllZCI6dHJ1ZSwianRpIjoiZjU1YzM2M2MxMjUxZTEyOCIsImlhdCI6MTc1MTQyMDAyMywiZXhwIjoxNzU0MDEyMDIzfQ.JiP_CmN3i1kydyFtylL4kUfb3fW8irXKTG0Ejz-6IOA",
+    "refreshToken": "3c292835b7b505b894416a709d280635d02b568540dd69b7e0c7e47d49c9499c"
+  },
+  "message": "Tokens refreshed successfully"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:43.086Z] POST /api/auth/refresh
+   URL: http://10.0.2.2:3000/api/auth/refresh
+Query: select "id", "user_id", "access_token_hash", "refresh_token_hash", "expires_at", "device_info", "ip_address", "user_agent", "last_accessed_at", "created_at" from "user_sessions" where "user_sessions"."refresh_token_hash" = $1 limit $2 -- params: ["8dbb7c1b1436bb8410133ab61134fc59a7ea84f0d458e78ad0356bac5d280a2c", 1]
+🟡 [2025-07-02T01:33:43.090Z] POST /api/auth/refresh - 401
+   📤 Response Body:
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_REFRESH_TOKEN",
+    "message": "Invalid or expired refresh token",
+    "details": "Please log in again."
+  }
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:43.167Z] GET /api/auth/preferences
+   URL: http://10.0.2.2:3000/api/auth/preferences
+🟡 [2025-07-02T01:33:43.167Z] GET /api/auth/preferences - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:33:43.167Z"
+}
+   ⏱️  Complete
+
+
+🔵 [2025-07-02T01:33:43.193Z] GET /api/auth/profile
+   URL: http://10.0.2.2:3000/api/auth/profile
+🟡 [2025-07-02T01:33:43.193Z] GET /api/auth/profile - 401
+   📤 Response Body:
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Authentication required",
+    "details": null
+  },
+  "timestamp": "2025-07-02T01:33:43.193Z"
+}
+   ⏱️  Complete
+

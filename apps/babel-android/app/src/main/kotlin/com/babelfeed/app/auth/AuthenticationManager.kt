@@ -21,7 +21,7 @@ class AuthenticationManager @Inject constructor(
     private val tokenManager: SecureTokenManager,
     private val apiService: BabelApiService
 ) {
-    private val _authState = MutableStateFlow(AuthState.None)
+    private val _authState = MutableStateFlow(AuthState.Guest)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     private val _currentUser = MutableStateFlow<User?>(null)
@@ -36,28 +36,47 @@ class AuthenticationManager @Inject constructor(
      * Initialize authentication state from stored tokens
      */
     private fun initializeAuthState() {
+        refreshAuthState()
+    }
+
+    /**
+     * Refresh authentication state from current token state
+     * This method can be called to sync AuthManager with TokenManager changes
+     */
+    fun refreshAuthState() {
         val state = tokenManager.getAuthState()
         _authState.value = state
         
-        // If we have tokens, try to get user profile silently in background
-        if (state == AuthState.Authenticated || state == AuthState.PendingVerification) {
-            // Launch coroutine to restore user profile without blocking initialization
+        // For authenticated users, try to restore user profile
+        if (state == AuthState.Authenticated) {
+            // First, try to restore from local storage
+            val storedProfile = tokenManager.getUserProfile()
+            if (storedProfile != null) {
+                _currentUser.value = storedProfile
+            }
+            
+            // Then try to fetch fresh profile from server in background
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    // First try to get current user
-                    getCurrentUser()
-                } catch (e: Exception) {
-                    // If it fails, try to refresh tokens first
-                    try {
-                        val refreshed = refreshTokenIfNeeded()
-                        if (refreshed != null) {
-                            // Retry getting user profile after refresh
-                            getCurrentUser()
-                        }
-                    } catch (refreshException: Exception) {
-                        // Both attempts failed - user will need to re-authenticate
-                        // The auth state will be corrected by refreshTokenIfNeeded() calling logout
+                    // Check if access token is expired and try to refresh if needed
+                    if (!tokenManager.isAuthenticated() && tokenManager.getRefreshToken() != null) {
+                        // Access token is expired but we have a refresh token - try to refresh
+                        refreshTokenIfNeeded()
                     }
+                    
+                    // Try to fetch user profile from server
+                    if (tokenManager.isAuthenticated()) {
+                        val response = apiService.getProfile()
+                        if (response.success) {
+                            _currentUser.value = response.data
+                            // Store the fresh profile locally
+                            tokenManager.storeUserProfile(response.data)
+                        }
+                        // If API call fails, we already have the stored profile
+                    }
+                } catch (e: Exception) {
+                    // Background profile fetch failed - that's okay, we have the stored profile
+                    // The profile will be fetched when needed
                 }
             }
         }
@@ -85,15 +104,15 @@ class AuthenticationManager @Inject constructor(
     }
 
     /**
-     * Upgrade guest to authenticated user by adding email
+     * Start verification process (unified for new and existing users)
      */
-    suspend fun createAccountFromGuest(email: String): Result<Unit> {
+    suspend fun startVerification(email: String): Result<Unit> {
         return try {
             val guestId = tokenManager.getGuestId()
                 ?: return Result.failure(Exception("No guest user found"))
             
-            val request = CreateAccountRequest(guestId, email)
-            val response = apiService.createAccount(request)
+            val request = StartVerificationRequest(guestId, email)
+            val response = apiService.startVerification(request)
             
             if (response.isSuccessful) {
                 val body = response.body()
@@ -109,7 +128,7 @@ class AuthenticationManager @Inject constructor(
                 val errorBody = response.errorBody()?.string()
                 val errorMessage = try {
                     val gson = Gson()
-                    val errorResponse = gson.fromJson(errorBody, CreateAccountResponse::class.java)
+                    val errorResponse = gson.fromJson(errorBody, StartVerificationResponse::class.java)
                     errorResponse.error?.message ?: errorResponse.message ?: "Unknown error"
                 } catch (e: Exception) {
                     "Network error occurred"
@@ -124,7 +143,7 @@ class AuthenticationManager @Inject constructor(
     /**
      * Verify email and complete authentication
      */
-    suspend fun verifyEmail(verificationToken: String): Result<User> {
+    suspend fun verifyEmail(verificationToken: String): Result<VerificationResult> {
         return try {
             val request = VerifyEmailRequest(verificationToken)
             val response = apiService.verifyEmail(request)
@@ -140,10 +159,17 @@ class AuthenticationManager @Inject constructor(
                         emailVerified = true
                     )
                     
+                    // Store user profile locally for persistence
+                    tokenManager.storeUserProfile(body.data.user)
+                    
                     _currentUser.value = body.data.user
                     _authState.value = AuthState.Authenticated
                     
-                    Result.success(body.data.user)
+                    val result = VerificationResult(
+                        user = body.data.user,
+                        preferences = body.data.preferences
+                    )
+                    Result.success(result)
                 } else {
                     val errorMessage = body?.error?.message ?: body?.message ?: "Email verification failed"
                     Result.failure(Exception(errorMessage))
@@ -198,6 +224,8 @@ class AuthenticationManager @Inject constructor(
             
             if (response.success) {
                 _currentUser.value = response.data
+                // Store the fresh profile locally for persistence
+                tokenManager.storeUserProfile(response.data)
                 Result.success(response.data)
             } else {
                 Result.failure(Exception("Failed to get user profile"))
@@ -210,6 +238,8 @@ class AuthenticationManager @Inject constructor(
                     val response = apiService.getProfile()
                     if (response.success) {
                         _currentUser.value = response.data
+                        // Store the fresh profile locally for persistence
+                        tokenManager.storeUserProfile(response.data)
                         return Result.success(response.data)
                     }
                 } catch (retryException: Exception) {
@@ -240,19 +270,19 @@ class AuthenticationManager @Inject constructor(
                 )
                 tokens
             } else {
-                // Refresh failed, logout user
-                logout()
+                // Refresh failed, clear tokens but preserve verification status
+                silentLogout()
                 null
             }
         } catch (e: Exception) {
-            // Refresh failed, logout user
-            logout()
+            // Refresh failed, clear tokens but preserve verification status
+            silentLogout()
             null
         }
     }
 
     /**
-     * Logout user and clear all authentication data
+     * Logout user and clear authentication data but preserve guest profile
      */
     suspend fun logout() {
         try {
@@ -263,9 +293,10 @@ class AuthenticationManager @Inject constructor(
             // Ignore logout API errors
         }
         
-        tokenManager.clearAll()
+        // Clear auth tokens but preserve guest data
+        tokenManager.clearAuthTokens()
         _currentUser.value = null
-        _authState.value = AuthState.None
+        _authState.value = AuthState.Guest
     }
 
     /**
@@ -274,7 +305,13 @@ class AuthenticationManager @Inject constructor(
     fun silentLogout() {
         tokenManager.clearAuthTokens()
         _currentUser.value = null
-        _authState.value = if (tokenManager.getGuestId() != null) AuthState.Guest else AuthState.None
+        
+        // Set auth state based on verification status
+        _authState.value = if (tokenManager.isEmailVerified()) {
+            AuthState.PendingVerification
+        } else {
+            AuthState.Guest
+        }
     }
 
     /**

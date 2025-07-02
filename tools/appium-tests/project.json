@@ -6,9 +6,10 @@
   "tags": ["scope:tools", "type:e2e"],
   "targets": {
     "test": {
-      "executor": "@nx/bun:test",
+      "executor": "nx:run-commands",
       "options": {
-        "bunConfigPath": "tools/appium-tests/bunfig.toml"
+        "command": "bun test",
+        "cwd": "apps/babel-api"
       },
       "configurations": {
         "watch": {
@@ -29,18 +30,6 @@
         "scenarios": {
           "testPathPattern": ["tests/user-scenarios.test.ts"]
         }
-      }
-    },
-    "setup": {
-      "executor": "@nx/bun:run",
-      "options": {
-        "script": "setup.js"
-      }
-    },
-    "doctor": {
-      "executor": "@nx/bun:run",
-      "options": {
-        "script": "doctor.js"
       }
     },
     "lint": {

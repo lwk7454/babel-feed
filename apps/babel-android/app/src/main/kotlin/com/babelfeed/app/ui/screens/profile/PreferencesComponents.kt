@@ -192,7 +192,7 @@ fun PreferencesContent(
                                     onUpdatePreferences(currentPreferences)
                                 }
                             )
-                            .semantics { contentDescription = "Theme Option $name" },
+                            .semantics { contentDescription = "Theme Option" },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
