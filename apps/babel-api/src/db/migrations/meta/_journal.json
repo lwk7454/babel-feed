@@ -29,6 +29,20 @@
       "when": 1750852450737,
       "tag": "20250625115410_misty_imperial_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754318400000,
+      "tag": "20250704120000_current_database_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1754318460000,
+      "tag": "20250704120001_add_translation_fields",
+      "breakpoints": true
     }
   ]
 }

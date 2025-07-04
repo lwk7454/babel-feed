@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, integer, timestamp, unique, boolean, foreignKey, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, uuid, text, varchar, integer, timestamp, foreignKey, jsonb, unique, boolean } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -16,21 +16,6 @@ export const translationCache = pgTable("translation_cache", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 });
-
-export const users = pgTable("users", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	email: varchar({ length: 255 }),
-	guestId: varchar("guest_id", { length: 100 }),
-	emailVerified: boolean("email_verified").default(false),
-	verificationToken: varchar("verification_token", { length: 255 }),
-	verificationTokenExpiry: timestamp("verification_token_expiry", { mode: 'string' }),
-	deviceFingerprint: varchar("device_fingerprint", { length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-}, (table) => [
-	unique("users_email_unique").on(table.email),
-	unique("users_guest_id_unique").on(table.guestId),
-]);
 
 export const userActivity = pgTable("user_activity", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -119,14 +104,26 @@ export const articles = pgTable("articles", {
 	summary: text(),
 	url: varchar({ length: 500 }).notNull(),
 	source: varchar({ length: 100 }).notNull(),
+	language: varchar({ length: 10 }).default('en').notNull(),
 	publishedAt: timestamp("published_at", { mode: 'string' }).defaultNow().notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-	titleTranslations: jsonb("title_translations").default({}),
-	summaryTranslations: jsonb("summary_translations").default({}),
-	sourceLanguage: varchar("source_language", { length: 10 }).default('en'),
-	availableLanguages: jsonb("available_languages").default(["en"]),
-	imageUrl: varchar("image_url", { length: 500 }),
 }, (table) => [
 	unique("articles_url_unique").on(table.url),
+]);
+
+export const users = pgTable("users", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	email: varchar({ length: 255 }),
+	guestId: varchar("guest_id", { length: 100 }),
+	emailVerified: boolean("email_verified").default(false),
+	verificationToken: varchar("verification_token", { length: 255 }),
+	verificationTokenExpiry: timestamp("verification_token_expiry", { mode: 'string' }),
+	deviceFingerprint: varchar("device_fingerprint", { length: 255 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+	userStatus: varchar("user_status", { length: 20 }).default('guest').notNull(),
+}, (table) => [
+	unique("users_email_unique").on(table.email),
+	unique("users_guest_id_unique").on(table.guestId),
 ]);

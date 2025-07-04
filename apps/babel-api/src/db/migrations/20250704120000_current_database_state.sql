@@ -1,0 +1,2 @@
+-- This migration represents the current database state
+-- No changes needed as this is a snapshot of the existing database structure
