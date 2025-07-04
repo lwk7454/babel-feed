@@ -66,7 +66,8 @@ export function createAuthGuard(customUserService?: any) {
               timestamp: new Date().toISOString()
             };
           }
-          return {};
+          // Don't return anything to avoid overriding the actual response
+          return;
         });
       },
       
@@ -100,7 +101,8 @@ export function createAuthGuard(customUserService?: any) {
               timestamp: new Date().toISOString()
             };
           }
-          return {};
+          // Don't return anything to avoid overriding the actual response
+          return;
         });
       }
     }))

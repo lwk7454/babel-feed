@@ -157,7 +157,8 @@ export const cacheMiddleware = new Elysia({ name: "cache" })
         });
       }
     }
-    return {};
+    // Don't return anything to avoid overriding the actual response
+    return;
   })
   .as('scoped');
 

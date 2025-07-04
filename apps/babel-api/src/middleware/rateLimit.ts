@@ -96,7 +96,8 @@ export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
         timestamp: new Date().toISOString()
       };
     }
-    return {};
+    // Don't return anything to avoid overriding the actual response
+    return;
   })
   .as('scoped');
 
@@ -121,7 +122,8 @@ export const contentValidationMiddleware = new Elysia({ name: "contentValidation
         };
       }
     }
-    return {};
+    // Don't return anything to avoid overriding the actual response
+    return;
   })
   .as('scoped');
 
