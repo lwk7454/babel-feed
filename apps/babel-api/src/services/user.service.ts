@@ -2,7 +2,6 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { users, userSessions, userPreferences, type User, type NewUser, type NewUserSession, type NewUserPreferences } from '../db/schema.js';
-import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
 import { emailService } from './email.service.js';
@@ -13,7 +12,6 @@ import { emailService } from './email.service.js';
 export class UserService {
   private readonly jwtSecret: string;
   private readonly accessTokenExpiry = '30d'; // 30 days for news app - longer sessions preferred
-  private readonly refreshTokenExpiry = '365d'; // 1 year
   private readonly db: PostgresJsDatabase<any>;
   
   constructor(database?: PostgresJsDatabase<any>) {
@@ -96,38 +94,12 @@ export class UserService {
     const existingEmailUser = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
     
     if (existingEmailUser.length > 0) {
-      const existingUser = existingEmailUser[0];
+      // Send verification code for existing user (verified or unverified)
+      await this.resendVerificationCode(email);
       
-      // If user is already verified, send verification code directly
-      if (existingUser.emailVerified) {
-        // Generate new verification token for existing verified user
-        const verificationToken = this.generateVerificationToken();
-        const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-        // Update existing user with new verification token (temporarily mark as unverified for re-verification)
-        const [updatedUser] = await this.db
-          .update(users)
-          .set({
-            verificationToken,
-            verificationTokenExpiry,
-            updatedAt: new Date()
-          })
-          .where(eq(users.id, existingUser.id))
-          .returning();
-
-        // Send OTP email
-        try {
-          await emailService.sendOTPEmail(email, verificationToken);
-        } catch (error) {
-          console.error('Failed to send OTP email:', error);
-        }
-
-        return { user: updatedUser, isExistingUser: true };
-      } else {
-        // User exists but not verified - resend verification
-        await this.resendVerificationCode(email);
-        return { user: existingUser, isExistingUser: true };
-      }
+      // Return updated user data
+      const [updatedUser] = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+      return { user: updatedUser, isExistingUser: true };
     }
 
     // Email doesn't exist - create new account from guest
@@ -207,10 +179,6 @@ export class UserService {
       throw new Error('User not found with this email address');
     }
 
-    if (user.emailVerified) {
-      throw new Error('Email is already verified');
-    }
-
     // Generate new verification token
     const verificationToken = this.generateVerificationToken();
     const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -242,7 +210,7 @@ export class UserService {
     const refreshTokenHash = this.hashToken(refreshToken);
     
     // Calculate expiry
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+    const expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years
 
     // Store session in database
     const newSession: NewUserSession = {
@@ -504,7 +472,7 @@ export class UserService {
 let _userServiceInstance: UserService | null = null;
 
 export const userService = new Proxy({} as UserService, {
-  get(target, prop) {
+  get(_, prop) {
     // Initialize the singleton on first access
     if (!_userServiceInstance) {
       _userServiceInstance = new UserService();

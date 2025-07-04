@@ -468,6 +468,19 @@ Backend service is deployed to AWS.
 - **Always git commit your code at key points**: Use git proactively to record your progress when working on big changes. You are free to create branches, but remember to clean them off when done, I don't like dangling branches. You are welcome to squash commits when merging branches, I like clean, readable and relevant git history.
 - **Expect a running backend api at localhost:3000**: When doing android mobile mcp tests, expect there's an avaialable localhost backend API. 
 
+### Mobile MCP usage guideline
+- When working on a mobile app, use mobile MCP to debug features that you are working on.
+- When using mobile mcp for debugging, remember to check logs in various places for better awareness, including corresponding backend service logs.
+- **Don't overly rely on screenshots for feedback. First check element list, then logs and other sources, only use screenshots when other methods aren't enough**.
+- When taking mobile screenshot, always directly use ADB and scale down 50% with imagemagick, **don't use mobile mcp take screenshot tool**. 
+- Before executing tap or click on elements, always confirm position with data from list element, don't use screenshot pixel position.
+
+### Android Testing Commands
+- **Run individual instrumented test**: `./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=FULL_CLASS_NAME#TEST_METHOD_NAME`
+- **Example**: `./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.babelfeed.app.ui.screens.feed.FeedScreenInstrumentedTest#feedScreen_articleCards_showCorrectContent`
+- **Run all tests in a class**: `./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=FULL_CLASS_NAME`
+- **Command location**: Must be run from Android app directory (apps/babel-android)
+
 ## Database Configuration
 
 - When accessing DB make sure you are using the correct MCP. There are sqlite and postgresql mcps, this project's db is PostgreSQL

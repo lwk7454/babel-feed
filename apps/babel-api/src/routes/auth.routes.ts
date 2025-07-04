@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { userService } from '../services/user.service.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { User } from '../db/schema.js';
 
 /**
  * Authentication routes for user management
@@ -12,7 +13,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Create guest profile
    */
   .post('/guest', 
-    async ({ body, headers, set }) => {
+    async ({ body, set }) => {
       try {
         const deviceFingerprint = (body as any).deviceFingerprint;
         const user = await userService.createGuestUser(deviceFingerprint);
@@ -315,7 +316,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Logout user
    */
   .post('/logout',
-    async ({ headers, set }) => {
+    async ({ headers }) => {
       try {
         const authorization = headers.authorization;
         if (authorization && authorization.startsWith('Bearer ')) {
@@ -349,37 +350,27 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    * Get current user profile
    */
   .get('/profile',
-    async ({ user, set }) => {
-      if (!user) {
-        set.status = 401;
-        return {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Authentication required',
-            details: null
-          },
-          timestamp: new Date().toISOString()
-        };
-      }
-      
+    async ({ user }) => {
+      const validatedUser = user as User;
       return {
         success: true,
         data: {
-          id: user.id,
-          email: user.email,
-          guestId: user.guestId,
-          emailVerified: user.emailVerified,
-          userStatus: user.userStatus,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          id: validatedUser.id,
+          email: validatedUser.email,
+          guestId: validatedUser.guestId,
+          emailVerified: validatedUser.emailVerified,
+          userStatus: validatedUser.userStatus,
+          createdAt: validatedUser.createdAt,
+          updatedAt: validatedUser.updatedAt
         }
       };
     },
     {
+      requireAuth: true,
       detail: {
         tags: ['Authentication'],
         summary: 'Get user profile',
-        description: 'Returns current user profile information'
+        description: 'Returns current user profile information (requires authentication)'
       }
     }
   )
@@ -389,21 +380,10 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    */
   .put('/preferences',
     async ({ user, body, set }) => {
-      if (!user) {
-        set.status = 401;
-        return {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Authentication required',
-            details: null
-          },
-          timestamp: new Date().toISOString()
-        };
-      }
-      
       try {
-        await userService.updateUserPreferences(user.id, body as any);
-        const preferences = await userService.getUserPreferences(user.id);
+        const validatedUser = user as User;
+        await userService.updateUserPreferences(validatedUser.id, body as any);
+        const preferences = await userService.getUserPreferences(validatedUser.id);
         
         return {
           success: true,
@@ -441,10 +421,11 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
           personalization: t.Optional(t.Boolean())
         }))
       }),
+      requireAuth: true,
       detail: {
         tags: ['Authentication'],
         summary: 'Update user preferences',
-        description: 'Updates user preferences and settings'
+        description: 'Updates user preferences and settings (requires authentication)'
       }
     }
   )
@@ -454,34 +435,10 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    */
   .post('/save-settings',
     async ({ user, body, set }) => {
-      if (!user) {
-        set.status = 401;
-        return {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Authentication required',
-            details: null
-          },
-          timestamp: new Date().toISOString()
-        };
-      }
-      
       try {
-        // Only verified users can sync settings to server
-        if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
-          set.status = 403;
-          return {
-            success: false,
-            error: {
-              code: 'SETTINGS_SYNC_FORBIDDEN',
-              message: 'Settings sync requires verified account',
-              details: 'Only verified users can sync settings to server'
-            }
-          };
-        }
-
-        await userService.updateUserPreferences(user.id, body as any);
-        const preferences = await userService.getUserPreferences(user.id);
+        const validatedUser = user as User;
+        await userService.updateUserPreferences(validatedUser.id, body as any);
+        const preferences = await userService.getUserPreferences(validatedUser.id);
         
         return {
           success: true,
@@ -519,6 +476,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
           personalization: t.Optional(t.Boolean())
         }))
       }),
+      requireVerifiedEmail: true,
       detail: {
         tags: ['Authentication'],
         summary: 'Save settings (verified users only)',
@@ -532,20 +490,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
    */
   .get('/preferences',
     async ({ user, set }) => {
-      if (!user) {
-        set.status = 401;
-        return {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Authentication required',
-            details: null
-          },
-          timestamp: new Date().toISOString()
-        };
-      }
-      
       try {
-        const preferences = await userService.getUserPreferences(user.id);
+        const validatedUser = user as User;
+        const preferences = await userService.getUserPreferences(validatedUser.id);
         
         return {
           success: true,
@@ -565,10 +512,11 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       }
     },
     {
+      requireAuth: true,
       detail: {
         tags: ['Authentication'],
         summary: 'Get user preferences',
-        description: 'Returns user preferences and settings'
+        description: 'Returns user preferences and settings (requires authentication)'
       }
     }
   )
@@ -591,7 +539,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       detail: {
         tags: ['Authentication'],
         summary: 'Check authentication status',
-        description: 'Returns current authentication status'
+        description: 'Returns current authentication status (no auth required - shows current status)'
       }
     }
   );

@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { userService } from '../services/user.service.js';
-import { emailService } from '../services/email.service.js';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { db } from '../db/connection.js';
 import { users } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { emailService } from '../services/email.service.js';
+import { userService } from '../services/user.service.js';
 
 describe('OTP Authentication Flow - Fixed', () => {
   const testUsers: string[] = [];

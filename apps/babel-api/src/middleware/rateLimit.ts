@@ -57,12 +57,11 @@ export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
     // Skip rate limiting if disabled
     if (process.env.RATE_LIMIT_ENABLED === "false") {
       // Still add headers for testing
-      set.headers = {
-        ...set.headers,
+      Object.assign(set.headers, {
         "X-RateLimit-Limit": "1000",
         "X-RateLimit-Remaining": "999", 
         "X-RateLimit-Reset": Math.ceil(Date.now() / 1000 + 86400).toString(),
-      };
+      });
       return;
     }
 
@@ -76,12 +75,11 @@ export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
     const result = rateLimiter.isAllowed(identifier);
     
     // Always add rate limit headers
-    set.headers = {
-      ...set.headers,
+    Object.assign(set.headers, {
       "X-RateLimit-Limit": rateLimiter.maxRequests.toString(),
       "X-RateLimit-Remaining": result.remaining.toString(),
       "X-RateLimit-Reset": Math.ceil(result.resetTime / 1000).toString(),
-    };
+    });
 
     if (!result.allowed) {
       set.status = 429;
@@ -98,11 +96,13 @@ export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
         timestamp: new Date().toISOString()
       };
     }
-  });
+    return {};
+  })
+  .as('scoped');
 
 // Content length validation middleware
 export const contentValidationMiddleware = new Elysia({ name: "contentValidation" })
-  .onBeforeHandle(({ request, set, headers }) => {
+  .onBeforeHandle(({ set, headers }) => {
     const contentLength = headers["content-length"];
     
     if (contentLength) {
@@ -121,17 +121,19 @@ export const contentValidationMiddleware = new Elysia({ name: "contentValidation
         };
       }
     }
-  });
+    return {};
+  })
+  .as('scoped');
 
 // Security headers middleware
 export const securityMiddleware = new Elysia({ name: "security" })
   .onAfterHandle(({ set }) => {
-    set.headers = {
-      ...set.headers,
+    Object.assign(set.headers, {
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "X-XSS-Protection": "1; mode=block",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Content-Security-Policy": "default-src 'self'",
-    };
-  });
+    });
+  })
+  .as('scoped');

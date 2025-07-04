@@ -1,49 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { Elysia, t } from 'elysia';
-import { testDb } from './test-database.js';
-import { users, userSessions, userPreferences } from '../db/schema.js';
-import { UserService } from '../services/user.service.js';
-import { authMiddleware } from '../middleware/auth.middleware.js';
 import './setup.js';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { Elysia, t } from 'elysia';
+import { userPreferences, users, userSessions } from '../db/schema.js';
+import { UserService } from '../services/user.service.js';
+import { createAuthGuard } from '../middleware/auth.middleware.js';
+import { testDb } from './test-database.js';
 
 describe('User Flow Integration Tests', () => {
-  let app: Elysia;
+  let app: any; // Allow any type to avoid Elysia macro type conflicts
   let testUserService: UserService;
 
   beforeEach(() => {
     testUserService = new UserService(testDb);
     
-    // Create test app with all auth routes
+    // Create auth guard with test user service
+    const testAuthGuard = createAuthGuard(testUserService);
+
     app = new Elysia()
-      .derive(async ({ headers }) => {
-        const authorization = headers.authorization;
-        
-        if (!authorization || !authorization.startsWith('Bearer ')) {
-          return { user: null };
-        }
-        
-        const token = authorization.substring(7);
-        const user = await testUserService.validateAccessToken(token);
-        
-        return { user };
-      })
-      .macro(({ onBeforeHandle }) => ({
-        requireAuth(enabled: boolean = true) {
-          if (!enabled) return;
-          
-          onBeforeHandle(({ user, set }) => {
-            if (!user) {
-              set.status = 401;
-              return {
-                error: {
-                  code: 'UNAUTHORIZED',
-                  message: 'Authentication required'
-                }
-              };
-            }
-          });
-        }
-      }))
       
       .post('/guest', 
         async ({ body }) => {
@@ -145,30 +118,54 @@ describe('User Flow Integration Tests', () => {
         }
       )
       
-      .get('/profile',
-        async ({ user }) => {
+      .use(testAuthGuard)
+      .get('/auth-protected/profile',
+        async ({ user, set }) => {
+          // Auth check since we're using testAuthGuard
+          if (!user) {
+            set.status = 401;
+            return {
+              error: {
+                code: 'UNAUTHORIZED',
+                message: 'Authentication required',
+                details: null
+              },
+              timestamp: new Date().toISOString()
+            };
+          }
+          
           return {
             success: true,
             data: {
-              id: user!.id,
-              email: user!.email,
-              guestId: user!.guestId,
-              emailVerified: user!.emailVerified,
-              userStatus: user!.userStatus,
-              createdAt: user!.createdAt,
-              updatedAt: user!.updatedAt
+              id: user.id,
+              email: user.email,
+              guestId: user.guestId,
+              emailVerified: user.emailVerified,
+              userStatus: user.userStatus,
+              createdAt: user.createdAt,
+              updatedAt: user.updatedAt
             }
           };
-        },
-        {
-          requireAuth: true
         }
       )
-      
-      .post('/save-settings',
+          
+      .post('/auth-protected/save-settings',
         async ({ user, body, set }) => {
+          // Auth check since we're using testAuthGuard
+          if (!user) {
+            set.status = 401;
+            return {
+              error: {
+                code: 'UNAUTHORIZED',
+                message: 'Authentication required',
+                details: null
+              },
+              timestamp: new Date().toISOString()
+            };
+          }
+          
           try {
-            if (user!.userStatus !== 'verified' && user!.userStatus !== 'vip') {
+            if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
               set.status = 403;
               return {
                 success: false,
@@ -179,8 +176,8 @@ describe('User Flow Integration Tests', () => {
               };
             }
 
-            await testUserService.updateUserPreferences(user!.id, body as any);
-            const preferences = await testUserService.getUserPreferences(user!.id);
+            await testUserService.updateUserPreferences(user.id, body as any);
+            const preferences = await testUserService.getUserPreferences(user.id);
             
             return {
               success: true,
@@ -199,7 +196,6 @@ describe('User Flow Integration Tests', () => {
           }
         },
         {
-          requireAuth: true,
           body: t.Object({
             preferredLanguages: t.Optional(t.Array(t.String())),
             feedCategories: t.Optional(t.Array(t.String())),
@@ -309,7 +305,7 @@ describe('User Flow Integration Tests', () => {
 
       // Step 5: Access protected profile endpoint
       const profileResponse = await app.handle(
-        new Request('http://localhost/profile', {
+        new Request('http://localhost/auth-protected/profile', {
           headers: { 
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
@@ -358,7 +354,7 @@ describe('User Flow Integration Tests', () => {
 
       // Test: Save settings as verified user
       const settingsResponse = await app.handle(
-        new Request('http://localhost/save-settings', {
+        new Request('http://localhost/auth-protected/save-settings', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -438,7 +434,7 @@ describe('User Flow Integration Tests', () => {
 
       // Test: Access profile with valid token
       const profileResponse = await app.handle(
-        new Request('http://localhost/profile', {
+        new Request('http://localhost/auth-protected/profile', {
           headers: { 
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
@@ -471,7 +467,7 @@ describe('User Flow Integration Tests', () => {
 
     it('should prevent settings sync for guest users', async () => {
       // Create guest user only (no verification)
-      const guestResponse = await app.handle(
+      await app.handle(
         new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -481,7 +477,7 @@ describe('User Flow Integration Tests', () => {
 
       // Attempt to save settings without verification should fail (no auth token)
       const settingsResponse = await app.handle(
-        new Request('http://localhost/save-settings', {
+        new Request('http://localhost/auth-protected/save-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

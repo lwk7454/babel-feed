@@ -1,52 +1,39 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import './setup.js';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { Elysia, t } from 'elysia';
-import { testDb } from './test-database.js';
 import { users, userSessions } from '../db/schema.js';
 import { UserService } from '../services/user.service.js';
-import { authMiddleware } from '../middleware/auth.middleware.js';
-import './setup.js';
+import { createAuthGuard } from '../middleware/auth.middleware.js';
+import { testDb } from './test-database.js';
 
 describe('Auth Routes', () => {
-  let app: Elysia;
+  let app: any; // Allow any type to avoid Elysia macro type conflicts
   let testUserService: UserService;
 
   beforeEach(() => {
     testUserService = new UserService(testDb);
     
-    // Create test version of auth routes
+    // Create auth guard with test user service
+    const testAuthGuard = createAuthGuard(testUserService);
+
     app = new Elysia()
-      .derive(async ({ headers }) => {
+      .derive(({ headers }) => {
         const authorization = headers.authorization;
+        const token = authorization?.startsWith('Bearer ') 
+          ? authorization.substring(7) 
+          : null;
         
-        if (!authorization || !authorization.startsWith('Bearer ')) {
-          return { user: null };
-        }
-        
-        const token = authorization.substring(7);
-        const user = await testUserService.validateAccessToken(token);
-        
-        return { user };
+        return { 
+          authToken: token,
+          async getUser() {
+            if (!token) return null;
+            return await testUserService.validateAccessToken(token);
+          }
+        };
       })
-      .macro(({ onBeforeHandle }) => ({
-        requireAuth(enabled: boolean = true) {
-          if (!enabled) return;
-          
-          onBeforeHandle(({ user, set }) => {
-            if (!user) {
-              set.status = 401;
-              return {
-                error: {
-                  code: 'UNAUTHORIZED',
-                  message: 'Authentication required'
-                }
-              };
-            }
-          });
-        }
-      }))
       
       .post('/guest', 
-        async ({ body, headers }) => {
+        async ({ body }) => {
           try {
             const deviceFingerprint = (body as any).deviceFingerprint;
             const user = await testUserService.createGuestUser(deviceFingerprint);
@@ -161,63 +148,81 @@ describe('Auth Routes', () => {
         }
       )
       
-      .post('/save-settings',
-        async ({ user, body, set }) => {
-          try {
-            if (user!.userStatus !== 'verified' && user!.userStatus !== 'vip') {
-              set.status = 403;
-              return {
-                success: false,
-                error: {
-                  code: 'SETTINGS_SYNC_FORBIDDEN',
-                  message: 'Settings sync requires verified account'
-                }
-              };
-            }
-
-            await testUserService.updateUserPreferences(user!.id, body as any);
-            const preferences = await testUserService.getUserPreferences(user!.id);
-            
-            return {
-              success: true,
-              data: preferences,
-              message: 'Settings saved and synced to server successfully'
-            };
-          } catch (error) {
-            set.status = 500;
-            return {
-              success: false,
-              error: {
-                code: 'SETTINGS_SAVE_FAILED',
-                message: 'Failed to save settings'
+      // Auth-protected routes group
+      .group('/auth-protected', (app) => 
+        app
+          .use(testAuthGuard)
+          .post('/save-settings',
+            async ({ user, body, set }) => {
+              // Auth check since we're using testAuthGuard
+              if (!user) {
+                set.status = 401;
+                return {
+                  error: {
+                    code: 'UNAUTHORIZED',
+                    message: 'Authentication required',
+                    details: null
+                  },
+                  timestamp: new Date().toISOString()
+                };
               }
-            };
-          }
-        },
-        {
-          requireAuth: true,
-          body: t.Object({
-            preferredLanguages: t.Optional(t.Array(t.String())),
-            feedCategories: t.Optional(t.Array(t.String())),
-            translationSettings: t.Optional(t.Object({
-              autoTranslate: t.Optional(t.Boolean()),
-              defaultTargetLanguage: t.Optional(t.String())
-            })),
-            themePreference: t.Optional(t.String()),
-            notificationSettings: t.Optional(t.Object({
-              emailNotifications: t.Optional(t.Boolean()),
-              pushNotifications: t.Optional(t.Boolean())
-            })),
-            privacySettings: t.Optional(t.Object({
-              analytics: t.Optional(t.Boolean()),
-              personalization: t.Optional(t.Boolean())
-            }))
-          })
-        }
+              
+              try {
+                if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
+                  set.status = 403;
+                  return {
+                    success: false,
+                    error: {
+                      code: 'SETTINGS_SYNC_FORBIDDEN',
+                      message: 'Settings sync requires verified account'
+                    }
+                  };
+                }
+
+                await testUserService.updateUserPreferences(user.id, body as any);
+                const preferences = await testUserService.getUserPreferences(user.id);
+                
+                return {
+                  success: true,
+                  data: preferences,
+                  message: 'Settings saved and synced to server successfully'
+                };
+              } catch (error) {
+                set.status = 500;
+                return {
+                  success: false,
+                  error: {
+                    code: 'SETTINGS_SAVE_FAILED',
+                    message: 'Failed to save settings'
+                  }
+                };
+              }
+            },
+            {
+              body: t.Object({
+                preferredLanguages: t.Optional(t.Array(t.String())),
+                feedCategories: t.Optional(t.Array(t.String())),
+                translationSettings: t.Optional(t.Object({
+                  autoTranslate: t.Optional(t.Boolean()),
+                  defaultTargetLanguage: t.Optional(t.String())
+                })),
+                themePreference: t.Optional(t.String()),
+                notificationSettings: t.Optional(t.Object({
+                  emailNotifications: t.Optional(t.Boolean()),
+                  pushNotifications: t.Optional(t.Boolean())
+                })),
+                privacySettings: t.Optional(t.Object({
+                  analytics: t.Optional(t.Boolean()),
+                  personalization: t.Optional(t.Boolean())
+                }))
+              })
+            }
+          )
       )
       
       .get('/status',
-        async ({ user }) => {
+        async ({ getUser }) => {
+          const user = await getUser();
           return {
             success: true,
             data: {
@@ -528,7 +533,7 @@ describe('Auth Routes', () => {
 
       // Test save settings
       const response = await app.handle(
-        new Request('http://localhost/save-settings', {
+        new Request('http://localhost/auth-protected/save-settings', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -551,18 +556,16 @@ describe('Auth Routes', () => {
 
     it('should reject settings save for guest user', async () => {
       // Create guest user only (not verified)
-      const guestResponse = await app.handle(
+      await app.handle(
         new Request('http://localhost/guest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
       );
-      const guestData = await guestResponse.json();
-
       // Try to save settings without verification
       const response = await app.handle(
-        new Request('http://localhost/save-settings', {
+        new Request('http://localhost/auth-protected/save-settings', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json'
@@ -578,7 +581,7 @@ describe('Auth Routes', () => {
 
     it('should require authentication for save settings', async () => {
       const response = await app.handle(
-        new Request('http://localhost/save-settings', {
+        new Request('http://localhost/auth-protected/save-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

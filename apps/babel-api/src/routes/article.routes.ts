@@ -131,11 +131,12 @@ export const articleRoutes = new Elysia({ prefix: "/api/articles" })
       const articleData = body;
       
       // Convert publishedAt string to Date if provided
-      if (articleData.publishedAt) {
-        articleData.publishedAt = new Date(articleData.publishedAt);
-      }
+      const processedData = {
+        ...articleData,
+        publishedAt: articleData.publishedAt ? new Date(articleData.publishedAt) : undefined
+      };
 
-      const article = await articleService.createArticle(articleData);
+      const article = await articleService.createArticle(processedData);
 
       set.status = 201;
       return {
@@ -179,11 +180,12 @@ export const articleRoutes = new Elysia({ prefix: "/api/articles" })
       const updates = body;
 
       // Convert publishedAt string to Date if provided
-      if (updates.publishedAt) {
-        updates.publishedAt = new Date(updates.publishedAt);
-      }
+      const processedUpdates = {
+        ...updates,
+        publishedAt: updates.publishedAt ? new Date(updates.publishedAt) : undefined
+      };
 
-      const article = await articleService.updateArticle(id, updates);
+      const article = await articleService.updateArticle(id, processedUpdates);
 
       if (!article) {
         set.status = 404;

@@ -1,13 +1,21 @@
-import { Elysia } from "elysia";
+// Load environment variables FIRST before any other imports
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load environment variables from .env file
+config({ path: resolve(process.cwd(), '.env') });
+
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
-import { translationRoutes } from "./routes/translation.js";
-import { authRoutes } from "./routes/auth.routes.js";
-import { articleRoutes } from "./routes/article.routes.js";
-import { rateLimitMiddleware, contentValidationMiddleware, securityMiddleware } from "./middleware/rateLimit.js";
+import { Elysia } from "elysia";
+import { checkDatabaseHealth, runMigrations } from "./db/index.js";
+import { authGuard } from './middleware/auth.middleware.js';
 import { cacheMiddleware, cacheStatsRoute } from "./middleware/cache.js";
 import { statsMiddleware, statsRoute } from "./middleware/logging.js";
-import { checkDatabaseHealth, runMigrations } from "./db/index.js";
+import { contentValidationMiddleware, rateLimitMiddleware, securityMiddleware } from "./middleware/rateLimit.js";
+import { articleRoutes } from "./routes/article.routes.js";
+import { authRoutes } from "./routes/auth.routes.js";
+import { translationRoutes } from "./routes/translation.js";
 
 const app = new Elysia()
   // Add stats middleware
@@ -21,6 +29,7 @@ const app = new Elysia()
     credentials: true
   }))
 
+  .use(authGuard)
   // Add security middleware
   .use(securityMiddleware)
   
@@ -150,7 +159,7 @@ const app = new Elysia()
     }
   })
   
-  .onBeforeHandle(({ body, request }) => {
+  .onBeforeHandle(({ body }) => {
     // Log request body for non-GET requests (truncate if too long)
     if (body && typeof body === 'object') {
       const bodyStr = JSON.stringify(body, null, 2);
@@ -229,7 +238,7 @@ const app = new Elysia()
           error: {
             code: "INTERNAL_ERROR",
             message: "Internal server error",
-            details: process.env.NODE_ENV === "development" ? error.message : null
+            details: process.env.NODE_ENV === "development" ? (error as Error).message : null
           },
           timestamp: new Date().toISOString()
         };

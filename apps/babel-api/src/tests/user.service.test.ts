@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import './setup.js';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
+import { users, userSessions } from '../db/schema.js';
 import { UserService } from '../services/user.service.js';
 import { testDb } from './test-database.js';
-import { users, userSessions } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
-import './setup.js';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -158,7 +158,7 @@ describe('UserService', () => {
       const guestUser = await userService.createGuestUser();
       const email = 'refresh@example.com';
       const { verificationToken } = await userService.createAccountFromGuest(guestUser.guestId!, email);
-      const { user, tokens: initialTokens } = await userService.verifyEmail(verificationToken);
+      const { tokens: initialTokens } = await userService.verifyEmail(verificationToken);
 
       // Wait a moment to ensure timestamp difference
       await new Promise(resolve => setTimeout(resolve, 100));

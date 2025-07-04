@@ -1,8 +1,29 @@
-import { describe, it, expect } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { cleanupTestDatabase, setupTestDatabase } from './setup.js';
+import { startTestServer, stopTestServer } from './test-server.js';
+
+let testServerUrl: string;
 
 describe('Backend Integration Tests', () => {
+  beforeAll(async () => {
+    // Set test environment first
+    process.env.NODE_ENV = 'test';
+    
+    // Initialize test database
+    await setupTestDatabase();
+    
+    // Start test server
+    const { url } = await startTestServer();
+    testServerUrl = url;
+  });
+
+  afterAll(async () => {
+    await stopTestServer();
+    await cleanupTestDatabase();
+  });
+
   it('should respond to health check', async () => {
-    const response = await fetch('http://localhost:3000/health');
+    const response = await fetch(`${testServerUrl}/health`);
     const data = await response.json();
     
     expect(response.status).toBe(200);
@@ -13,7 +34,7 @@ describe('Backend Integration Tests', () => {
   it('should handle guest user creation', async () => {
     const testData = { deviceFingerprint: 'test-integration' };
     
-    const response = await fetch('http://localhost:3000/api/auth/guest', {
+    const response = await fetch(`${testServerUrl}/api/auth/guest`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(testData)
@@ -28,7 +49,7 @@ describe('Backend Integration Tests', () => {
   });
 
   it('should provide stats endpoint', async () => {
-    const response = await fetch('http://localhost:3000/api/debug/stats');
+    const response = await fetch(`${testServerUrl}/api/debug/stats`);
     const data = await response.json();
     
     expect(response.status).toBe(200);

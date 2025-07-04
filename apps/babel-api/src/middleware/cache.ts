@@ -132,7 +132,7 @@ const translationCache = new InMemoryTranslationCache();
 
 // Cache middleware for translation requests
 export const cacheMiddleware = new Elysia({ name: "cache" })
-  .derive(({ headers }) => ({
+  .derive(() => ({
     cache: translationCache
   }))
   .onBeforeHandle(({ body, set, cache }) => {
@@ -143,21 +143,23 @@ export const cacheMiddleware = new Elysia({ name: "cache" })
       
       if (cachedResult) {
         console.log(`Cache hit for request ${request.requestId}`);
-        set.headers = {
+        Object.assign(set.headers, {
           ...set.headers,
           "X-Cache-Status": "HIT",
           "Content-Type": "application/json"
-        };
+        });
         
         return cachedResult;
       } else {
-        set.headers = {
+        Object.assign(set.headers, {
           ...set.headers,
           "X-Cache-Status": "MISS"
-        };
+        });
       }
     }
-  });
+    return {};
+  })
+  .as('scoped');
 
 // Helper function to cache translation results
 export function cacheTranslationResult(request: TranslationRequest, result: StreamingTranslationResult): void {

@@ -63,7 +63,8 @@ export const statsMiddleware = new Elysia({ name: "stats" })
   .onAfterHandle(({ set }) => {
     const status = typeof set.status === 'number' ? set.status : 200;
     requestStats.recordResponse(status, 0); // Duration tracking simplified
-  });
+  })
+  .as('scoped');
 
 /**
  * Stats endpoint to view request statistics
