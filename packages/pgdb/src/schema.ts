@@ -101,18 +101,133 @@ export const translationCache = pgTable('translation_cache', {
 });
 
 /**
+ * News sources table - stores RSS feeds and news source configurations
+ */
+export const newsSources = pgTable('news_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 100 }).unique().notNull(), // URL-friendly identifier
+  url: varchar('url', { length: 500 }).notNull(),
+  sourceType: varchar('source_type', { length: 50 }).notNull(), // rss, api, scraper
+  language: varchar('language', { length: 10 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  tags: jsonb('tags').default('[]'), // Array of tags
+  enabled: boolean('enabled').default(true).notNull(),
+  pollingInterval: integer('polling_interval').default(300000).notNull(), // milliseconds
+  reliability: integer('reliability').default(100).notNull(), // 0-100 score
+  priority: integer('priority').default(5).notNull(), // 1-10, higher = more important
+  metadata: jsonb('metadata').default('{}'), // Flexible metadata storage
+  lastFetched: timestamp('last_fetched'),
+  lastSuccess: timestamp('last_success'),
+  lastError: text('last_error'),
+  errorCount: integer('error_count').default(0).notNull(),
+  successCount: integer('success_count').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  // Indexes for common query patterns
+  enabledIndex: index('news_sources_enabled_idx').on(table.enabled),
+  languageIndex: index('news_sources_language_idx').on(table.language),
+  categoryIndex: index('news_sources_category_idx').on(table.category),
+  priorityIndex: index('news_sources_priority_idx').on(table.priority),
+  enabledLanguageIndex: index('news_sources_enabled_language_idx').on(table.enabled, table.language),
+  enabledCategoryIndex: index('news_sources_enabled_category_idx').on(table.enabled, table.category)
+}));
+
+/**
+ * AI providers table - stores LLM provider configurations and API keys
+ */
+export const aiProviders = pgTable('ai_providers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 100 }).notNull(), // openrouter, huggingface, openai, etc.
+  displayName: varchar('display_name', { length: 255 }).notNull(),
+  providerType: varchar('provider_type', { length: 50 }).notNull(), // translation, summarization, chat, etc.
+  baseUrl: varchar('base_url', { length: 500 }).notNull(),
+  enabled: boolean('enabled').default(true).notNull(),
+  priority: integer('priority').default(5).notNull(), // 1-10, higher = preferred
+  maxRequestsPerMinute: integer('max_requests_per_minute').default(60).notNull(),
+  maxRequestsPerHour: integer('max_requests_per_hour').default(1000).notNull(),
+  maxRequestsPerDay: integer('max_requests_per_day').default(10000).notNull(),
+  circuitBreakerThreshold: integer('circuit_breaker_threshold').default(5).notNull(), // failures to trip
+  circuitBreakerTimeout: integer('circuit_breaker_timeout').default(60000).notNull(), // ms
+  healthCheckInterval: integer('health_check_interval').default(30000).notNull(), // ms
+  metadata: jsonb('metadata').default('{}'), // Provider-specific config
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  enabledIndex: index('ai_providers_enabled_idx').on(table.enabled),
+  typeIndex: index('ai_providers_type_idx').on(table.providerType),
+  priorityIndex: index('ai_providers_priority_idx').on(table.priority),
+  enabledTypeIndex: index('ai_providers_enabled_type_idx').on(table.enabled, table.providerType)
+}));
+
+/**
+ * AI provider API keys - stores multiple API keys per provider for rotation
+ */
+export const aiProviderKeys = pgTable('ai_provider_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  providerId: uuid('provider_id').references(() => aiProviders.id, { onDelete: 'cascade' }).notNull(),
+  keyName: varchar('key_name', { length: 100 }).notNull(), // Human-readable name
+  apiKey: text('api_key').notNull(), // Encrypted API key
+  enabled: boolean('enabled').default(true).notNull(),
+  priority: integer('priority').default(5).notNull(), // 1-10, higher = preferred
+  currentUsage: integer('current_usage').default(0).notNull(), // Current period usage
+  dailyQuota: integer('daily_quota'), // Daily quota limit (null = unlimited)
+  monthlyQuota: integer('monthly_quota'), // Monthly quota limit (null = unlimited)
+  lastUsed: timestamp('last_used'),
+  lastReset: timestamp('last_reset').defaultNow().notNull(),
+  rateLimitHits: integer('rate_limit_hits').default(0).notNull(),
+  errorCount: integer('error_count').default(0).notNull(),
+  successCount: integer('success_count').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  providerIndex: index('ai_provider_keys_provider_idx').on(table.providerId),
+  enabledIndex: index('ai_provider_keys_enabled_idx').on(table.enabled),
+  priorityIndex: index('ai_provider_keys_priority_idx').on(table.priority),
+  providerEnabledIndex: index('ai_provider_keys_provider_enabled_idx').on(table.providerId, table.enabled),
+  uniqueProviderKeyName: uniqueIndex('unique_provider_key_name').on(table.providerId, table.keyName)
+}));
+
+/**
+ * Circuit breaker states - tracks circuit breaker status for AI providers
+ */
+export const circuitBreakerStates = pgTable('circuit_breaker_states', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  providerId: uuid('provider_id').references(() => aiProviders.id, { onDelete: 'cascade' }).notNull(),
+  keyId: uuid('key_id').references(() => aiProviderKeys.id, { onDelete: 'cascade' }),
+  state: varchar('state', { length: 20 }).notNull(), // closed, open, half_open
+  failureCount: integer('failure_count').default(0).notNull(),
+  lastFailure: timestamp('last_failure'),
+  lastSuccess: timestamp('last_success'),
+  nextAttempt: timestamp('next_attempt'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  providerIndex: index('circuit_breaker_provider_idx').on(table.providerId),
+  keyIndex: index('circuit_breaker_key_idx').on(table.keyId),
+  stateIndex: index('circuit_breaker_state_idx').on(table.state),
+  uniqueProviderKey: uniqueIndex('unique_circuit_breaker_provider_key').on(table.providerId, table.keyId)
+}));
+
+/**
  * Articles table - stores news articles metadata
  */
 export const articles = pgTable('articles', {
   id: uuid('id').primaryKey().defaultRandom(),
   url: varchar('url', { length: 500 }).unique().notNull(),
-  source: varchar('source', { length: 100 }).notNull(),
+  sourceId: uuid('source_id').references(() => newsSources.id, { onDelete: 'set null' }), // Reference to news source
+  source: varchar('source', { length: 100 }).notNull(), // Legacy field, kept for backward compatibility
   sourceLanguage: varchar('source_language', { length: 10 }).notNull(),
   imageUrl: varchar('image_url', { length: 500 }),
   publishedAt: timestamp('published_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
+}, (table) => ({
+  sourceIndex: index('articles_source_id_idx').on(table.sourceId),
+  publishedIndex: index('articles_published_idx').on(table.publishedAt),
+  sourcePublishedIndex: index('articles_source_published_idx').on(table.sourceId, table.publishedAt)
+}));
 
 /**
  * Article translations table - stores translated content for search optimization
@@ -179,8 +294,43 @@ export const userActivityRelations = relations(userActivity, ({ one }) => ({
   })
 }));
 
-export const articlesRelations = relations(articles, ({ many }) => ({
-  translations: many(articleTranslations)
+// News Sources Relations
+export const newsSourcesRelations = relations(newsSources, ({ many }) => ({
+  articles: many(articles)
+}));
+
+// AI Providers Relations
+export const aiProvidersRelations = relations(aiProviders, ({ many }) => ({
+  keys: many(aiProviderKeys),
+  circuitBreakers: many(circuitBreakerStates)
+}));
+
+export const aiProviderKeysRelations = relations(aiProviderKeys, ({ one, many }) => ({
+  provider: one(aiProviders, {
+    fields: [aiProviderKeys.providerId],
+    references: [aiProviders.id]
+  }),
+  circuitBreakers: many(circuitBreakerStates)
+}));
+
+export const circuitBreakerStatesRelations = relations(circuitBreakerStates, ({ one }) => ({
+  provider: one(aiProviders, {
+    fields: [circuitBreakerStates.providerId],
+    references: [aiProviders.id]
+  }),
+  key: one(aiProviderKeys, {
+    fields: [circuitBreakerStates.keyId],
+    references: [aiProviderKeys.id]
+  })
+}));
+
+// Updated Articles Relations
+export const articlesRelations = relations(articles, ({ many, one }) => ({
+  translations: many(articleTranslations),
+  source: one(newsSources, {
+    fields: [articles.sourceId],
+    references: [newsSources.id]
+  })
 }));
 
 export const articleTranslationsRelations = relations(articleTranslations, ({ one }) => ({
@@ -205,3 +355,17 @@ export type TranslationCache = typeof translationCache.$inferSelect;
 export type NewTranslationCache = typeof translationCache.$inferInsert;
 export type Article = typeof articles.$inferSelect;
 export type NewArticle = typeof articles.$inferInsert;
+export type ArticleTranslation = typeof articleTranslations.$inferSelect;
+export type NewArticleTranslation = typeof articleTranslations.$inferInsert;
+
+// News Sources Types
+export type NewsSource = typeof newsSources.$inferSelect;
+export type NewNewsSource = typeof newsSources.$inferInsert;
+
+// AI Providers Types
+export type AiProvider = typeof aiProviders.$inferSelect;
+export type NewAiProvider = typeof aiProviders.$inferInsert;
+export type AiProviderKey = typeof aiProviderKeys.$inferSelect;
+export type NewAiProviderKey = typeof aiProviderKeys.$inferInsert;
+export type CircuitBreakerState = typeof circuitBreakerStates.$inferSelect;
+export type NewCircuitBreakerState = typeof circuitBreakerStates.$inferInsert;

@@ -16,7 +16,8 @@ npm-debug.log
 yarn-error.log
 
 **/debug-logs/*
-emulator.log
+**/logs/*
+*.log
 *.local.*
 local.*
 tools/**/reports/

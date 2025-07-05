@@ -1,0 +1,94 @@
+{
+  "sources": [
+    {
+      "id": "bbc-world",
+      "name": "BBC World News",
+      "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+      "type": "rss",
+      "language": "en",
+      "category": "world",
+      "enabled": true,
+      "pollingInterval": 300000,
+      "reliability": 0.95,
+      "metadata": {
+        "region": "global",
+        "credibility": "high"
+      }
+    },
+    {
+      "id": "reuters-world",
+      "name": "Reuters World News",
+      "url": "https://feeds.reuters.com/reuters/worldNews",
+      "type": "rss",
+      "language": "en",
+      "category": "world",
+      "enabled": true,
+      "pollingInterval": 300000,
+      "reliability": 0.93,
+      "metadata": {
+        "region": "global",
+        "credibility": "high"
+      }
+    },
+    {
+      "id": "cnn-world",
+      "name": "CNN World News",
+      "url": "http://rss.cnn.com/rss/edition.rss",
+      "type": "rss",
+      "language": "en",
+      "category": "world",
+      "enabled": true,
+      "pollingInterval": 600000,
+      "reliability": 0.87,
+      "metadata": {
+        "region": "global",
+        "credibility": "medium"
+      }
+    },
+    {
+      "id": "ap-world",
+      "name": "Associated Press World News",
+      "url": "https://feeds.apnews.com/RSS-world",
+      "type": "rss",
+      "language": "en",
+      "category": "world",
+      "enabled": true,
+      "pollingInterval": 300000,
+      "reliability": 0.92,
+      "metadata": {
+        "region": "global",
+        "credibility": "high"
+      }
+    },
+    {
+      "id": "nhk-world",
+      "name": "NHK World Japan",
+      "url": "https://www3.nhk.or.jp/rss/news/cat0.xml",
+      "type": "rss",
+      "language": "ja",
+      "category": "world",
+      "enabled": true,
+      "pollingInterval": 600000,
+      "reliability": 0.90,
+      "metadata": {
+        "region": "japan",
+        "credibility": "high"
+      }
+    },
+    {
+      "id": "china-daily",
+      "name": "China Daily",
+      "url": "https://www.chinadaily.com.cn/rss/world_rss.xml",
+      "type": "rss",
+      "language": "zh-CN",
+      "category": "world",
+      "enabled": true,
+      "pollingInterval": 600000,
+      "reliability": 0.85,
+      "metadata": {
+        "region": "china",
+        "credibility": "medium"
+      }
+    }
+  ]
+}

@@ -20,10 +20,12 @@ The architecture is designed to start simple and cost-effective while providing 
 ### 1. Content Aggregation & Processing
 
 #### 1.1 News Source Management
-- **Dynamic Source Configuration**: JSON/ENV-based source management supporting RSS feeds, news APIs, and web scraping
+- **Database-Driven Source Management**: PostgreSQL-based source configuration with real-time updates and admin API
+- **Dynamic Source CRUD**: Full create, read, update, delete operations via admin interface and API endpoints
 - **Source Discovery**: Automated discovery of new RSS feeds and news sources using domain crawling and feed detection
-- **Source Health Monitoring**: Track source reliability, response times, and content quality metrics
-- **Configurable Refresh Intervals**: Per-source customizable polling intervals (1-60 minutes)
+- **Source Health Monitoring**: Real-time tracking of source reliability, response times, error rates, and content quality metrics
+- **Configurable Refresh Intervals**: Per-source customizable polling intervals (1-60 minutes) with dynamic updates
+- **Source Categories & Tags**: Hierarchical categorization and tagging system for better content organization
 - **Content Deduplication**: Hash-based duplicate detection across sources and time windows
 
 #### 1.2 Content Extraction & Processing
@@ -33,9 +35,15 @@ The architecture is designed to start simple and cost-effective while providing 
 - **Image Processing**: Thumbnail generation, format standardization, and CDN optimization
 - **Content Validation**: Spam detection, content policy compliance, and factual accuracy indicators
 
-#### 1.3 AI-Powered Enhancement
-- **Summarization**: Use free-tier LLMs (Hugging Face BART) for article summarization with quality thresholds
-- **Translation**: Multi-language translation (EN, ZH-CN, ZH-TW, JA) using MarianMT or equivalent free models
+#### 1.3 AI-Powered Enhancement with Resilient Architecture
+- **Multi-Provider LLM System**: Flexible architecture supporting multiple LLM providers (OpenRouter, Hugging Face, OpenAI, etc.)
+- **API Key Rotation**: Automatic rotation between multiple API keys to handle rate limits and quotas
+- **Circuit Breaker Pattern**: Implement circuit breakers to handle provider failures and prevent cascade failures
+- **Graceful Degradation**: Fallback strategies when AI services are unavailable (hold processing, ensure translation quality, stop service, etc.)
+- **Rate Limit Management**: Intelligent rate limiting with exponential backoff and jitter
+- **Provider Health Monitoring**: Real-time monitoring of provider availability, response times, and error rates
+- **Translation Services**: Multi-language translation (EN, ZH-CN, ZH-TW, JA) with provider failover
+- **Summarization Services**: Article summarization with quality thresholds and multiple model options
 - **Tagging & Categorization**: Automated content tagging for topics, sentiment, geographic regions, and industries
 - **Trending Detection**: Identify emerging topics and trending stories across sources
 - **Content Enrichment**: Add metadata for readability scores, estimated reading time, and content complexity
@@ -92,6 +100,56 @@ The architecture is designed to start simple and cost-effective while providing 
 - **System Health**: Database performance, memory usage, disk space, network connectivity
 - **Alert System**: Email/SMS notifications for system failures and performance degradation
 - **Logging**: Structured logging with log levels, rotation, and searchability
+
+## Architectural Improvements & Design Decisions
+
+### Database-First Source Management
+
+**Rationale**: Static JSON configuration files are not suitable for production systems requiring real-time updates and admin management.
+
+**New Architecture**:
+- **PostgreSQL Sources Table**: Store all source configurations in database with full CRUD operations
+- **Admin API Endpoints**: RESTful API for source management (create, update, delete, enable/disable)
+- **Real-time Updates**: Changes take effect immediately without service restart
+- **Source Versioning**: Track configuration changes with timestamps and change logs
+- **Bulk Operations**: Support bulk enable/disable, category updates, and batch imports
+- **Configuration Validation**: Database constraints and API validation for source integrity
+
+**Benefits**:
+- Hot configuration updates without service downtime
+- Admin dashboard integration capabilities
+- Audit trail for all source changes
+- Scalable to thousands of sources
+- Multi-user admin access with proper authorization
+
+### Resilient AI Provider Architecture
+
+**Rationale**: Single-provider AI integration creates single points of failure and rate limit bottlenecks.
+
+**New Architecture**:
+- **Multi-Provider Support**: OpenRouter, Hugging Face, OpenAI, Anthropic, etc.
+- **API Key Pools**: Multiple keys per provider with automatic rotation
+- **Circuit Breaker Pattern**: Fail-fast and recovery mechanisms for each provider
+- **Provider Health Monitoring**: Real-time status tracking and automatic failover
+- **Intelligent Rate Limiting**: Per-provider, per-key rate limit management
+- **Graceful Degradation**: Fallback strategies when AI services are unavailable
+
+**Circuit Breaker States**:
+- **Closed**: Normal operation, requests flow through
+- **Open**: Provider is down, requests immediately fail to fallback
+- **Half-Open**: Testing if provider has recovered
+
+**Fallback Strategies**:
+1. Try next available provider in rotation
+2. Use cached translation results if available
+3. Return original content with processing flag
+4. Queue for later processing when services recover
+
+**Rate Limit Management**:
+- **Exponential Backoff**: Increase delays on rate limit hits
+- **Jitter**: Random delays to prevent thundering herd
+- **Key Rotation**: Automatically switch to next available key
+- **Usage Tracking**: Monitor quota consumption across all keys
 
 ## Monorepo Integration Guidelines
 
