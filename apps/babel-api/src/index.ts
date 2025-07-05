@@ -8,7 +8,7 @@ config({ path: resolve(process.cwd(), '.env') });
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-import { checkDatabaseHealth, runMigrations } from "./db/index.js";
+import { checkDatabaseHealth, runMigrationsWithFolder } from "@babel-feed/pgdb";
 import { authGuard } from './middleware/auth.middleware.js';
 import { cacheMiddleware, cacheStatsRoute } from "./middleware/cache.js";
 import { statsMiddleware, statsRoute } from "./middleware/logging.js";
@@ -253,7 +253,7 @@ const app = new Elysia()
 async function initializeApp() {
   try {
     console.log('🗄️  Initializing database...');
-    await runMigrations();
+    await runMigrationsWithFolder('../../packages/pgdb/src/migrations');
     console.log('✅ Database initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

@@ -43,6 +43,13 @@
       "when": 1754318460000,
       "tag": "20250704120001_add_translation_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1751712126806,
+      "tag": "20250705104206_daffy_stranger",
+      "breakpoints": true
     }
   ]
 }

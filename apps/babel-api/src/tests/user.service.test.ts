@@ -1,7 +1,7 @@
 import './setup.js';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
-import { users, userSessions } from '../db/schema.js';
+import { users, userSessions } from '@babel-feed/pgdb';
 import { UserService } from '../services/user.service.js';
 import { testDb } from './test-database.js';
 

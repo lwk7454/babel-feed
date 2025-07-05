@@ -4,6 +4,7 @@
   "sourceRoot": "apps/babel-api/src",
   "projectType": "application",
   "tags": [],
+  "implicitDependencies": ["pgdb"],
   "targets": {
     "build": {
       "executor": "@nx/esbuild:esbuild",

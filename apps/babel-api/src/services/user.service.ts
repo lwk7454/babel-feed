@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
-import { db } from '../db/connection.js';
+import { db } from '@babel-feed/pgdb';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { users, userSessions, userPreferences, type User, type NewUser, type NewUserSession, type NewUserPreferences } from '../db/schema.js';
+import { users, userSessions, userPreferences, type User, type NewUser, type NewUserSession, type NewUserPreferences } from '@babel-feed/pgdb';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
 import { emailService } from './email.service.js';

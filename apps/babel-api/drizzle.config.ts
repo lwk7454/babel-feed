@@ -13,10 +13,10 @@ export default defineConfig({
   },
   
   // Schema files
-  schema: './src/db/schema.ts',
+  schema: '../../packages/pgdb/src/schema.ts',
   
   // Migration output directory
-  out: './src/db/migrations',
+  out: '../../packages/pgdb/src/migrations',
   
   // Migration settings
   migrations: {

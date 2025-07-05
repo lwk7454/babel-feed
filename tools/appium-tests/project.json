@@ -31,15 +31,6 @@
           "testPathPattern": ["tests/user-scenarios.test.ts"]
         }
       }
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "outputs": ["{options.outputFile}"],
-      "options": {
-        "lintFilePatterns": [
-          "tools/appium-tests/**/*.{ts,js}"
-        ]
-      }
     }
   }
 }

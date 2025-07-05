@@ -2,7 +2,7 @@ import './setup.js';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { Elysia, t } from 'elysia';
 import { eq } from 'drizzle-orm';
-import { userPreferences, users, userSessions } from '../db/schema.js';
+import { userPreferences, users, userSessions } from '@babel-feed/pgdb';
 import { UserService } from '../services/user.service.js';
 import { authRoutes } from '../routes/auth.routes.js';
 import { createAuthGuard } from '../middleware/auth.middleware.js';

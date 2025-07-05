@@ -1,5 +1,5 @@
-import { getDatabase } from '../db/connection.js';
-import { articles, type Article, type NewArticle } from '../db/schema.js';
+import { getDatabase } from '@babel-feed/pgdb';
+import { articles, type Article, type NewArticle } from '@babel-feed/pgdb';
 import { eq, desc, sql } from 'drizzle-orm';
 
 /**
@@ -22,7 +22,7 @@ export class ArticleService {
       // Build query conditions
       const conditions = [];
       if (language) {
-        conditions.push(eq(articles.language, language));
+        conditions.push(eq(articles.sourceLanguage, language));
       }
 
       // Get articles with limit and offset
@@ -160,7 +160,7 @@ export class ArticleService {
       ];
 
       if (language) {
-        conditions.push(eq(articles.language, language));
+        conditions.push(eq(articles.sourceLanguage, language));
       }
 
       // Get articles with search

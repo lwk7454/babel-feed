@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
-import { db } from '../db/connection.js';
-import { users } from '../db/schema.js';
+import { db } from '@babel-feed/pgdb';
+import { users } from '@babel-feed/pgdb';
 import { emailService } from '../services/email.service.js';
 import { userService } from '../services/user.service.js';
 

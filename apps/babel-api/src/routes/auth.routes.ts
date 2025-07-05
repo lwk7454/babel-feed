@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { userService } from '../services/user.service.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
-import { User } from '../db/schema.js';
+import { User } from '@babel-feed/pgdb';
 
 /**
  * Authentication routes for user management

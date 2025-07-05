@@ -1,0 +1,39 @@
+{
+  "name": "pgdb",
+  "root": "packages/pgdb",
+  "sourceRoot": "packages/pgdb/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/pgdb",
+        "main": "packages/pgdb/src/index.ts",
+        "tsConfig": "packages/pgdb/tsconfig.json",
+        "assets": [
+          "packages/pgdb/src/migrations/**/*"
+        ],
+        "bundle": false,
+        "format": ["esm"],
+        "platform": "node",
+        "target": "node18"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/pgdb/**/*.ts"]
+      }
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "packages/pgdb"
+      }
+    }
+  },
+  "tags": ["scope:pgdb", "type:library"]
+}

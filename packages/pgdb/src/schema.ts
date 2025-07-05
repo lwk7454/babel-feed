@@ -1,5 +1,5 @@
-import { pgTable, uuid, varchar, boolean, timestamp, jsonb, text, integer } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, uuid, varchar, boolean, timestamp, jsonb, text, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 
 /**
  * Users table - stores both guest and verified users
@@ -101,23 +101,42 @@ export const translationCache = pgTable('translation_cache', {
 });
 
 /**
- * Articles table - stores news articles and content
+ * Articles table - stores news articles metadata
  */
 export const articles = pgTable('articles', {
   id: uuid('id').primaryKey().defaultRandom(),
-  title: text('title').notNull(),
-  titleTranslations: jsonb('title_translations').default('{}'), // Store translations as JSON object
-  summary: text('summary'),
-  summaryTranslations: jsonb('summary_translations').default('{}'), // Store translations as JSON object
   url: varchar('url', { length: 500 }).unique().notNull(),
   source: varchar('source', { length: 100 }).notNull(),
-  sourceLanguage: varchar('source_language', { length: 10 }).default('en').notNull(), // Renamed from 'language'
-  availableLanguages: jsonb('available_languages').default('["en"]'), // Array of supported languages
-  imageUrl: varchar('image_url', { length: 500 }), // Added image URL field
+  sourceLanguage: varchar('source_language', { length: 10 }).notNull(),
+  imageUrl: varchar('image_url', { length: 500 }),
   publishedAt: timestamp('published_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
+
+/**
+ * Article translations table - stores translated content for search optimization
+ */
+export const articleTranslations = pgTable('article_translations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  articleId: uuid('article_id').references(() => articles.id, { onDelete: 'cascade' }).notNull(),
+  language: varchar('language', { length: 10 }).notNull(),
+  title: text('title').notNull(),
+  summary: text('summary'),
+  content: text('content'), // For full article text if needed
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  // Unique constraint: one translation per article per language
+  uniqueArticleLanguage: uniqueIndex('unique_article_language').on(table.articleId, table.language),
+  // Index for language-based queries
+  languageIndex: index('language_idx').on(table.language),
+  // Full-text search indexes for title and summary
+  titleTextIndex: index('title_text_idx').using('gin', sql`to_tsvector('simple', ${table.title})`),
+  summaryTextIndex: index('summary_text_idx').using('gin', sql`to_tsvector('simple', ${table.summary})`),
+  // Combined index for common query patterns
+  articleLanguageIndex: index('article_language_idx').on(table.articleId, table.language)
+}));
 
 // Define relationships for better query performance and type safety
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -157,6 +176,17 @@ export const userActivityRelations = relations(userActivity, ({ one }) => ({
   content: one(contentCache, {
     fields: [userActivity.contentId],
     references: [contentCache.id]
+  })
+}));
+
+export const articlesRelations = relations(articles, ({ many }) => ({
+  translations: many(articleTranslations)
+}));
+
+export const articleTranslationsRelations = relations(articleTranslations, ({ one }) => ({
+  article: one(articles, {
+    fields: [articleTranslations.articleId],
+    references: [articles.id]
   })
 }));
 
