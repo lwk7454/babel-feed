@@ -35,13 +35,14 @@ describe('News Aggregator Setup', () => {
       expect(status.modules).toBeDefined()
       
       if (status.modules) {
-        // Check that key services are present
-        expect(status.modules.sourceManager).toBeDefined()
-        expect(status.modules.aiProviderManager).toBeDefined()
-        expect(status.modules.contentCache).toBeDefined()
-        expect(status.modules.translationCache).toBeDefined()
-        expect(status.modules.healthChecker).toBeDefined()
-        expect(status.modules.rssProcessor).toBeDefined()
+        // Check that key modules are present
+        expect(status.modules.sourceCRUD).toBeDefined()
+        expect(status.modules.healthMonitor).toBeDefined()
+        expect(status.modules.sourceDiscovery).toBeDefined()
+        expect(status.modules.fetcher).toBeDefined()
+        expect(status.modules.processor).toBeDefined()
+        expect(status.modules.aiIntegration).toBeDefined()
+        expect(status.modules.deduplication).toBeDefined()
       }
     })
 
@@ -49,12 +50,12 @@ describe('News Aggregator Setup', () => {
       const service = new NewsAggregatorService()
       await service.initialize()
       
-      // Test service access methods
-      const sourceManager = service.getSourceManager()
-      expect(sourceManager).toBeDefined()
+      // Test new module access
+      const sourceCRUD = service.getSourceCRUD()
+      expect(sourceCRUD).toBeDefined()
       
-      const aiProviderManager = service.getAiProviderManager()
-      expect(aiProviderManager).toBeDefined()
+      const fetcher = service.getFetcher()
+      expect(fetcher).toBeDefined()
       
       const healthChecker = service.getHealthChecker()
       expect(healthChecker).toBeDefined()

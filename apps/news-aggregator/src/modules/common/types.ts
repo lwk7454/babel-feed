@@ -256,3 +256,10 @@ export interface DiscoveredSource {
   metadata?: Record<string, unknown>;
 }
 
+// Legacy service types for backward compatibility
+export interface LegacyService {
+  initialize?(): Promise<void>;
+  initialized?: boolean;
+  [key: string]: unknown;
+}
+
