@@ -33,6 +33,20 @@
         "command": "tsc --noEmit",
         "cwd": "packages/pgdb"
       }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "drizzle-kit migrate",
+        "cwd": "packages/pgdb"
+      }
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "drizzle-kit generate",
+        "cwd": "packages/pgdb"
+      }
     }
   },
   "tags": ["scope:pgdb", "type:library"]

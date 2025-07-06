@@ -13,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - babel_feed_dev_data:/var/lib/postgresql/data
-      - ./packages/pgdb/src/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U babel_dev -d babel_feed_dev"]
       interval: 3s

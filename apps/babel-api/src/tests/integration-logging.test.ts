@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { cleanupTestDatabase, setupTestDatabase } from './setup.js';
-import { startTestServer, stopTestServer } from './test-server.js';
+import { startTestServer, stopTestServer } from './test-server';
+import { cleanupTestDatabase, setupTestDatabase } from '@babel-feed/pgdb';
 
 let testServerUrl: string;
 

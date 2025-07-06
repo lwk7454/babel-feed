@@ -7,7 +7,7 @@ import { statsMiddleware, statsRoute } from "../middleware/logging.js";
 import { articleRoutes } from "../routes/article.routes.js";
 import { authRoutes } from "../routes/auth.routes.js";
 import { translationRoutes } from "../routes/translation.js";
-import { getTestDb } from './setup.js';
+import { getTestDb } from '@babel-feed/pgdb';
 
 /**
  * Test server setup that uses test database

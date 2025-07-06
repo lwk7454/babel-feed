@@ -1,17 +1,27 @@
-import './setup.js';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, userPreferences, users, userSessions } from '@babel-feed/pgdb';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { Elysia, t } from 'elysia';
-import { userPreferences, users, userSessions } from '@babel-feed/pgdb';
-import { UserService } from '../services/user.service.js';
-import { createAuthGuard } from '../middleware/auth.middleware.js';
-import { testDb } from './test-database.js';
+import { createAuthGuard } from '../middleware/auth.middleware';
+import { UserService } from '../services/user.service';
 
 describe('User Flow Integration Tests', () => {
   let app: any; // Allow any type to avoid Elysia macro type conflicts
   let testUserService: UserService;
 
+  beforeAll(async () => {
+    await setupTestDatabase();
+  });
+
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
+  afterEach(async () => {
+    await clearTestData();
+  });
+
   beforeEach(() => {
-    testUserService = new UserService(testDb);
+    testUserService = new UserService(getTestDb());
     
     // Create auth guard with test user service
     const testAuthGuard = createAuthGuard(testUserService);
@@ -241,9 +251,9 @@ describe('User Flow Integration Tests', () => {
 
   afterEach(async () => {
     // Clean up test data in correct order
-    await testDb.delete(userPreferences);
-    await testDb.delete(userSessions);
-    await testDb.delete(users);
+    await getTestDb().delete(userPreferences);
+    await getTestDb().delete(userSessions);
+    await getTestDb().delete(users);
   });
 
   describe('Complete User Onboarding Flow', () => {
@@ -282,7 +292,7 @@ describe('User Flow Integration Tests', () => {
       expect(accountData.data.userStatus).toBe('guest'); // Still guest until verified
 
       // Step 3: Get verification token from database
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       expect(user.verificationToken).toBeTruthy();
       expect(user.emailVerified).toBe(false);
 
@@ -342,7 +352,7 @@ describe('User Flow Integration Tests', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verifyResponse = await app.handle(
         new Request('http://localhost/verify', {
           method: 'POST',
@@ -418,7 +428,7 @@ describe('User Flow Integration Tests', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verifyResponse = await app.handle(
         new Request('http://localhost/verify', {
           method: 'POST',
@@ -429,7 +439,7 @@ describe('User Flow Integration Tests', () => {
       const verifyData = await verifyResponse.json();
 
       // Verify session exists
-      let sessions = await testDb.select().from(userSessions);
+      let sessions = await getTestDb().select().from(userSessions);
       expect(sessions).toHaveLength(1);
 
       // Test: Access profile with valid token
@@ -457,7 +467,7 @@ describe('User Flow Integration Tests', () => {
       expect(logoutData.success).toBe(true);
 
       // Verify session was deleted
-      sessions = await testDb.select().from(userSessions);
+      sessions = await getTestDb().select().from(userSessions);
       expect(sessions).toHaveLength(0);
 
       // Test: Access profile with invalidated token should fail

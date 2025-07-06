@@ -10,7 +10,7 @@ export async function runMigrations(): Promise<void> {
     console.log('🔄 Running database migrations...');
     
     const db = getDatabase();
-    const migrationsFolder = resolve(process.cwd(), 'src/migrations');
+    const migrationsFolder = resolve(import.meta.url, 'migrations');
     
     await migrate(db, { migrationsFolder });
     
@@ -56,7 +56,7 @@ export async function checkMigrationStatus(): Promise<{ needsMigration: boolean;
       );
     `);
     
-    const tableExists = result.rows[0]?.exists;
+    const tableExists = result[0]?.exists;
     
     if (!tableExists) {
       return { needsMigration: true };

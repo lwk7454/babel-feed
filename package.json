@@ -5,14 +5,6 @@
   "scripts": {
     "dev": "nx run-many --target=dev --projects=babel-api,babel-android --parallel",
     "dev:api": "bun scripts/start-dev-db.ts && nx dev babel-api",
-    "dev:aggregator": "nx dev news-aggregator",
-    "db:start": "bun scripts/start-dev-db.ts start",
-    "db:stop": "bun scripts/start-dev-db.ts stop",
-    "db:reset": "bun scripts/start-dev-db.ts reset",
-    "db:status": "bun scripts/start-dev-db.ts status",
-    "db:generate": "nx db:generate babel-api",
-    "db:migrate": "nx db:migrate babel-api",
-    "db:studio": "nx db:studio babel-api",
     "dev:android": "nx dev babel-android",
     "build": "nx run-many --target=build --projects=babel-api,babel-android --parallel",
     "build:api": "nx build babel-api",
@@ -37,7 +29,9 @@
     "test:api": "nx test babel-api",
     "test:api:watch": "nx test:watch babel-api",
     "test:aggregator": "nx test news-aggregator",
-    "test:aggregator:watch": "nx test:watch news-aggregator"
+    "test:aggregator:watch": "nx test:watch news-aggregator",
+    "db:migrate": "bunx drizzle-kit migrate --config=packages/pgdb/drizzle.config.cjs",
+    "db:generate": "bunx drizzle-kit generate --config=packages/pgdb/drizzle.config.cjs"
   },
   "private": true,
   "dependencies": {
@@ -53,7 +47,12 @@
     "node-cron": "^3.0.3",
     "openai": "^5.6.0",
     "postgres": "^3.4.7",
-    "rss-parser": "^3.13.0"
+    "rss-parser": "^3.13.0",
+    "winston": "^3.11.0",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "sharp": "^0.33.1",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",

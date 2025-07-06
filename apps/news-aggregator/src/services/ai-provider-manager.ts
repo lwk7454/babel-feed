@@ -1,21 +1,20 @@
-import { eq, and, desc, asc, gte } from 'drizzle-orm';
-import { 
-  aiProviders, 
+import {
   aiProviderKeys,
-  circuitBreakerStates,
+  aiProviders,
+  getDatabase,
+  getTestDb,
   type AiProvider as DbAiProvider,
   type AiProviderKey as DbAiProviderKey,
-  type NewAiProvider,
-  type NewAiProviderKey,
-  getDatabase
-} from '../../../../packages/pgdb/src';
-import { logger } from '../utils/logger';
+  type NewAiProvider
+} from '@babel-feed/pgdb';
+import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm';
 import { AiProvider, AiProviderKey, ProviderHealthStatus } from '../types';
+import { AggregatorError } from '../utils/errors';
+import { logger } from '../utils/logger';
 import { CircuitBreaker, CircuitBreakerOptions } from './circuit-breaker';
-import { AggregatorError, ValidationError } from '../utils/errors';
 
 export class AiProviderManager {
-  private db = getDatabase();
+  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase();
   private circuitBreakers = new Map<string, CircuitBreaker>();
   private keyRotationIndex = new Map<string, number>();
   private rateLimitTracking = new Map<string, { count: number; resetTime: number }>();
@@ -54,19 +53,16 @@ export class AiProviderManager {
 
   async getEnabledProviders(providerType?: string): Promise<AiProvider[]> {
     try {
-      let query = this.db
-        .select()
-        .from(aiProviders)
-        .where(eq(aiProviders.enabled, true));
-
+      let whereCondition = eq(aiProviders.enabled, true);
       if (providerType) {
-        query = query.where(and(
-          eq(aiProviders.enabled, true),
-          eq(aiProviders.providerType, providerType)
-        ));
+        whereCondition = and(whereCondition, eq(aiProviders.providerType, providerType))!;
       }
 
-      const providers = await query.orderBy(desc(aiProviders.priority), asc(aiProviders.name));
+      const providers = await this.db
+        .select()
+        .from(aiProviders)
+        .where(whereCondition)
+        .orderBy(desc(aiProviders.priority), asc(aiProviders.name));
       return providers.map(this.mapDbProviderToAiProvider);
     } catch (error) {
       logger.error('Failed to fetch enabled AI providers:', error);
@@ -494,5 +490,69 @@ export class AiProviderManager {
     }
 
     logger.info(`Seeded ${initialProviders.length} initial AI providers`);
+  }
+
+  async bulkEnableProviders(providerIds: string[]): Promise<void> {
+    try {
+      if (providerIds.length === 0) return;
+
+      await this.db
+        .update(aiProviders)
+        .set({ enabled: true })
+        .where(inArray(aiProviders.id, providerIds));
+
+      logger.info(`Bulk enabled ${providerIds.length} AI providers`);
+    } catch (error) {
+      logger.error('Failed to bulk enable AI providers:', error);
+      throw new AggregatorError('Failed to bulk enable AI providers', 'DATABASE_ERROR');
+    }
+  }
+
+  async bulkDisableProviders(providerIds: string[]): Promise<void> {
+    try {
+      if (providerIds.length === 0) return;
+
+      await this.db
+        .update(aiProviders)
+        .set({ enabled: false })
+        .where(inArray(aiProviders.id, providerIds));
+
+      logger.info(`Bulk disabled ${providerIds.length} AI providers`);
+    } catch (error) {
+      logger.error('Failed to bulk disable AI providers:', error);
+      throw new AggregatorError('Failed to bulk disable AI providers', 'DATABASE_ERROR');
+    }
+  }
+
+  async bulkEnableKeys(keyIds: string[]): Promise<void> {
+    try {
+      if (keyIds.length === 0) return;
+
+      await this.db
+        .update(aiProviderKeys)
+        .set({ enabled: true })
+        .where(inArray(aiProviderKeys.id, keyIds));
+
+      logger.info(`Bulk enabled ${keyIds.length} AI provider keys`);
+    } catch (error) {
+      logger.error('Failed to bulk enable AI provider keys:', error);
+      throw new AggregatorError('Failed to bulk enable AI provider keys', 'DATABASE_ERROR');
+    }
+  }
+
+  async bulkDisableKeys(keyIds: string[]): Promise<void> {
+    try {
+      if (keyIds.length === 0) return;
+
+      await this.db
+        .update(aiProviderKeys)
+        .set({ enabled: false })
+        .where(inArray(aiProviderKeys.id, keyIds));
+
+      logger.info(`Bulk disabled ${keyIds.length} AI provider keys`);
+    } catch (error) {
+      logger.error('Failed to bulk disable AI provider keys:', error);
+      throw new AggregatorError('Failed to bulk disable AI provider keys', 'DATABASE_ERROR');
+    }
   }
 }

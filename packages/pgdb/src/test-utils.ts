@@ -4,28 +4,19 @@
  */
 
 import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { resolve } from 'path';
+import postgres from 'postgres';
 import * as schema from './schema.js';
-import { 
-  users, 
-  userSessions, 
-  userPreferences, 
-  contentCache, 
-  userActivity, 
-  translationCache,
+import {
   articles,
-  articleTranslations
+  articleTranslations,
+  users
 } from './schema.js';
-import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-// Get the directory of the current file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 // Test database configuration
-const TEST_DB_NAME = 'babel_feed_test';
+const TEST_DB_NAME = process.env.DB_NAME_TEST || 'babel_feed_test';
 
 export interface TestDbConfig {
   host: string;
@@ -40,10 +31,10 @@ export interface TestDbConfig {
 }
 
 export const defaultTestDbConfig: TestDbConfig = {
-  host: process.env.TEST_DB_HOST || 'localhost',
-  port: parseInt(process.env.TEST_DB_PORT || '5432'),
-  user: process.env.TEST_DB_USER || 'babel_dev',
-  password: process.env.TEST_DB_PASSWORD || 'babel_dev_password',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  user: process.env.DB_USER || 'babel_dev',
+  password: process.env.DB_PASSWORD || 'babel_dev_password',
   database: TEST_DB_NAME,
   max: 1,
   idle_timeout: 1,
@@ -59,6 +50,9 @@ let sql: ReturnType<typeof postgres> | null = null;
  */
 export async function setupTestDatabase(config: TestDbConfig = defaultTestDbConfig): Promise<ReturnType<typeof drizzle>> {
   try {
+    // Ensure test database exists before connecting
+    await createTestDatabaseIfNotExists(config);
+
     // Skip database creation - assume it already exists
     console.log(`🔌 Connecting to test database: ${config.database}`);
     
@@ -79,15 +73,15 @@ export async function setupTestDatabase(config: TestDbConfig = defaultTestDbConf
     testDb = drizzle(sql, { schema });
     
     // Run migrations to ensure schema is up to date
-    const migrationsPath = resolve(__dirname, 'migrations');
+    const __dirname = fileURLToPath(new URL('.', import.meta.url));
+    const migrationsPath = resolve(__dirname, '../migrations');
     console.log(`🔄 Running migrations from: ${migrationsPath}`);
     
     try {
       await migrate(testDb, { migrationsFolder: migrationsPath });
       console.log('✅ Migrations completed successfully');
     } catch (migrationError) {
-      console.log('⚠️  Migration error (may be expected if already applied):', migrationError);
-      // Continue execution - migrations may already be applied
+      console.log('⚠️  Migration error:', migrationError);
     }
     
     // Verify database health
@@ -156,19 +150,21 @@ export async function cleanupTestDatabase(): Promise<void> {
  * Clear all test data from database tables
  */
 export async function clearTestData(): Promise<void> {
-  if (!testDb) {
+  if (!sql) {
     throw new Error('Test database not initialized. Call setupTestDatabase() first.');
   }
-  
-  // Clear all tables in reverse dependency order
-  await testDb.delete(userActivity);
-  await testDb.delete(translationCache);
-  await testDb.delete(userSessions);
-  await testDb.delete(userPreferences);
-  await testDb.delete(contentCache);
-  await testDb.delete(articleTranslations);
-  await testDb.delete(articles);
-  await testDb.delete(users);
+
+  // Get all user tables in the public schema
+  const result = await sql`
+    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+  `;
+  const tableNames = (result as unknown as Array<{ tablename: string }>).map(row => `"${row.tablename}"`);
+
+  if (tableNames.length === 0) return;
+
+  // Truncate all tables, restart identity, cascade
+  const truncateQuery = `TRUNCATE TABLE ${tableNames.join(', ')} RESTART IDENTITY CASCADE;`;
+  await sql.unsafe(truncateQuery);
 }
 
 /**
@@ -245,7 +241,7 @@ export async function insertTestArticle(
 /**
  * Insert test article translation
  */
-export async function insertTestArticleTranslation(translationData: Partial<typeof articleTranslations.$inferInsert> = {}) {
+export async function insertTestArticleTranslation(translationData: Partial<schema.NewArticleTranslation> = {}) {
   const testDb = getTestDb();
   
   const defaultTranslation = {
@@ -255,7 +251,7 @@ export async function insertTestArticleTranslation(translationData: Partial<type
     ...translationData
   };
   
-  const [translation] = await testDb.insert(articleTranslations).values(defaultTranslation).returning();
+  const [translation] = await testDb.insert(articleTranslations).values(defaultTranslation as schema.NewArticleTranslation).returning();
   return translation;
 }
 
@@ -270,7 +266,7 @@ export async function testDatabaseHealth(): Promise<{ healthy: boolean; error?: 
     
     // Simple query to check connection
     console.log('🔍 Testing database connection...');
-    const result = await testDb.select().from(users).limit(1);
+    await testDb.select().from(users).limit(1);
     console.log('✅ Database connection successful');
     return { healthy: true };
   } catch (error) {

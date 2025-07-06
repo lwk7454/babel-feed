@@ -1,21 +1,26 @@
-import './setup.js';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
-import { users, userSessions } from '@babel-feed/pgdb';
-import { UserService } from '../services/user.service.js';
-import { testDb } from './test-database.js';
+import { UserService } from '../services/user.service';
 
 describe('UserService', () => {
   let userService: UserService;
 
-  beforeEach(() => {
-    userService = new UserService(testDb);
+
+  beforeAll(async () => {
+    await setupTestDatabase();
   });
 
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
+  beforeEach(() => {
+    userService = new UserService(getTestDb());
+  });
+  
   afterEach(async () => {
-    // Clean up test data
-    await testDb.delete(userSessions);
-    await testDb.delete(users);
+    await clearTestData();
   });
 
   describe('createGuestUser', () => {
@@ -109,14 +114,14 @@ describe('UserService', () => {
       const { user } = await userService.createAccountFromGuest(guestUser.guestId!, email);
 
       // Manually expire the token
-      await testDb
+      await getTestDb()
         .update(users)
         .set({
           verificationTokenExpiry: new Date(Date.now() - 1000) // 1 second ago
         })
         .where(eq(users.id, user.id));
 
-      const [updatedUser] = await testDb.select().from(users).where(eq(users.id, user.id));
+      const [updatedUser] = await getTestDb().select().from(users).where(eq(users.id, user.id));
 
       await expect(
         userService.verifyEmail(updatedUser.verificationToken!)
@@ -133,7 +138,7 @@ describe('UserService', () => {
       const { user } = await userService.verifyEmail(verificationToken);
 
       // Clear existing sessions created during verification
-      await testDb.delete(userSessions).where(eq(userSessions.userId, user.id));
+      await getTestDb().delete(userSessions).where(eq(userSessions.userId, user.id));
 
       const deviceInfo = { platform: 'test', version: '1.0' };
       const ipAddress = '127.0.0.1';
@@ -145,7 +150,7 @@ describe('UserService', () => {
       expect(tokens.refreshToken).toBeTruthy();
 
       // Verify session was stored
-      const sessions = await testDb.select().from(userSessions).where(eq(userSessions.userId, user.id));
+      const sessions = await getTestDb().select().from(userSessions).where(eq(userSessions.userId, user.id));
       expect(sessions).toHaveLength(1);
       expect(sessions[0].ipAddress).toBe(ipAddress);
       expect(sessions[0].userAgent).toBe(userAgent);
@@ -252,13 +257,13 @@ describe('UserService', () => {
       const { user, tokens } = await userService.verifyEmail(verificationToken);
 
       // Verify session exists
-      let sessions = await testDb.select().from(userSessions).where(eq(userSessions.userId, user.id));
+      let sessions = await getTestDb().select().from(userSessions).where(eq(userSessions.userId, user.id));
       expect(sessions).toHaveLength(1);
 
       await userService.logout(tokens.accessToken);
 
       // Verify session was deleted
-      sessions = await testDb.select().from(userSessions).where(eq(userSessions.userId, user.id));
+      sessions = await getTestDb().select().from(userSessions).where(eq(userSessions.userId, user.id));
       expect(sessions).toHaveLength(0);
     });
   });

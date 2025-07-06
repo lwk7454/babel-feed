@@ -1,16 +1,17 @@
-import { eq, and, desc, asc } from 'drizzle-orm';
-import { 
-  newsSources, 
-  type NewsSource as DbNewsSource, 
-  type NewNewsSource,
-  getDatabase
-} from '../../../../packages/pgdb/src';
-import { logger } from '../utils/logger';
+import {
+  getDatabase,
+  getTestDb,
+  newsSources,
+  type NewsSource as DbNewsSource,
+  type NewNewsSource
+} from '@babel-feed/pgdb';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { NewsSource } from '../types';
 import { AggregatorError, ValidationError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 export class DatabaseSourceManager {
-  private db = getDatabase();
+  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase();
 
   async initialize(): Promise<void> {
     logger.info('Initializing database-based source manager...');
@@ -241,7 +242,7 @@ export class DatabaseSourceManager {
 
       if (success) {
         updates.lastSuccess = new Date();
-        updates.lastError = null;
+        updates.lastError = undefined;
         updates.successCount = source.successCount + 1;
         
         // Improve reliability on success
@@ -263,10 +264,12 @@ export class DatabaseSourceManager {
 
   async bulkEnableSources(ids: string[]): Promise<void> {
     try {
+      if (ids.length === 0) return;
+
       await this.db
         .update(newsSources)
         .set({ enabled: true })
-        .where(eq(newsSources.id, ids[0])); // Note: This needs to be updated for proper bulk operation
+        .where(inArray(newsSources.id, ids));
 
       logger.info(`Bulk enabled ${ids.length} sources`);
     } catch (error) {
@@ -277,10 +280,12 @@ export class DatabaseSourceManager {
 
   async bulkDisableSources(ids: string[]): Promise<void> {
     try {
+      if (ids.length === 0) return;
+
       await this.db
         .update(newsSources)
         .set({ enabled: false })
-        .where(eq(newsSources.id, ids[0])); // Note: This needs to be updated for proper bulk operation
+        .where(inArray(newsSources.id, ids));
 
       logger.info(`Bulk disabled ${ids.length} sources`);
     } catch (error) {

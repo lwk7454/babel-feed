@@ -1,1 +1,0 @@
-ALTER TABLE "users" ADD COLUMN "user_status" varchar(20) DEFAULT 'guest' NOT NULL;

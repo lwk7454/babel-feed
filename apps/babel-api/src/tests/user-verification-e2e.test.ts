@@ -1,19 +1,28 @@
-import './setup.js';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { Elysia, t } from 'elysia';
+import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
-import { userPreferences, users, userSessions } from '@babel-feed/pgdb';
-import { UserService } from '../services/user.service.js';
-import { authRoutes } from '../routes/auth.routes.js';
-import { createAuthGuard } from '../middleware/auth.middleware.js';
-import { testDb } from './test-database.js';
+import { Elysia, t } from 'elysia';
+import { createAuthGuard } from '../middleware/auth.middleware';
+import { UserService } from '../services/user.service';
 
 describe('User Verification E2E Tests', () => {
   let app: any;
   let testUserService: UserService;
 
+  beforeAll(async () => {
+    await setupTestDatabase();
+  });
+
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
+  afterEach(async () => {
+    await clearTestData();
+  });
+
   beforeEach(() => {
-    testUserService = new UserService(testDb);
+    testUserService = new UserService(getTestDb());
     
     // Create auth guard with test user service
     const testAuthGuard = createAuthGuard(testUserService);
@@ -379,13 +388,6 @@ describe('User Verification E2E Tests', () => {
       );
   });
 
-  afterEach(async () => {
-    // Clean up test data in correct order
-    await testDb.delete(userPreferences);
-    await testDb.delete(userSessions);
-    await testDb.delete(users);
-  });
-
   describe('Complete User Verification Flow (Mobile Screen Flow)', () => {
     it('should complete the full verification flow as described in mobile screen specifications', async () => {
       // Step 1: Create guest user (Welcome Screen -> Feed Screen)
@@ -427,7 +429,7 @@ describe('User Verification E2E Tests', () => {
       expect(startVerificationData.message).toBe('Account created successfully. Please check your email for verification.');
 
       // Step 3: Verify that verification email was "sent" (get OTP from database)
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       expect(user.verificationToken).toBeTruthy();
       expect(user.verificationToken).toMatch(/^\d{4}$/); // 4-digit OTP
       expect(user.verificationTokenExpiry).toBeTruthy();
@@ -515,7 +517,7 @@ describe('User Verification E2E Tests', () => {
         })
       );
 
-      const [existingUser] = await testDb.select().from(users).limit(1);
+      const [existingUser] = await getTestDb().select().from(users).limit(1);
       await app.handle(
         new Request('http://localhost/api/auth/verify', {
           method: 'POST',
@@ -552,7 +554,7 @@ describe('User Verification E2E Tests', () => {
       expect(existingUserData.message).toBe('Verification code sent to your email address.');
 
       // Verify the existing user gets new verification token
-      const [updatedUser] = await testDb.select().from(users)
+      const [updatedUser] = await getTestDb().select().from(users)
         .where(eq(users.email, 'existing-user@example.com'))
         .limit(1);
       expect(updatedUser.verificationToken).toBeTruthy();
@@ -581,7 +583,7 @@ describe('User Verification E2E Tests', () => {
         })
       );
 
-      const [userBeforeResend] = await testDb.select().from(users).limit(1);
+      const [userBeforeResend] = await getTestDb().select().from(users).limit(1);
       const originalToken = userBeforeResend.verificationToken;
 
       // Test: Resend verification code
@@ -601,7 +603,7 @@ describe('User Verification E2E Tests', () => {
       expect(resendData.message).toBe('Verification code sent successfully');
 
       // Verify new token was generated
-      const [userAfterResend] = await testDb.select().from(users).limit(1);
+      const [userAfterResend] = await getTestDb().select().from(users).limit(1);
       expect(userAfterResend.verificationToken).toBeTruthy();
       expect(userAfterResend.verificationToken).not.toBe(originalToken);
       expect(userAfterResend.verificationTokenExpiry).toBeTruthy();
@@ -661,10 +663,10 @@ describe('User Verification E2E Tests', () => {
       );
 
       // Manually expire the token
-      const [user] = await testDb.select().from(users)
+      const [user] = await getTestDb().select().from(users)
         .where(eq(users.email, 'expired-token@example.com'))
         .limit(1);
-      await testDb.update(users)
+      await getTestDb().update(users)
         .set({ verificationTokenExpiry: new Date(Date.now() - 1000) }) // 1 second ago
         .where(eq(users.id, user.id));
 
@@ -725,7 +727,7 @@ describe('User Verification E2E Tests', () => {
       const guestData = await guestResponse.json();
 
       // Verify initial status
-      const [initialUser] = await testDb.select().from(users).limit(1);
+      const [initialUser] = await getTestDb().select().from(users).limit(1);
       expect(initialUser.userStatus).toBe('guest');
       expect(initialUser.emailVerified).toBe(false);
 
@@ -742,7 +744,7 @@ describe('User Verification E2E Tests', () => {
       );
 
       // Verify status still guest with email added
-      const [pendingUser] = await testDb.select().from(users).limit(1);
+      const [pendingUser] = await getTestDb().select().from(users).limit(1);
       expect(pendingUser.userStatus).toBe('guest');
       expect(pendingUser.emailVerified).toBe(false);
       expect(pendingUser.email).toBe('status-transition@example.com');
@@ -759,7 +761,7 @@ describe('User Verification E2E Tests', () => {
       );
 
       // Verify final status
-      const [verifiedUser] = await testDb.select().from(users).limit(1);
+      const [verifiedUser] = await getTestDb().select().from(users).limit(1);
       expect(verifiedUser.userStatus).toBe('verified');
       expect(verifiedUser.emailVerified).toBe(true);
       expect(verifiedUser.verificationToken).toBeNull();
@@ -788,10 +790,10 @@ describe('User Verification E2E Tests', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
 
       // Verify no sessions exist initially
-      let sessions = await testDb.select().from(userSessions);
+      let sessions = await getTestDb().select().from(userSessions);
       expect(sessions).toHaveLength(0);
 
       // Complete verification
@@ -808,7 +810,7 @@ describe('User Verification E2E Tests', () => {
       const verifyData = await verifyResponse.json();
 
       // Verify session was created
-      sessions = await testDb.select().from(userSessions);
+      sessions = await getTestDb().select().from(userSessions);
       expect(sessions).toHaveLength(1);
       expect(sessions[0].userId).toBe(user.id);
 
@@ -842,7 +844,7 @@ describe('User Verification E2E Tests', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users)
+      const [user] = await getTestDb().select().from(users)
         .where(eq(users.email, 'token-auth-test@example.com'))
         .limit(1);
       
@@ -991,7 +993,7 @@ describe('User Verification E2E Tests', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verifyResponse = await app.handle(
         new Request('http://localhost/api/auth/verify', {
           method: 'POST',
@@ -1042,7 +1044,7 @@ describe('User Verification E2E Tests', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verifyResponse = await app.handle(
         new Request('http://localhost/api/auth/verify', {
           method: 'POST',
@@ -1069,7 +1071,7 @@ describe('User Verification E2E Tests', () => {
       expect(logoutData.success).toBe(true);
 
       // Verify session was invalidated
-      const sessions = await testDb.select().from(userSessions);
+      const sessions = await getTestDb().select().from(userSessions);
       expect(sessions).toHaveLength(0);
 
       // Verify token no longer works

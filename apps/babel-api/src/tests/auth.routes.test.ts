@@ -1,17 +1,27 @@
-import './setup.js';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users } from '@babel-feed/pgdb';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { Elysia, t } from 'elysia';
-import { users, userSessions } from '@babel-feed/pgdb';
-import { UserService } from '../services/user.service.js';
-import { createAuthGuard } from '../middleware/auth.middleware.js';
-import { testDb } from './test-database.js';
+import { createAuthGuard } from '../middleware/auth.middleware';
+import { UserService } from '../services/user.service';
 
 describe('Auth Routes', () => {
   let app: any; // Allow any type to avoid Elysia macro type conflicts
   let testUserService: UserService;
 
+  beforeAll(async () => {
+    await setupTestDatabase();
+  });
+
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
+  afterEach(async () => {
+    await clearTestData();
+  });
+
   beforeEach(() => {
-    testUserService = new UserService(testDb);
+    testUserService = new UserService(getTestDb());
     
     // Create auth guard with test user service
     const testAuthGuard = createAuthGuard(testUserService);
@@ -235,12 +245,6 @@ describe('Auth Routes', () => {
       );
   });
 
-  afterEach(async () => {
-    // Clean up test data
-    await testDb.delete(userSessions);
-    await testDb.delete(users);
-  });
-
   describe('POST /api/auth/guest', () => {
     it('should create guest user successfully', async () => {
       const response = await app.handle(
@@ -337,7 +341,7 @@ describe('Auth Routes', () => {
       );
 
       // Get verification token and verify first user
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       await app.handle(
         new Request('http://localhost/verify', {
           method: 'POST',
@@ -399,7 +403,7 @@ describe('Auth Routes', () => {
       );
 
       // Get verification token from database
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verificationToken = user.verificationToken!;
 
       const response = await app.handle(
@@ -470,7 +474,7 @@ describe('Auth Routes', () => {
       );
 
       // Get verification token and verify
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verifyResponse = await app.handle(
         new Request('http://localhost/verify', {
           method: 'POST',
@@ -521,7 +525,7 @@ describe('Auth Routes', () => {
         })
       );
 
-      const [user] = await testDb.select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1);
       const verifyResponse = await app.handle(
         new Request('http://localhost/verify', {
           method: 'POST',

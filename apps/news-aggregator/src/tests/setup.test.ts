@@ -1,10 +1,25 @@
-import { describe, it, expect } from 'bun:test';
-import { DatabaseSourceManager } from '../services/db-source-manager';
-import { AiProviderManager } from '../services/ai-provider-manager';
-import { HealthChecker } from '../services/health-checker';
+import { cleanupTestDatabase, clearTestData, setupTestDatabase } from '@babel-feed/pgdb';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { NewsAggregator } from '../services/aggregator';
+import { AiProviderManager } from '../services/ai-provider-manager';
+import { DatabaseSourceManager } from '../services/db-source-manager';
+import { HealthChecker } from '../services/health-checker';
+
 
 describe('News Aggregator Setup', () => {
+
+  beforeAll(async () => {
+    await setupTestDatabase();
+  });
+
+  beforeEach(async () => {
+    await clearTestData();
+  });
+
+  afterAll(async () => {
+    await cleanupTestDatabase();
+  });
+
   describe('DatabaseSourceManager', () => {
     it('should initialize with default sources', async () => {
       const sourceManager = new DatabaseSourceManager();

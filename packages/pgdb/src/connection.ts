@@ -18,23 +18,15 @@ function getDatabaseUrl(): string {
     return process.env.DATABASE_URL;
   }
   
-  // Test: Use test database
-  if (isTest) {
-    const host = process.env.TEST_DB_HOST || 'localhost';
-    const port = process.env.TEST_DB_PORT || '5432';
-    const database = 'babel_feed_test';
-    const username = process.env.TEST_DB_USER || 'babel_dev';
-    const password = process.env.TEST_DB_PASSWORD || 'babel_dev_password';
-    
-    return `postgres://${username}:${password}@${host}:${port}/${database}`;
-  }
-  
   // Development: Use local Docker PostgreSQL
   const host = process.env.DB_HOST || 'localhost';
   const port = process.env.DB_PORT || '5432';
-  const database = process.env.DB_NAME || 'babel_feed_dev';
+  let database = process.env.DB_NAME || 'babel_feed_dev';
   const username = process.env.DB_USER || 'babel_dev';
   const password = process.env.DB_PASSWORD || 'babel_dev_password';
+  if (isTest) {
+    database = process.env.DB_NAME_TEST || 'babel_feed_test';
+  }
   
   return `postgres://${username}:${password}@${host}:${port}/${database}`;
 }
@@ -120,49 +112,6 @@ export async function closeDatabaseConnection(): Promise<void> {
   }
 }
 
-/**
- * Database configuration info for debugging
- */
-export function getDatabaseInfo() {
-  return {
-    environment: process.env.NODE_ENV || 'development',
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || '5432',
-    database: process.env.DB_NAME || 'babel_feed_dev',
-    ssl: isProduction,
-    poolSize: process.env.DB_POOL_SIZE || '10'
-  };
-}
-
-/**
- * Create test database connection that uses a separate test database
- */
-export function createTestDatabase() {
-  const TEST_DB_NAME = 'babel_feed_test';
-  
-  function getTestDatabaseUrl(): string {
-    const host = process.env.TEST_DB_HOST || 'localhost';
-    const port = process.env.TEST_DB_PORT || '5432';
-    const database = TEST_DB_NAME;
-    const username = process.env.TEST_DB_USER || 'babel_dev';
-    const password = process.env.TEST_DB_PASSWORD || 'babel_dev_password';
-    
-    return `postgres://${username}:${password}@${host}:${port}/${database}`;
-  }
-
-  const connectionString = getTestDatabaseUrl();
-  
-  const sql = postgres(connectionString, {
-    max: 1, // Single connection for tests
-    idle_timeout: 1,
-    connect_timeout: 10,
-    prepare: false,
-    onnotice: () => {}, // Suppress notices in tests
-    debug: false
-  });
-  
-  return drizzle(sql, { schema });
-}
 
 // Export the database instance as default
 export const db = getDatabase();

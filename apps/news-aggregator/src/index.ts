@@ -1,4 +1,4 @@
-import { initializeDatabase } from '../../../packages/pgdb/src';
+import { initializeDatabase } from '@babel-feed/pgdb';
 import { logger } from './utils/logger';
 import { config } from './config/config';
 import { NewsAggregator } from './services/aggregator';
