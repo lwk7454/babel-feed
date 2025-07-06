@@ -314,7 +314,7 @@
             )
 
             let node
-            while (node = walker.nextNode()) {
+            while ((node = walker.nextNode())) {
                 if (node.textContent.trim() === translation.originalText.trim()) {
                     this.replaceTextContent(node, translation.translatedText)
                     break
@@ -361,7 +361,7 @@
             )
 
             let node
-            while (node = walker.nextNode()) {
+            while ((node = walker.nextNode())) {
                 if (node.textContent.trim() === originalText.trim()) {
                     this.replaceTextContent(node, translatedText)
                     break

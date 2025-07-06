@@ -5,7 +5,7 @@ import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
 
 describe('User Flow Integration Tests', () => {
-  let app: any // Allow any type to avoid Elysia macro type conflicts
+  let app: Elysia // Use proper Elysia type
   let testUserService: UserService
 
   beforeAll(async () => {

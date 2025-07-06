@@ -3,7 +3,7 @@
  * Utilities for interacting with the backend API during tests
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

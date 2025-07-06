@@ -1,6 +1,5 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '@babel-feed/pgdb'
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import { users, userSessions, userPreferences, type User, type NewUser, type NewUserSession, type NewUserPreferences } from '@babel-feed/pgdb'
 import * as jwt from 'jsonwebtoken'
 import { randomBytes, createHash } from 'crypto'
@@ -12,9 +11,9 @@ import { emailService } from './email.service.js'
 export class UserService {
   private readonly jwtSecret: string
   private readonly accessTokenExpiry = '30d' // 30 days for news app - longer sessions preferred
-  private readonly db: PostgresJsDatabase<any>
+  private readonly db
   
-  constructor(database?: PostgresJsDatabase<any>) {
+  constructor(database?: any) {
     this.jwtSecret = process.env.JWT_SECRET || 'development-secret-key'
     if (this.jwtSecret === 'development-secret-key' && process.env.NODE_ENV === 'production') {
       throw new Error('JWT_SECRET must be set in production environment')
@@ -110,7 +109,7 @@ export class UserService {
   /**
    * Verify email and complete account creation
    */
-  async verifyEmail(verificationToken: string): Promise<{ user: User; tokens: { accessToken: string; refreshToken: string }; preferences?: any }> {
+  async verifyEmail(verificationToken: string): Promise<{ user: User; tokens: { accessToken: string; refreshToken: string }; preferences?: unknown }> {
     // Find user by verification token (allow already verified users for existing user flow)
     const [user] = await this.db
       .select()
@@ -200,7 +199,7 @@ export class UserService {
   /**
    * Create a new session for authenticated user
    */
-  async createSession(user: User, deviceInfo?: any, ipAddress?: string, userAgent?: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async createSession(user: User, deviceInfo?: Record<string, unknown>, ipAddress?: string, userAgent?: string): Promise<{ accessToken: string; refreshToken: string }> {
     // Generate tokens
     const accessToken = this.generateAccessToken(user)
     const refreshToken = this.generateRefreshToken()
@@ -279,7 +278,7 @@ export class UserService {
    */
   async validateAccessToken(accessToken: string): Promise<User | null> {
     try {
-      const payload = jwt.verify(accessToken, this.jwtSecret) as any
+      const payload = jwt.verify(accessToken, this.jwtSecret) as { userId: string; email?: string; emailVerified?: boolean; jti?: string }
       
       // Check if session exists (for logout invalidation)
       const accessTokenHash = this.hashToken(accessToken)
@@ -357,24 +356,24 @@ export class UserService {
     // Merge nested objects properly - exclude nested objects from initial spread
     const { translationSettings, notificationSettings, privacySettings, ...otherPrefs } = preferences
     
-    const updatedPrefs: any = {
+    const updatedPrefs: Partial<NewUserPreferences> & { updatedAt: Date } = {
       ...otherPrefs,
       updatedAt: new Date()
     }
 
     // Handle nested object merging for specific fields
     if (translationSettings) {
-      const existing = (existingPrefs.translationSettings as any) || {}
+      const existing = (existingPrefs.translationSettings as Record<string, unknown>) || {}
       updatedPrefs.translationSettings = Object.assign({}, existing, translationSettings)
     }
 
     if (notificationSettings) {
-      const existing = (existingPrefs.notificationSettings as any) || {}
+      const existing = (existingPrefs.notificationSettings as Record<string, unknown>) || {}
       updatedPrefs.notificationSettings = Object.assign({}, existing, notificationSettings)
     }
 
     if (privacySettings) {
-      const existing = (existingPrefs.privacySettings as any) || {}
+      const existing = (existingPrefs.privacySettings as Record<string, unknown>) || {}
       updatedPrefs.privacySettings = Object.assign({}, existing, privacySettings)
     }
 

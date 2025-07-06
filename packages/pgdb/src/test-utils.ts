@@ -66,7 +66,9 @@ export async function setupTestDatabase(config: TestDbConfig = defaultTestDbConf
       idle_timeout: config.idle_timeout || 1,
       connect_timeout: config.connect_timeout || 10,
       prepare: config.prepare || false,
-      onnotice: () => {} // Suppress notices in tests
+      onnotice: () => {
+        // Suppress notices in tests
+      }
     })
     
     // Create Drizzle instance
@@ -111,7 +113,9 @@ export async function createTestDatabaseIfNotExists(config: TestDbConfig = defau
     idle_timeout: 1,
     connect_timeout: 10,
     prepare: false,
-    onnotice: () => {} // Suppress notices
+    onnotice: () => {
+      // Suppress notices
+    }
   })
   
   try {

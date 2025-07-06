@@ -125,7 +125,7 @@ async function main() {
     }
     
     switch (command) {
-      case 'start':
+      case 'start': {
         const isRunning = await isContainerRunning(CONTAINER_NAME)
         if (isRunning) {
           console.log('ℹ️  Database container is already running')
@@ -134,6 +134,7 @@ async function main() {
           await startDatabase()
         }
         break
+      }
         
       case 'stop':
         await stopDatabase()
@@ -147,7 +148,7 @@ async function main() {
         await showDatabaseStatus()
         break
         
-      default:
+      default: {
         // Default behavior: start database if not running
         const isRunning2 = await isContainerRunning(CONTAINER_NAME)
         if (isRunning2) {
@@ -163,6 +164,7 @@ async function main() {
           await startDatabase()
         }
         break
+      }
     }
   } catch (error) {
     console.error('💥 Script failed:', error)

@@ -183,7 +183,7 @@ export class TranslationService {
    */
   private async* attemptTranslation(
     request: TranslationRequest, 
-    modelConfig: any, 
+    modelConfig: { name: string; modelId: string; maxTokens: number; temperature: number }, 
     startTime: number
   ): AsyncGenerator<StreamingTranslationResult> {
     const prompt = this.generateTranslationPrompt(request)
@@ -411,7 +411,7 @@ export class TranslationService {
    */
   private async* attemptBatchedTranslation(
     request: BatchedTranslationRequest,
-    modelConfig: any,
+    modelConfig: { name: string; modelId: string; maxTokens: number; temperature: number },
     startTime: number
   ): AsyncGenerator<string> {
     const prompt = this.generateBatchedTranslationPrompt(request)
@@ -541,8 +541,6 @@ export class TranslationService {
     startTime: number
   ): AsyncGenerator<string> {
     const totalElements = request.elements.length
-    const fromLanguageName = getLanguageName(request.fromLanguage)
-    const toLanguageName = getLanguageName(request.toLanguage)
     
     // Mock translation mappings based on target language
     const mockTranslations = this.generateMockTranslations(request.elements, request.toLanguage)

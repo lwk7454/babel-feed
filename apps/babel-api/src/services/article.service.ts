@@ -1,5 +1,5 @@
 import { getDatabase } from '@babel-feed/pgdb'
-import { articles, type Article, type NewArticle } from '@babel-feed/pgdb'
+import { articles, articleTranslations, type Article, type NewArticle } from '@babel-feed/pgdb'
 import { eq, desc, sql } from 'drizzle-orm'
 
 /**
@@ -26,18 +26,19 @@ export class ArticleService {
       }
 
       // Get articles with limit and offset
-      let query = this.db
+      const baseQuery = this.db
         .select()
         .from(articles)
         .orderBy(desc(articles.publishedAt))
 
-      if (conditions.length > 0) {
-        query = query.where(sql`${sql.join(conditions, sql` AND `)}`)
-      }
-
-      const articlesResult = await query
-        .limit(limit)
-        .offset(offset)
+      const articlesResult = conditions.length > 0 
+        ? await baseQuery
+            .where(sql`${sql.join(conditions, sql` AND `)}`)
+            .limit(limit)
+            .offset(offset)
+        : await baseQuery
+            .limit(limit)
+            .offset(offset)
 
       // Get total count
       const totalResult = await this.db
@@ -156,17 +157,28 @@ export class ArticleService {
 
     try {
       const conditions = [
-        sql`(${articles.title} ILIKE ${`%${query}%`} OR ${articles.summary} ILIKE ${`%${query}%`})`
+        sql`(${articleTranslations.title} ILIKE ${`%${query}%`} OR ${articleTranslations.summary} ILIKE ${`%${query}%`})`
       ]
 
       if (language) {
-        conditions.push(eq(articles.sourceLanguage, language))
+        conditions.push(eq(articleTranslations.language, language))
       }
 
-      // Get articles with search
+      // Get articles with search using inner join with translations
       const articlesResult = await this.db
-        .select()
+        .select({
+          id: articles.id,
+          url: articles.url,
+          sourceId: articles.sourceId,
+          source: articles.source,
+          sourceLanguage: articles.sourceLanguage,
+          imageUrl: articles.imageUrl,
+          publishedAt: articles.publishedAt,
+          createdAt: articles.createdAt,
+          updatedAt: articles.updatedAt
+        })
         .from(articles)
+        .innerJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
         .where(sql`${sql.join(conditions, sql` AND `)}`)
         .orderBy(desc(articles.publishedAt))
         .limit(limit)
@@ -176,6 +188,7 @@ export class ArticleService {
       const totalResult = await this.db
         .select({ count: sql<number>`count(*)` })
         .from(articles)
+        .innerJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
         .where(sql`${sql.join(conditions, sql` AND `)}`)
 
       const total = totalResult[0]?.count || 0

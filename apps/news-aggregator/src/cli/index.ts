@@ -257,16 +257,8 @@ export class NewsAggregatorCLI {
     if (!this.service) throw new Error('Service not initialized')
     
     try {
-      const discovery = this.service.getSourceDiscovery()
-      const status = discovery.getStatus()
-      
-      if (status.running) {
-        console.log('Source discovery is already running')
-      } else {
-        console.log('Starting source discovery...')
-        await discovery.startDiscovery()
-        console.log('Source discovery started')
-      }
+      console.log('Source discovery functionality not yet implemented')
+      console.log('This feature will be available when source discovery module is completed')
     } catch (error) {
       console.log('Error with source discovery:', error)
     }
@@ -276,8 +268,8 @@ export class NewsAggregatorCLI {
     if (!this.service) throw new Error('Service not initialized')
     
     try {
-      const healthMonitor = this.service.getHealthMonitor()
-      const health = await healthMonitor.getHealthStatus()
+      const healthChecker = this.service.getHealthChecker()
+      const health = await healthChecker.getHealthStatus()
       
       console.log('\n=== System Health Check ===')
       console.log(`Overall Status: ${this.getHealthIcon(health.status)} ${health.status}`)

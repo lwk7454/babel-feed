@@ -16,7 +16,7 @@ const createArticleSchema = t.Object({
   summary: t.Optional(t.String()),
   url: t.String({ format: 'uri' }),
   source: t.String({ minLength: 1, maxLength: 100 }),
-  language: t.String({ minLength: 2, maxLength: 2, default: 'en' }),
+  sourceLanguage: t.String({ minLength: 2, maxLength: 2, default: 'en' }),
   publishedAt: t.Optional(t.String({ format: 'date-time' }))
 })
 
@@ -25,7 +25,7 @@ const updateArticleSchema = t.Object({
   summary: t.Optional(t.String()),
   url: t.Optional(t.String({ format: 'uri' })),
   source: t.Optional(t.String({ minLength: 1, maxLength: 100 })),
-  language: t.Optional(t.String({ minLength: 2, maxLength: 2 })),
+  sourceLanguage: t.Optional(t.String({ minLength: 2, maxLength: 2 })),
   publishedAt: t.Optional(t.String({ format: 'date-time' }))
 })
 
@@ -128,7 +128,14 @@ export const articleRoutes = new Elysia({ prefix: "/api/articles" })
    */
   .post("/", async ({ body, set }) => {
     try {
-      const articleData = body
+      const articleData = body as {
+        title: string
+        summary?: string
+        url: string
+        source: string
+        sourceLanguage: string
+        publishedAt?: string
+      }
       
       // Convert publishedAt string to Date if provided
       const processedData = {
@@ -177,7 +184,14 @@ export const articleRoutes = new Elysia({ prefix: "/api/articles" })
   .put("/:id", async ({ params, body, set }) => {
     try {
       const { id } = params
-      const updates = body
+      const updates = body as {
+        title?: string
+        summary?: string
+        url?: string
+        source?: string
+        sourceLanguage?: string
+        publishedAt?: string
+      }
 
       // Convert publishedAt string to Date if provided
       const processedUpdates = {

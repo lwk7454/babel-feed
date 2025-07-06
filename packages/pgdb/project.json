@@ -17,7 +17,8 @@
         "bundle": false,
         "format": ["esm"],
         "platform": "node",
-        "target": "node18"
+        "target": "node18",
+        "declaration": true
       }
     },
     "lint": {

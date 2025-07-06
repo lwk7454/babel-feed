@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
 import { userService } from '../services/user.service.js'
+import { User } from '@babel-feed/pgdb'
 
 /**
  * Lightweight user context - safe to use globally
@@ -26,7 +27,7 @@ export const userContext = new Elysia({ name: 'userContext' })
 /**
  * Factory function to create auth guard with custom user service
  */
-export function createAuthGuard(customUserService?: any) {
+export function createAuthGuard(customUserService?: { validateAccessToken(token: string): Promise<User | null> }) {
   return new Elysia({ name: 'authGuard' })
     .derive(({ headers }) => {
       const authorization = headers.authorization

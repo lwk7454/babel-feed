@@ -6,7 +6,7 @@ import type { MailgunMessageData } from 'mailgun.js'
  * Configurable for both development and production environments
  */
 export class EmailService {
-  private mailgun: any
+  private mailgun: any | null
   private domain: string
   private isDevelopment: boolean
 
@@ -19,7 +19,7 @@ export class EmailService {
     
     if (apiKey && !this.isDevelopment) {
       // Production: Use real Mailgun
-      const mailgun = new Mailgun(fetch)
+      const mailgun = new Mailgun(fetch as any)
       this.mailgun = mailgun.client({
         username: 'api',
         key: apiKey,
@@ -27,7 +27,7 @@ export class EmailService {
       })
     } else if (apiKey && this.isDevelopment) {
       // Development with real Mailgun (for testing)
-      const mailgun = new Mailgun(fetch)
+      const mailgun = new Mailgun(fetch as any)
       this.mailgun = mailgun.client({
         username: 'api',
         key: apiKey,

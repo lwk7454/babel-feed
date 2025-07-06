@@ -1,6 +1,7 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { getDatabase } from './connection.js'
 import { resolve } from 'path'
+import { fileURLToPath } from 'url'
 
 /**
  * Run database migrations
@@ -10,28 +11,10 @@ export async function runMigrations(): Promise<void> {
     console.log('🔄 Running database migrations...')
     
     const db = getDatabase()
-    const migrationsFolder = resolve(import.meta.url, 'migrations')
+    const __dirname = fileURLToPath(new URL('.', import.meta.url))
+    const migrationsPath = resolve(__dirname, '../migrations')
     
-    await migrate(db, { migrationsFolder })
-    
-    console.log('✅ Database migrations completed successfully')
-  } catch (error) {
-    console.error('❌ Database migration failed:', error)
-    throw error
-  }
-}
-
-/**
- * Run database migrations with custom migration folder
- */
-export async function runMigrationsWithFolder(migrationsFolder: string): Promise<void> {
-  try {
-    console.log('🔄 Running database migrations...')
-    
-    const db = getDatabase()
-    const resolvedFolder = resolve(migrationsFolder)
-    
-    await migrate(db, { migrationsFolder: resolvedFolder })
+    await migrate(db, { migrationsFolder: migrationsPath })
     
     console.log('✅ Database migrations completed successfully')
   } catch (error) {
@@ -82,23 +65,6 @@ export async function initializeDatabase(): Promise<void> {
     
     // Run migrations to create tables
     await runMigrations()
-    
-    console.log('✅ Database initialization completed')
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error)
-    throw error
-  }
-}
-
-/**
- * Initialize database with custom migration folder
- */
-export async function initializeDatabaseWithFolder(migrationsFolder: string): Promise<void> {
-  try {
-    console.log('🚀 Initializing database...')
-    
-    // Run migrations to create tables
-    await runMigrationsWithFolder(migrationsFolder)
     
     console.log('✅ Database initialization completed')
   } catch (error) {

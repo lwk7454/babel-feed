@@ -5,10 +5,10 @@ import { resolve } from 'path'
 // Load environment variables from .env file
 config({ path: resolve(process.cwd(), '.env') })
 
+import { checkDatabaseHealth, initializeDatabase } from "@babel-feed/pgdb"
 import { cors } from "@elysiajs/cors"
 import { swagger } from "@elysiajs/swagger"
 import { Elysia } from "elysia"
-import { checkDatabaseHealth, runMigrationsWithFolder } from "@babel-feed/pgdb"
 import { authGuard } from './middleware/auth.middleware.js'
 import { cacheMiddleware, cacheStatsRoute } from "./middleware/cache.js"
 import { statsMiddleware, statsRoute } from "./middleware/logging.js"
@@ -251,14 +251,7 @@ const app = new Elysia()
 
 // Initialize database on startup
 async function initializeApp() {
-  try {
-    console.log('🗄️  Initializing database...')
-    await runMigrationsWithFolder('../../packages/pgdb/src/migrations')
-    console.log('✅ Database initialized successfully')
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error)
-    console.log('⚠️  API will continue without database functionality')
-  }
+  await initializeDatabase()
 }
 
 // Run initialization

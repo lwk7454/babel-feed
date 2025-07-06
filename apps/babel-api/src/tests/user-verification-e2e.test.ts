@@ -6,7 +6,7 @@ import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
 
 describe('User Verification E2E Tests', () => {
-  let app: any
+  let app: Elysia
   let testUserService: UserService
 
   beforeAll(async () => {
@@ -100,7 +100,19 @@ describe('User Verification E2E Tests', () => {
                 const { verificationToken } = body as any
                 const result = await testUserService.verifyEmail(verificationToken)
                 
-                const responseData: any = {
+                const responseData: {
+                  user: {
+                    id: string;
+                    email: string | null;
+                    guestId: string | null;
+                    emailVerified: boolean;
+                    userStatus: string;
+                    createdAt: Date;
+                  };
+                  accessToken: string;
+                  refreshToken: string;
+                  preferences?: unknown;
+                } = {
                   user: {
                     id: result.user.id,
                     email: result.user.email,

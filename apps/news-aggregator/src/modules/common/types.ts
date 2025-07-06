@@ -46,7 +46,7 @@ export interface NewsSource {
   lastFetched?: Date;
   lastSuccess?: Date;
   lastError?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -61,17 +61,17 @@ export interface RawArticle {
   source: string;
   sourceLanguage: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   key: string;
   value: T;
   createdAt: Date;
   expiresAt?: Date;
   hitCount?: number;
   lastAccessed?: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CircuitBreakerState {
@@ -193,3 +193,66 @@ export interface CircuitBreakerOptions {
   failureThreshold?: number;
   monitoringWindow?: number;
 }
+
+// RSS/XML parsing types
+export interface RSSItem {
+  title?: string;
+  link?: string;
+  description?: string;
+  pubDate?: string;
+  isoDate?: string;
+  content?: string;
+  contentEncoded?: string;
+  author?: string;
+  'dc:creator'?: string;
+  creator?: string;
+  guid?: string;
+  categories?: string[];
+  enclosure?: {
+    url: string;
+    type: string;
+    length?: number;
+  };
+  mediaContent?: {
+    url: string;
+    type?: string;
+    medium?: string;
+  };
+  mediaThumbnail?: {
+    url: string;
+    width?: number;
+    height?: number;
+  };
+  summary?: string;
+  [key: string]: unknown;
+}
+
+// Health status response type
+export interface HealthStatusResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  timestamp: Date;
+  uptime: number;
+  services: Array<{
+    name: string;
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck?: Date;
+    error?: string;
+  }>;
+  summary: {
+    totalSources: number;
+    healthySources: number;
+    unhealthySources: number;
+  };
+}
+
+// Source discovery types
+export interface DiscoveredSource {
+  url: string;
+  name: string;
+  sourceType: 'rss' | 'json' | 'html' | 'api' | 'scraper';
+  language?: string;
+  category?: string;
+  quality?: number;
+  metadata?: Record<string, unknown>;
+}
+

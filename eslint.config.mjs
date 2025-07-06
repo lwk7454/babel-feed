@@ -5,7 +5,20 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/node_modules'],
+    ignores: [
+      '**/dist',
+      '**/node_modules',
+      '**/build',
+      '**/tmp',
+      '**/apps/babel-android/app/build/**',
+      '**/tmp/**'
+    ],
+  },
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
@@ -42,10 +55,4 @@ export default [
       'semi': ['error', 'never'],
     },
   },
-  {
-    files: ['**/*.test.ts'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-    },
-  }
 ]

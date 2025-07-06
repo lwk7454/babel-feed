@@ -154,7 +154,7 @@ export class NewsSourceManager {
   async updateSource(id: string, updates: Partial<Omit<NewsSource, 'id' | 'createdAt' | 'updatedAt'>>): Promise<NewsSource> {
     try {
       if (updates.slug || updates.name) {
-        this.validateSourceData(updates as any)
+        this.validateSourceData(updates as Partial<NewsSource>)
       }
 
       const updateData: Partial<NewNewsSource> = {

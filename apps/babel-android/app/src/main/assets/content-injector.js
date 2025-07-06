@@ -136,7 +136,7 @@
             )
             
             let node
-            while (node = walker.nextNode()) {
+            while ((node = walker.nextNode())) {
                 const textIds = node.getAttribute('data-babel-text-ids')
                 if (textIds && textIds.includes(nodeId)) {
                     return node

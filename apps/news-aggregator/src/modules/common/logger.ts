@@ -4,7 +4,7 @@ class Logger {
     return new Date().toISOString()
   }
 
-  private formatMessage(level: string, message: string, ...args: any[]): string {
+  private formatMessage(level: string, message: string, ...args: unknown[]): string {
     const timestamp = this.getTimestamp()
     const formattedArgs = args.length > 0 ? ' ' + args.map(arg => 
       typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
@@ -12,19 +12,19 @@ class Logger {
     return `[${timestamp}] ${level.toUpperCase()}: ${message}${formattedArgs}`
   }
 
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     console.log(this.formatMessage('info', message, ...args))
   }
 
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     console.error(this.formatMessage('error', message, ...args))
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     console.warn(this.formatMessage('warn', message, ...args))
   }
 
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     console.debug(this.formatMessage('debug', message, ...args))
   }
 }

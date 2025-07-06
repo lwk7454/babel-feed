@@ -4,8 +4,7 @@ import { translationService } from "../services/translation.service.js"
 import { 
   TranslationRequest, 
   TranslationError, 
-  BatchedTranslationRequest,
-  BatchedTranslationElement 
+  BatchedTranslationRequest
 } from "../types/translation.js"
 
 // Validation schemas

@@ -13,7 +13,7 @@ class InMemoryTranslationCache {
 
   private cleanup() {
     const now = Date.now()
-    for (const [key, data] of this.cache.entries()) {
+    for (const [key, data] of Array.from(this.cache.entries())) {
       if (now > data.expiresAt) {
         this.cache.delete(key)
       }

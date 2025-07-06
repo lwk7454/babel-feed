@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/babel-api",
+    "downlevelIteration": true,
+    "target": "es2020"
+  },
   "files": [],
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts"]
 }

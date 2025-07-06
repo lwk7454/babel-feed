@@ -37,7 +37,7 @@ export interface TranslationError {
   error: {
     code: "UNSUPPORTED_LANGUAGE" | "CONTENT_TOO_LARGE" | "RATE_LIMIT_EXCEEDED" | "MODEL_UNAVAILABLE" | "INTERNAL_ERROR";
     message: string;
-    details?: any;
+    details?: unknown;
   };
   timestamp: string;
 }

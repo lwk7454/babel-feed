@@ -15,7 +15,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .post('/guest', 
     async ({ body, set }) => {
       try {
-        const deviceFingerprint = (body as any).deviceFingerprint
+        const deviceFingerprint = (body as { deviceFingerprint?: string }).deviceFingerprint
         const user = await userService.createGuestUser(deviceFingerprint)
         
         return {
@@ -58,7 +58,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .post('/start-verification',
     async ({ body, set }) => {
       try {
-        const { guestId, email } = body as any
+        const { guestId, email } = body as { guestId: string; email: string }
         const result = await userService.startVerification(guestId, email)
         
         return {
@@ -120,7 +120,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .post('/resend-verification',
     async ({ body, set }) => {
       try {
-        const { email } = body as any
+        const { email } = body as { email: string }
         await userService.resendVerificationCode(email)
         
         return {
@@ -184,15 +184,27 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .post('/verify',
     async ({ body, set }) => {
       try {
-        const { verificationToken } = body as any
+        const { verificationToken } = body as { verificationToken: string }
         const result = await userService.verifyEmail(verificationToken)
         
-        const responseData: any = {
+        const responseData: {
+          user: {
+            id: string;
+            email: string | null;
+            guestId: string | null;
+            emailVerified: boolean;
+            userStatus: string;
+            createdAt: Date;
+          };
+          accessToken: string;
+          refreshToken: string;
+          preferences?: unknown;
+        } = {
           user: {
             id: result.user.id,
             email: result.user.email,
             guestId: result.user.guestId,
-            emailVerified: result.user.emailVerified,
+            emailVerified: result.user.emailVerified || false,
             userStatus: result.user.userStatus,
             createdAt: result.user.createdAt
           },
@@ -267,7 +279,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
   .post('/refresh',
     async ({ body, set }) => {
       try {
-        const { refreshToken } = body as any
+        const { refreshToken } = body as { refreshToken: string }
         const tokens = await userService.refreshToken(refreshToken)
         
         if (!tokens) {
@@ -382,7 +394,14 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     async ({ user, body, set }) => {
       try {
         const validatedUser = user as User
-        await userService.updateUserPreferences(validatedUser.id, body as any)
+        await userService.updateUserPreferences(validatedUser.id, body as Partial<{
+          preferredLanguages?: string[];
+          feedCategories?: string[];
+          translationSettings?: { autoTranslate?: boolean; defaultTargetLanguage?: string };
+          themePreference?: string;
+          notificationSettings?: { emailNotifications?: boolean; pushNotifications?: boolean };
+          privacySettings?: { analytics?: boolean; personalization?: boolean };
+        }>)
         const preferences = await userService.getUserPreferences(validatedUser.id)
         
         return {
@@ -437,7 +456,14 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     async ({ user, body, set }) => {
       try {
         const validatedUser = user as User
-        await userService.updateUserPreferences(validatedUser.id, body as any)
+        await userService.updateUserPreferences(validatedUser.id, body as Partial<{
+          preferredLanguages?: string[];
+          feedCategories?: string[];
+          translationSettings?: { autoTranslate?: boolean; defaultTargetLanguage?: string };
+          themePreference?: string;
+          notificationSettings?: { emailNotifications?: boolean; pushNotifications?: boolean };
+          privacySettings?: { analytics?: boolean; personalization?: boolean };
+        }>)
         const preferences = await userService.getUserPreferences(validatedUser.id)
         
         return {

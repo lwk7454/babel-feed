@@ -1,0 +1,22 @@
+{
+  "name": "@babel-feed/pgdb",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "../../dist/packages/pgdb/index.js",
+  "types": "../../dist/packages/pgdb/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "../../dist/packages/pgdb/index.js",
+      "types": "../../dist/packages/pgdb/src/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.2",
+    "postgres": "^3.4.7",
+    "drizzle-kit": "^0.31.1"
+  },
+  "devDependencies": {
+    "@types/node": "~18.16.9",
+    "typescript": "~5.8.3"
+  }
+}

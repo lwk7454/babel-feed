@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
 import RSSParser from 'rss-parser'
 import * as cheerio from 'cheerio'
-import { NewsSource, RawArticle, AggregatorError } from '../modules/common/types'
+import { NewsSource, RawArticle, AggregatorError, RSSItem } from '../modules/common/types'
 import { logger } from '../modules/common/logger'
 import { NewsSourceManager } from './news-source-manager'
 
@@ -146,7 +146,7 @@ export class RssProcessor {
 
       for (const item of feed.items) {
         try {
-          const article = await this.extractArticleFromItem(item, source)
+          const article = await this.extractArticleFromItem(item as RSSItem, source)
           if (article) {
             articles.push(article)
           }
@@ -163,7 +163,7 @@ export class RssProcessor {
     }
   }
 
-  private async extractArticleFromItem(item: any, source: NewsSource): Promise<RawArticle | null> {
+  private async extractArticleFromItem(item: RSSItem, source: NewsSource): Promise<RawArticle | null> {
     // Validate required fields
     if (!item.link || !item.title) {
       logger.debug(`Skipping item missing required fields (link or title) from ${source.name}`)
@@ -241,7 +241,7 @@ export class RssProcessor {
     }
   }
 
-  private extractDescription(item: any): string | undefined {
+  private extractDescription(item: RSSItem): string | undefined {
     // Try different description fields in order of preference
     const candidates = [
       item.contentEncoded,
@@ -255,7 +255,7 @@ export class RssProcessor {
     // Use the longest non-empty description
     let bestDescription = ''
     for (const candidate of candidates) {
-      const cleaned = this.cleanHtmlContent(candidate)
+      const cleaned = this.cleanHtmlContent(candidate || '')
       if (cleaned.length > bestDescription.length) {
         bestDescription = cleaned
       }
@@ -264,7 +264,7 @@ export class RssProcessor {
     return bestDescription.length > 0 ? bestDescription : undefined
   }
 
-  private extractImageUrl(item: any): string | undefined {
+  private extractImageUrl(item: RSSItem): string | undefined {
     // Try different image sources
     if (item.enclosure?.type?.startsWith('image/')) {
       return item.enclosure.url
@@ -298,7 +298,7 @@ export class RssProcessor {
     return undefined
   }
 
-  private extractAuthor(item: any): string | undefined {
+  private extractAuthor(item: RSSItem): string | undefined {
     return item.author || item['dc:creator'] || item.creator || undefined
   }
 
