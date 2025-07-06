@@ -72,6 +72,48 @@
         "command": "bun test --coverage",
         "cwd": "apps/news-aggregator"
       }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/server.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "worker": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/worker.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "cli": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/cli/index.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "dev:server": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun --watch src/server.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "dev:worker": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun --watch src/worker.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "dev:all": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun --watch src/index.ts --all",
+        "cwd": "apps/news-aggregator"
+      }
     }
   }
 } 

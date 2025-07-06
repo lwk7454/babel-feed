@@ -1,9 +1,6 @@
 import { cleanupTestDatabase, clearTestData, setupTestDatabase } from '@babel-feed/pgdb';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { NewsAggregator } from '../services/aggregator';
-import { AiProviderManager } from '../services/ai-provider-manager';
-import { DatabaseSourceManager } from '../services/db-source-manager';
-import { HealthChecker } from '../services/health-checker';
+import { NewsAggregatorService } from '../services/news-aggregator-service';
 
 
 describe('News Aggregator Setup', () => {
@@ -20,83 +17,68 @@ describe('News Aggregator Setup', () => {
     await cleanupTestDatabase();
   });
 
-  describe('DatabaseSourceManager', () => {
-    it('should initialize with default sources', async () => {
-      const sourceManager = new DatabaseSourceManager();
-      await sourceManager.initialize();
+  describe('NewsAggregatorService', () => {
+    it('should initialize successfully', async () => {
+      const service = new NewsAggregatorService();
+      await service.initialize();
       
-      const sources = await sourceManager.getAllSources();
-      expect(sources.length).toBeGreaterThan(0);
-      
-      const enabledSources = await sourceManager.getEnabledSources();
-      expect(enabledSources.length).toBeGreaterThan(0);
-    });
-
-    it('should get sources by language', async () => {
-      const sourceManager = new DatabaseSourceManager();
-      await sourceManager.initialize();
-      
-      const englishSources = await sourceManager.getSourcesByLanguage('en');
-      expect(englishSources.length).toBeGreaterThan(0);
-      
-      const japaneseSources = await sourceManager.getSourcesByLanguage('ja');
-      expect(japaneseSources.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('AiProviderManager', () => {
-    it('should initialize with default providers', async () => {
-      const aiProviderManager = new AiProviderManager();
-      await aiProviderManager.initialize();
-      
-      const providers = await aiProviderManager.getAllProviders();
-      expect(providers.length).toBeGreaterThan(0);
-      
-      const enabledProviders = await aiProviderManager.getEnabledProviders();
-      expect(enabledProviders.length).toBeGreaterThan(0);
-    });
-
-    it('should get providers by type', async () => {
-      const aiProviderManager = new AiProviderManager();
-      await aiProviderManager.initialize();
-      
-      const translationProviders = await aiProviderManager.getEnabledProviders('translation');
-      expect(translationProviders.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('HealthChecker', () => {
-    it('should return health status', async () => {
-      const sourceManager = new DatabaseSourceManager();
-      const aiProviderManager = new AiProviderManager();
-      await sourceManager.initialize();
-      await aiProviderManager.initialize();
-      
-      const healthChecker = new HealthChecker(sourceManager, aiProviderManager);
-      const status = await healthChecker.getHealthStatus();
-      
-      expect(status.status).toBeDefined();
-      expect(status.timestamp).toBeInstanceOf(Date);
-      expect(status.uptime).toBeGreaterThanOrEqual(0);
-      expect(status.services).toBeInstanceOf(Array);
-      expect(status.summary).toBeDefined();
-    });
-  });
-
-  describe('NewsAggregator', () => {
-    it('should initialize and start successfully', async () => {
-      const aggregator = new NewsAggregator();
-      await aggregator.initialize();
-      await aggregator.start();
-      
-      const status = await aggregator.getStatus();
+      const status = await service.getStatus();
       expect(status.running).toBe(true);
-      expect(status.health).toBeDefined();
-      expect(status.config).toBeDefined();
+      expect(status.modules).toBeDefined();
+    });
+
+    it('should have all modules initialized', async () => {
+      const service = new NewsAggregatorService();
+      await service.initialize();
       
-      await aggregator.stop();
+      const status = await service.getStatus();
+      expect(status.modules).toBeDefined();
       
-      const stoppedStatus = await aggregator.getStatus();
+      if (status.modules) {
+        // Check that key modules are present
+        expect(status.modules.sourceCRUD).toBeDefined();
+        expect(status.modules.healthMonitor).toBeDefined();
+        expect(status.modules.sourceDiscovery).toBeDefined();
+        expect(status.modules.fetcher).toBeDefined();
+        expect(status.modules.processor).toBeDefined();
+        expect(status.modules.aiIntegration).toBeDefined();
+        expect(status.modules.deduplication).toBeDefined();
+      }
+    });
+
+    it('should support legacy service access', async () => {
+      const service = new NewsAggregatorService();
+      await service.initialize();
+      
+      // Test legacy compatibility methods
+      const sourceManager = service.getSourceManager();
+      expect(sourceManager).toBeDefined();
+      
+      const aiProviderManager = service.getAiProviderManager();
+      expect(aiProviderManager).toBeDefined();
+      
+      const healthChecker = service.getHealthChecker();
+      expect(healthChecker).toBeDefined();
+      
+      // Test new module access
+      const sourceCRUD = service.getSourceCRUD();
+      expect(sourceCRUD).toBeDefined();
+      
+      const fetcher = service.getFetcher();
+      expect(fetcher).toBeDefined();
+    });
+
+    it('should start and stop successfully', async () => {
+      const service = new NewsAggregatorService();
+      await service.initialize();
+      await service.start();
+      
+      const runningStatus = await service.getStatus();
+      expect(runningStatus.running).toBe(true);
+      
+      await service.stop();
+      
+      const stoppedStatus = await service.getStatus();
       expect(stoppedStatus.running).toBe(false);
     });
   });

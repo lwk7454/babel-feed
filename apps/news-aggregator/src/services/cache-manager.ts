@@ -1,6 +1,6 @@
-import { logger } from '../utils/logger';
-import { CacheEntry } from '../types';
-import { config } from '../config/config';
+import { logger } from '../modules/common/logger';
+import { CacheEntry } from '../modules/common/types';
+import { config } from '../modules/common/config';
 
 export class CacheManager<T = unknown> {
   private cache = new Map<string, CacheEntry<T>>();
@@ -21,14 +21,18 @@ export class CacheManager<T = unknown> {
     }
 
     // Check if expired
-    if (Date.now() > entry.expiresAt.getTime()) {
+    if (entry.expiresAt && Date.now() > entry.expiresAt.getTime()) {
       this.cache.delete(key);
       logger.debug(`Cache entry expired and removed: ${key}`, { cache: this.name });
       return null;
     }
 
     // Update access statistics
-    entry.hitCount++;
+    if (entry.hitCount !== undefined) {
+      entry.hitCount++;
+    } else {
+      entry.hitCount = 1;
+    }
     entry.lastAccessed = new Date();
 
     logger.debug(`Cache hit: ${key}`, { 
@@ -87,7 +91,7 @@ export class CacheManager<T = unknown> {
     }
 
     // Check if expired
-    if (Date.now() > entry.expiresAt.getTime()) {
+    if (entry.expiresAt && Date.now() > entry.expiresAt.getTime()) {
       this.cache.delete(key);
       return false;
     }
@@ -122,7 +126,7 @@ export class CacheManager<T = unknown> {
     let newestEntry: Date | undefined;
 
     for (const entry of this.cache.values()) {
-      totalHits += entry.hitCount;
+      totalHits += entry.hitCount ?? 0;
       
       if (!oldestEntry || entry.createdAt < oldestEntry) {
         oldestEntry = entry.createdAt;
@@ -151,7 +155,7 @@ export class CacheManager<T = unknown> {
     let cleaned = 0;
 
     for (const [key, entry] of this.cache.entries()) {
-      if (now > entry.expiresAt.getTime()) {
+      if (entry.expiresAt && now > entry.expiresAt.getTime()) {
         this.cache.delete(key);
         cleaned++;
       }

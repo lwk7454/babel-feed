@@ -22,14 +22,16 @@ The architecture is designed to start simple and cost-effective while providing 
 #### 1.1 News Source Management
 - **Database-Driven Source Management**: PostgreSQL-based source configuration with real-time updates and admin API
 - **Dynamic Source CRUD**: Full create, read, update, delete operations via admin interface and API endpoints
-- **Source Discovery**: Automated discovery of new RSS feeds and news sources using domain crawling and feed detection
-- **Source Health Monitoring**: Real-time tracking of source reliability, response times, error rates, and content quality metrics
+- **Automated Source Discovery**: Multi-stage pipeline for discovering new news sources and feeds, starting from public lists (Wikipedia, GitHub, open datasets), automated search engine queries, and homepage crawling for RSS/Atom/JSON feeds. Recursively expands by following links from known news sites and aggregators. Allows user/admin suggestions for new sources. Periodically re-checks for new/hidden feeds.
+- **Hybrid Ingestion (2025 best practice)**: Prioritize RSS/Atom feeds for efficiency, but automatically fall back to HTML crawling and content extraction when feeds are missing, incomplete, or insufficient (expected for ~30-40% of sources in 2025). Supports JSON APIs and other custom formats as needed.
+- **Source Health Monitoring**: Real-time tracking of source reliability, response times, error rates, and content quality metrics. Periodically prunes inactive, low-quality, or duplicate sources.
 - **Configurable Refresh Intervals**: Per-source customizable polling intervals (1-60 minutes) with dynamic updates
-- **Source Categories & Tags**: Hierarchical categorization and tagging system for better content organization
+- **Source Categories & Tags**: Hierarchical categorization and tagging system for better content organization. Uses NLP to auto-categorize sources by topic, region, and language.
 - **Content Deduplication**: Hash-based duplicate detection across sources and time windows
+- **Source Cap & Diversity Management**: Enforces caps on the number of active sources per category/region/language to ensure diversity and avoid overload. Prioritizes high-quality, unique, and diverse sources over sheer quantity. Maintains blacklist/whitelist for known spam or low-value sources.
 
 #### 1.2 Content Extraction & Processing
-- **Multi-format Support**: RSS feeds, JSON APIs, HTML scraping with fallback mechanisms
+- **Multi-format Support**: RSS feeds, JSON APIs, HTML scraping with fallback mechanisms. For each source, attempts RSS/Atom first, then falls back to crawling and extraction if needed. Periodically re-checks for new or improved feeds.
 - **Content Extraction**: Title, hero image, article summary, publication date, author, source metadata
 - **Content Quality Scoring**: Automated filtering of low-quality articles using length, readability, and source reputation
 - **Image Processing**: Thumbnail generation, format standardization, and CDN optimization
@@ -190,12 +192,36 @@ When working on news aggregator implementation, be aware of existing monorepo ar
 - **Caching**: Redis for high-performance caching of frequently accessed data
 
 #### 1.2 Service Architecture
-- **Ingestion Service**: Combined RSS fetching, content extraction, and AI processing
-- **API Service**: RESTful API for content delivery and admin functions
-- **Optional Workers**: Separate processing workers for high-volume scaling
-- **Database Service**: PostgreSQL with optimized schema and indexing
+- **Modular Monolith Structure**: The news aggregator is implemented as a modular monolith for optimal development and operational simplicity. All core modules (source manager, aggregator/worker, admin API, CLI) reside in a single codebase and deployment artifact, with clear separation of concerns and interfaces. Multiple entrypoints/processes (API, worker, CLI) can be run together or separately, sharing the same database and models. This structure enables easy local development (single command for all-in-one), simple production deployment (single image, flexible process management), and future-proofing (easy to split into microservices if needed).
+- **Ingestion Service**: Combined RSS fetching, content extraction, and AI processing, as described above.
+- **API Service**: RESTful API for content delivery and admin functions.
+- **CLI Tools**: Command-line interface for source management, discovery, and maintenance.
+- **Optional Workers**: Separate processing workers for high-volume scaling.
+- **Database Service**: PostgreSQL with optimized schema and indexing.
 
-#### 1.3 External Dependencies
+#### 1.3 Development Commands
+
+**News Aggregator Service - Multiple Deployment Modes:**
+```bash
+# Development (with auto-restart)
+nx run news-aggregator:dev:all      # Run all services (API + worker)
+nx run news-aggregator:dev:server   # Run API server only
+nx run news-aggregator:dev:worker   # Run worker only
+
+# Production
+nx run news-aggregator:start        # Run all services
+nx run news-aggregator:serve        # Run API server only  
+nx run news-aggregator:worker       # Run worker only
+nx run news-aggregator:cli          # Run CLI commands
+
+# CLI Examples (when implemented):
+nx run news-aggregator:cli add-source https://example.com/rss
+nx run news-aggregator:cli health-check
+nx run news-aggregator:cli list-sources
+nx run news-aggregator:cli discover-sources
+```
+
+#### 1.4 External Dependencies
 - **LLM Provider**: Hugging Face (free tier) for summarization and translation
 - **Image Processing**: Sharp.js for image optimization and thumbnail generation
 - **HTTP Client**: Axios with retry logic and timeout handling
@@ -247,35 +273,63 @@ When working on news aggregator implementation, be aware of existing monorepo ar
 
 ### Phase 1: Foundation & Core Infrastructure (Weeks 1-2)
 
-#### 1.1 Project Setup & Architecture
-- [ ] **Project Structure**: Set up monorepo structure with proper TypeScript configuration
-- [ ] **Database Schema**: Design and implement comprehensive PostgreSQL schema
-- [ ] **Database Migration System**: Implement migration system for schema changes
-- [ ] **Environment Configuration**: Set up environment variables and configuration management
-- [ ] **Development Environment**: Docker Compose setup for local development
+#### 1.1 Project Setup & Architecture ✅ COMPLETED
+- [x] **Project Structure**: Set up monorepo structure with proper TypeScript configuration
+- [x] **Database Schema**: Design and implement comprehensive PostgreSQL schema
+- [x] **Database Migration System**: Implement migration system for schema changes
+- [x] **Environment Configuration**: Set up environment variables and configuration management
+- [x] **Development Environment**: Docker Compose setup for local development
+- [x] **Modular Monolith Refactor**: ✅ **COMPLETED** - Refactored codebase into modular monolith structure with clear separation of concerns:
+  - **modules/common/**: Shared utilities (db, logger, config, types)
+  - **modules/source-manager/**: Source CRUD, health monitoring, discovery
+  - **modules/aggregator/**: Content fetching, processing, AI integration, deduplication
+  - **api/**: Admin API server with source management endpoints
+  - **cli/**: Command-line interface for system management
+  - **Multiple Entrypoints**: index.ts (all-in-one), server.ts (API-only), worker.ts (worker-only), cli/index.ts (CLI)
+  - **Nx Targets**: serve, worker, cli, dev:server, dev:worker, dev:all for flexible development
 
-#### 1.2 Core Services Foundation
-- [ ] **Database Connection**: Implement connection pooling and query optimization
-- [ ] **Basic Logging**: Set up structured logging with Winston
-- [ ] **Error Handling**: Implement comprehensive error handling and reporting
-- [ ] **Health Checks**: Basic health check endpoints for monitoring
-- [ ] **Configuration Management**: JSON-based source configuration system
+#### 1.2 Core Services Foundation ✅ COMPLETED
+- [x] **Database Connection**: Implement connection pooling and query optimization
+- [x] **Basic Logging**: Set up structured logging with Winston
+- [x] **Error Handling**: Implement comprehensive error handling and reporting
+- [x] **Health Checks**: Basic health check endpoints for monitoring
+- [x] **Configuration Management**: JSON-based source configuration system
 
 ### Phase 2: Content Ingestion & Processing (Weeks 3-4)
 
-#### 2.1 RSS Feed Processing
-- [ ] **RSS Parser**: Implement robust RSS feed parsing with error handling
-- [ ] **Content Extraction**: Extract title, description, link, publication date, and images
-- [ ] **Content Validation**: Validate content quality and completeness
-- [ ] **Deduplication**: Implement hash-based duplicate detection
-- [ ] **Scheduling System**: Implement configurable polling intervals per source
+#### 2.1 RSS Feed Processing ✅ COMPLETED
+- [x] **RSS Parser**: Implement robust RSS feed parsing with error handling
+- [x] **Content Extraction**: Extract title, description, link, publication date, and images
+- [x] **Content Validation**: Validate content quality and completeness
+- [x] **Deduplication**: Implement hash-based duplicate detection
+- [x] **Scheduling System**: Implement configurable polling intervals per source
+- [x] **Hybrid Ingestion Pipeline**: Implement logic to attempt RSS/Atom ingestion first, then fall back to HTML crawling and extraction if feeds are missing or insufficient. Periodically re-check for new/hidden feeds.
 
-#### 2.2 AI Integration
-- [ ] **Hugging Face Integration**: Set up API client with retry logic and error handling
-- [ ] **Summarization Service**: Implement article summarization with quality thresholds
-- [ ] **Translation Service**: Multi-language translation with caching
-- [ ] **Content Tagging**: Automated tagging and categorization
-- [ ] **Caching Layer**: Implement translation and processing result caching
+#### 2.2 AI Integration 🚧 **PLACEHOLDER STRUCTURE CREATED**
+**Current Status**: Modular structure created with placeholders, needs implementation
+
+**TODO - High Priority Implementation Needed**:
+- [ ] **Database-Driven Source Management**: Replace JSON configuration with PostgreSQL-based source CRUD operations
+- [ ] **AI Translation Pipeline**: Implement multi-provider translation with failover and caching
+- [ ] **AI Summarization Pipeline**: Implement article summarization with quality thresholds
+- [ ] **AI Content Tagging**: Implement automated tagging and categorization
+- [ ] **Admin API Endpoints**: Implement Express/Fastify server with source management endpoints
+- [ ] **CLI Commands**: Implement functional CLI commands for source management and system control
+- [ ] **Source Discovery Pipeline**: Implement automated source discovery with validation and scoring
+- [ ] **Content Processing Pipeline**: Implement article processing, validation, and normalization
+- [ ] **Deduplication Logic**: Implement sophisticated content deduplication with fuzzy matching
+- [ ] **Database Storage**: Implement article storage with translations and metadata
+- [ ] **Health Monitoring**: Implement real-time health checks and alerting
+- [ ] **Content Extraction**: Implement HTML content extraction for non-RSS sources
+
+**Placeholder Modules Created**:
+- ✅ **Source Manager**: CRUD, health monitoring, discovery services (structure only)
+- ✅ **Aggregator**: Fetcher, processor, AI integration, deduplication services (structure only)
+- ✅ **API Layer**: Admin API server with route placeholders
+- ✅ **CLI Layer**: Command-line interface with command placeholders
+- ✅ **Multiple Entrypoints**: All-in-one, API-only, worker-only, CLI modes
+
+**Legacy Services**: Maintained for backward compatibility during transition
 
 #### 2.3 Database Operations
 - [ ] **Article Storage**: Implement article insertion with conflict resolution
@@ -333,7 +387,7 @@ When working on news aggregator implementation, be aware of existing monorepo ar
 ### Phase 5: Advanced Features & Optimization (Weeks 9-10)
 
 #### 5.1 Advanced Content Processing
-- [ ] **Source Discovery**: Automated discovery of new RSS feeds and news sources
+- [ ] **Source Discovery Pipeline**: Implement multi-stage automated source discovery (public lists, search engine queries, homepage crawling, recursive expansion, user/admin suggestions), with validation, deduplication, quality scoring, and diversity/cap management. Integrate with source manager for real-time updates and pruning.
 - [ ] **Content Quality Scoring**: Advanced filtering of low-quality articles
 - [ ] **Image Processing**: Thumbnail generation and image optimization
 - [ ] **Content Enrichment**: Additional metadata and content enhancement

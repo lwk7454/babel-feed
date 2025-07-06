@@ -1,13 +1,13 @@
-import { DatabaseSourceManager } from './db-source-manager';
+import { NewsSourceManager } from './news-source-manager';
 import { AiProviderManager } from './ai-provider-manager';
 import { HealthChecker } from './health-checker';
 import { RssProcessor } from './rss-processor';
 import { CacheManager } from './cache-manager';
-import { logger } from '../utils/logger';
-import { config } from '../config/config';
+import { logger } from '../modules/common/logger';
+import { config } from '../modules/common/config';
 
 export class NewsAggregator {
-  private sourceManager: DatabaseSourceManager;
+  private sourceManager: NewsSourceManager;
   private aiProviderManager: AiProviderManager;
   private healthChecker: HealthChecker;
   private rssProcessor: RssProcessor;
@@ -18,7 +18,7 @@ export class NewsAggregator {
   private healthCheckInterval?: NodeJS.Timeout;
 
   constructor() {
-    this.sourceManager = new DatabaseSourceManager();
+    this.sourceManager = new NewsSourceManager();
     this.aiProviderManager = new AiProviderManager();
     this.healthChecker = new HealthChecker(this.sourceManager, this.aiProviderManager);
     this.rssProcessor = new RssProcessor(this.sourceManager);
@@ -99,7 +99,7 @@ export class NewsAggregator {
     }
   }
 
-  getSourceManager(): DatabaseSourceManager {
+  getSourceManager(): NewsSourceManager {
     return this.sourceManager;
   }
 

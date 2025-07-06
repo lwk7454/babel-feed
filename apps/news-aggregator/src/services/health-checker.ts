@@ -1,5 +1,5 @@
-import { logger } from '../utils/logger';
-import { DatabaseSourceManager } from './db-source-manager';
+import { logger } from '../modules/common/logger';
+import { NewsSourceManager } from './news-source-manager';
 import { AiProviderManager } from './ai-provider-manager';
 
 export interface HealthStatus {
@@ -25,10 +25,10 @@ export interface ServiceHealth {
 
 export class HealthChecker {
   private startTime: Date = new Date();
-  private sourceManager?: DatabaseSourceManager;
+  private sourceManager?: NewsSourceManager;
   private aiProviderManager?: AiProviderManager;
 
-  constructor(sourceManager?: DatabaseSourceManager, aiProviderManager?: AiProviderManager) {
+  constructor(sourceManager?: NewsSourceManager, aiProviderManager?: AiProviderManager) {
     this.sourceManager = sourceManager;
     this.aiProviderManager = aiProviderManager;
   }

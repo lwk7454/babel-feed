@@ -1,21 +1,11 @@
-import { logger } from '../utils/logger';
-import { CircuitBreakerState } from '../types';
-
-export type CircuitState = 'closed' | 'open' | 'half_open';
-
-export interface CircuitBreakerOptions {
-  failureThreshold: number;
-  timeout: number; // milliseconds
-  monitoringWindow: number; // milliseconds
-}
+import { logger } from '../modules/common/logger';
+import { CircuitBreakerState, CircuitState, CircuitBreakerOptions } from '../modules/common/types';
 
 export class CircuitBreaker {
   private state: CircuitState = 'closed';
   private failureCount = 0;
   private nextAttempt?: Date;
   private lastFailure?: Date;
-  private lastSuccess?: Date;
-
   constructor(
     private name: string,
     private options: CircuitBreakerOptions
@@ -24,7 +14,7 @@ export class CircuitBreaker {
   async execute<T>(operation: () => Promise<T>): Promise<T> {
     if (this.state === 'open') {
       if (this.shouldAttemptReset()) {
-        this.state = 'half_open';
+        this.state = 'half-open';
         logger.info(`Circuit breaker ${this.name} entering half-open state`);
       } else {
         throw new Error(`Circuit breaker ${this.name} is open`);
@@ -43,9 +33,9 @@ export class CircuitBreaker {
 
   private onSuccess(): void {
     this.failureCount = 0;
-    this.lastSuccess = new Date();
+    // Track success for potential future use
     
-    if (this.state === 'half_open') {
+    if (this.state === 'half-open') {
       this.state = 'closed';
       logger.info(`Circuit breaker ${this.name} reset to closed state`);
     }
@@ -57,7 +47,7 @@ export class CircuitBreaker {
     
     logger.warn(`Circuit breaker ${this.name} failure ${this.failureCount}/${this.options.failureThreshold}:`, error);
 
-    if (this.failureCount >= this.options.failureThreshold) {
+    if (this.failureCount >= (this.options.failureThreshold || this.options.threshold)) {
       this.state = 'open';
       this.nextAttempt = new Date(Date.now() + this.options.timeout);
       logger.error(`Circuit breaker ${this.name} opened due to ${this.failureCount} failures`);
@@ -70,16 +60,14 @@ export class CircuitBreaker {
 
   getState(): CircuitBreakerState {
     return {
-      id: this.name,
-      providerId: this.name.split(':')[0], // Assuming format "providerId:keyId"
-      keyId: this.name.split(':')[1] || undefined,
+      name: this.name,
       state: this.state,
       failureCount: this.failureCount,
-      lastFailure: this.lastFailure,
-      lastSuccess: this.lastSuccess,
-      nextAttempt: this.nextAttempt,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      successCount: 0, // Add tracking if needed
+      lastFailureTime: this.lastFailure,
+      nextAttemptTime: this.nextAttempt,
+      threshold: this.options.failureThreshold || this.options.threshold,
+      timeout: this.options.timeout,
     };
   }
 
@@ -92,7 +80,7 @@ export class CircuitBreaker {
   }
 
   isHalfOpen(): boolean {
-    return this.state === 'half_open';
+    return this.state === 'half-open';
   }
 
   reset(): void {

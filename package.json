@@ -30,6 +30,10 @@
     "test:api:watch": "nx test:watch babel-api",
     "test:aggregator": "nx test news-aggregator",
     "test:aggregator:watch": "nx test:watch news-aggregator",
+    "dev:admin": "bun scripts/start-dev-db.ts && nx dev babel-admin-api",
+    "build:admin": "nx build babel-admin-api",
+    "test:admin": "nx test babel-admin-api",
+    "test:admin:watch": "nx test:watch babel-admin-api",
     "db:migrate": "bunx drizzle-kit migrate --config=packages/pgdb/drizzle.config.cjs",
     "db:generate": "bunx drizzle-kit generate --config=packages/pgdb/drizzle.config.cjs"
   },

@@ -6,11 +6,10 @@ import {
   type NewNewsSource
 } from '@babel-feed/pgdb';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
-import { NewsSource } from '../types';
-import { AggregatorError, ValidationError } from '../utils/errors';
-import { logger } from '../utils/logger';
+import { NewsSource, AggregatorError, ValidationError } from '../modules/common/types';
+import { logger } from '../modules/common/logger';
 
-export class DatabaseSourceManager {
+export class NewsSourceManager {
   private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase();
 
   async initialize(): Promise<void> {
@@ -132,7 +131,7 @@ export class DatabaseSourceManager {
         priority: sourceData.priority,
         metadata: sourceData.metadata,
         lastFetched: sourceData.lastFetched,
-        lastSuccess: sourceData.lastSuccess,
+        // lastSuccess: sourceData.lastSuccess,
         lastError: sourceData.lastError,
       };
 
@@ -172,7 +171,7 @@ export class DatabaseSourceManager {
         ...(updates.priority !== undefined && { priority: updates.priority }),
         ...(updates.metadata && { metadata: updates.metadata }),
         ...(updates.lastFetched && { lastFetched: updates.lastFetched }),
-        ...(updates.lastSuccess && { lastSuccess: updates.lastSuccess }),
+        // ...(updates.lastSuccess && { lastSuccess: updates.lastSuccess }),
         ...(updates.lastError !== undefined && { lastError: updates.lastError }),
         ...(updates.errorCount !== undefined && { errorCount: updates.errorCount }),
         ...(updates.successCount !== undefined && { successCount: updates.successCount }),
@@ -241,7 +240,7 @@ export class DatabaseSourceManager {
       };
 
       if (success) {
-        updates.lastSuccess = new Date();
+        // updates.lastSuccess = new Date();
         updates.lastError = undefined;
         updates.successCount = source.successCount + 1;
         
@@ -335,7 +334,7 @@ export class DatabaseSourceManager {
       name: dbSource.name,
       slug: dbSource.slug,
       url: dbSource.url,
-      sourceType: dbSource.sourceType as 'rss' | 'api' | 'scraper',
+      sourceType: dbSource.sourceType as 'rss' | 'json' | 'html',
       language: dbSource.language,
       category: dbSource.category,
       tags: Array.isArray(dbSource.tags) ? dbSource.tags as string[] : [],

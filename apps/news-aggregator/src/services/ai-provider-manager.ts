@@ -8,10 +8,11 @@ import {
   type NewAiProvider
 } from '@babel-feed/pgdb';
 import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm';
-import { AiProvider, AiProviderKey, ProviderHealthStatus } from '../types';
-import { AggregatorError } from '../utils/errors';
-import { logger } from '../utils/logger';
-import { CircuitBreaker, CircuitBreakerOptions } from './circuit-breaker';
+import { AiProvider, AiProviderKey, ProviderHealthStatus } from '../modules/common/types';
+import { AggregatorError } from '../modules/common/types';
+import { logger } from '../modules/common/logger';
+import { CircuitBreaker } from './circuit-breaker';
+import { CircuitBreakerOptions } from '../modules/common/types';
 
 export class AiProviderManager {
   private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase();
@@ -129,8 +130,6 @@ export class AiProviderManager {
       throw new AggregatorError(`Provider ${providerId} not found or disabled`, 'PROVIDER_UNAVAILABLE');
     }
 
-    let lastError: unknown;
-
     for (let attempt = 0; attempt < retries; attempt++) {
       const key = await this.getAvailableKey(providerId);
       if (!key) {
@@ -156,7 +155,7 @@ export class AiProviderManager {
             await this.updateKeyMetrics(key.id, {
               lastUsed: new Date(),
               successCount: key.successCount + 1,
-              currentUsage: key.currentUsage + 1
+              currentUsage: (key.currentUsage || 0) + 1
             });
 
             logger.debug(`AI operation successful for ${providerId}:${key.keyName} in ${Date.now() - startTime}ms`);
@@ -171,7 +170,7 @@ export class AiProviderManager {
             // Update error metrics
             await this.updateKeyMetrics(key.id, {
               errorCount: key.errorCount + 1,
-              rateLimitHits: this.isRateLimitError(error) ? key.rateLimitHits + 1 : key.rateLimitHits
+              rateLimitHits: this.isRateLimitError(error) ? (key.rateLimitHits || 0) + 1 : (key.rateLimitHits || 0)
             });
 
             throw error;
@@ -180,7 +179,7 @@ export class AiProviderManager {
 
         return result;
       } catch (error) {
-        lastError = error;
+        // Store error for debugging but don't use it currently
         logger.warn(`AI operation failed for ${providerId}:${key.keyName} on attempt ${attempt + 1}:`, error);
         
         if (attempt < retries - 1) {
@@ -192,8 +191,7 @@ export class AiProviderManager {
     throw new AggregatorError(
       `All retries exhausted for provider ${providerId}`,
       'OPERATION_FAILED',
-      500,
-      { lastError }
+      500
     );
   }
 
@@ -215,25 +213,23 @@ export class AiProviderManager {
     const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
 
     // Get overall circuit state (worst case)
-    let circuitState: 'closed' | 'open' | 'half_open' = 'closed';
+    let circuitState: 'closed' | 'open' | 'half-open' = 'closed';
     for (const key of keys) {
       const breaker = this.circuitBreakers.get(`${providerId}:${key.id}`);
       if (breaker?.isOpen()) {
         circuitState = 'open';
         break;
       } else if (breaker?.isHalfOpen()) {
-        circuitState = 'half_open';
+        circuitState = 'half-open';
       }
     }
 
     return {
-      providerId,
       healthy: provider.enabled && availableKeys.length > 0 && errorRate < 50,
       circuitState,
       availableKeys: availableKeys.length,
       totalKeys: keys.length,
       errorRate,
-      responseTime: 0, // TODO: Calculate from recent operations
       lastCheck: new Date()
     };
   }
@@ -261,9 +257,9 @@ export class AiProviderManager {
       this.getProviderById(providerId).then(provider => {
         if (provider) {
           const options: CircuitBreakerOptions = {
-            failureThreshold: provider.circuitBreakerThreshold,
+            threshold: provider.circuitBreakerThreshold,
             timeout: provider.circuitBreakerTimeout,
-            monitoringWindow: provider.healthCheckInterval
+            resetTimeout: provider.healthCheckInterval || 30000
           };
           
           this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, options));
@@ -272,9 +268,9 @@ export class AiProviderManager {
       
       // Create with default options in the meantime
       const defaultOptions: CircuitBreakerOptions = {
-        failureThreshold: 5,
+        threshold: 5,
         timeout: 60000,
-        monitoringWindow: 30000
+        resetTimeout: 30000
       };
       
       this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, defaultOptions));
@@ -296,7 +292,7 @@ export class AiProviderManager {
     }
     
     // Check daily quota
-    if (key.dailyQuota && key.currentUsage >= key.dailyQuota) {
+    if (key.dailyQuota && (key.currentUsage || 0) >= key.dailyQuota) {
       return true;
     }
     
@@ -330,7 +326,7 @@ export class AiProviderManager {
   private async handleRateLimit(key: AiProviderKey): Promise<void> {
     logger.warn(`Rate limit hit for key ${key.keyName}`);
     await this.updateKeyMetrics(key.id, {
-      rateLimitHits: key.rateLimitHits + 1
+      rateLimitHits: (key.rateLimitHits || 0) + 1
     });
   }
 
@@ -343,7 +339,8 @@ export class AiProviderManager {
           ...(updates.successCount !== undefined && { successCount: updates.successCount }),
           ...(updates.errorCount !== undefined && { errorCount: updates.errorCount }),
           ...(updates.rateLimitHits !== undefined && { rateLimitHits: updates.rateLimitHits }),
-          ...(updates.currentUsage !== undefined && { currentUsage: updates.currentUsage })
+          ...(updates.currentUsage !== undefined && { currentUsage: updates.currentUsage }),
+          updatedAt: new Date()
         })
         .where(eq(aiProviderKeys.id, keyId));
     } catch (error) {
@@ -381,7 +378,7 @@ export class AiProviderManager {
         .update(aiProviderKeys)
         .set({
           currentUsage: 0,
-          lastReset: new Date()
+          updatedAt: new Date()
         })
         .where(gte(aiProviderKeys.lastReset, new Date(Date.now() - 24 * 60 * 60 * 1000)));
       
@@ -419,7 +416,6 @@ export class AiProviderManager {
       circuitBreakerThreshold: dbProvider.circuitBreakerThreshold,
       circuitBreakerTimeout: dbProvider.circuitBreakerTimeout,
       healthCheckInterval: dbProvider.healthCheckInterval,
-      metadata: (dbProvider.metadata as Record<string, unknown>) || {},
       createdAt: dbProvider.createdAt,
       updatedAt: dbProvider.updatedAt,
     };
@@ -430,14 +426,15 @@ export class AiProviderManager {
       id: dbKey.id,
       providerId: dbKey.providerId,
       keyName: dbKey.keyName,
+      keyValue: dbKey.apiKey,
       apiKey: dbKey.apiKey,
       enabled: dbKey.enabled,
-      priority: dbKey.priority,
+      // priority: dbKey.priority,
       currentUsage: dbKey.currentUsage,
       dailyQuota: dbKey.dailyQuota || undefined,
-      monthlyQuota: dbKey.monthlyQuota || undefined,
+      // monthlyQuota: dbKey.monthlyQuota || undefined,
       lastUsed: dbKey.lastUsed || undefined,
-      lastReset: dbKey.lastReset,
+      // lastReset: dbKey.lastReset,
       rateLimitHits: dbKey.rateLimitHits,
       errorCount: dbKey.errorCount,
       successCount: dbKey.successCount,
