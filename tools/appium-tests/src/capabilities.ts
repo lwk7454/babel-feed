@@ -24,7 +24,7 @@ export interface AppiumCapabilities {
   'appium:ignoreUnimportantViews': boolean;
 }
 
-export const getCapabilities = (preserveAppData: boolean = false): AppiumCapabilities => ({
+export const getCapabilities = (preserveAppData = false): AppiumCapabilities => ({
   'appium:platformName': 'Android',
   'appium:platformVersion': '16',
   'appium:deviceName': 'emulator-5554',
@@ -47,7 +47,7 @@ export const getCapabilities = (preserveAppData: boolean = false): AppiumCapabil
   'appium:skipServerInstallation': false,
   'appium:skipDeviceInitialization': false,
   'appium:ignoreUnimportantViews': false
-});
+})
 
 export const appiumConfig = {
   host: 'localhost',
@@ -55,4 +55,4 @@ export const appiumConfig = {
   path: '/',
   logLevel: 'info' as const,
   capabilities: getCapabilities() // default: fresh user (clear app data)
-};
+}

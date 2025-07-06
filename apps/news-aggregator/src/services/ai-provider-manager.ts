@@ -6,36 +6,36 @@ import {
   type AiProvider as DbAiProvider,
   type AiProviderKey as DbAiProviderKey,
   type NewAiProvider
-} from '@babel-feed/pgdb';
-import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm';
-import { AiProvider, AiProviderKey, ProviderHealthStatus } from '../modules/common/types';
-import { AggregatorError } from '../modules/common/types';
-import { logger } from '../modules/common/logger';
-import { CircuitBreaker } from './circuit-breaker';
-import { CircuitBreakerOptions } from '../modules/common/types';
+} from '@babel-feed/pgdb'
+import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm'
+import { AiProvider, AiProviderKey, ProviderHealthStatus } from '../modules/common/types'
+import { AggregatorError } from '../modules/common/types'
+import { logger } from '../modules/common/logger'
+import { CircuitBreaker } from './circuit-breaker'
+import { CircuitBreakerOptions } from '../modules/common/types'
 
 export class AiProviderManager {
-  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase();
-  private circuitBreakers = new Map<string, CircuitBreaker>();
-  private keyRotationIndex = new Map<string, number>();
-  private rateLimitTracking = new Map<string, { count: number; resetTime: number }>();
+  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()
+  private circuitBreakers = new Map<string, CircuitBreaker>()
+  private keyRotationIndex = new Map<string, number>()
+  private rateLimitTracking = new Map<string, { count: number; resetTime: number }>()
 
   async initialize(): Promise<void> {
-    logger.info('Initializing AI provider manager...');
-    
+    logger.info('Initializing AI provider manager...')
+
     // Seed initial providers if none exist
-    const existingProviders = await this.getAllProviders();
+    const existingProviders = await this.getAllProviders()
     if (existingProviders.length === 0) {
-      await this.seedInitialProviders();
+      await this.seedInitialProviders()
     }
 
     // Initialize circuit breakers for all providers and keys
-    await this.initializeCircuitBreakers();
-    
+    await this.initializeCircuitBreakers()
+
     // Start periodic cleanup and monitoring
-    this.startPeriodicTasks();
-    
-    logger.info(`AI provider manager initialized with ${existingProviders.length} providers`);
+    this.startPeriodicTasks()
+
+    logger.info(`AI provider manager initialized with ${existingProviders.length} providers`)
   }
 
   async getAllProviders(): Promise<AiProvider[]> {
@@ -43,31 +43,31 @@ export class AiProviderManager {
       const providers = await this.db
         .select()
         .from(aiProviders)
-        .orderBy(desc(aiProviders.priority), asc(aiProviders.name));
+        .orderBy(desc(aiProviders.priority), asc(aiProviders.name))
 
-      return providers.map(this.mapDbProviderToAiProvider);
+      return providers.map(this.mapDbProviderToAiProvider)
     } catch (error) {
-      logger.error('Failed to fetch AI providers:', error);
-      throw new AggregatorError('Failed to fetch AI providers from database', 'DATABASE_ERROR');
+      logger.error('Failed to fetch AI providers:', error)
+      throw new AggregatorError('Failed to fetch AI providers from database', 'DATABASE_ERROR')
     }
   }
 
   async getEnabledProviders(providerType?: string): Promise<AiProvider[]> {
     try {
-      let whereCondition = eq(aiProviders.enabled, true);
+      let whereCondition = eq(aiProviders.enabled, true)
       if (providerType) {
-        whereCondition = and(whereCondition, eq(aiProviders.providerType, providerType))!;
+        whereCondition = and(whereCondition, eq(aiProviders.providerType, providerType))!
       }
 
       const providers = await this.db
         .select()
         .from(aiProviders)
         .where(whereCondition)
-        .orderBy(desc(aiProviders.priority), asc(aiProviders.name));
-      return providers.map(this.mapDbProviderToAiProvider);
+        .orderBy(desc(aiProviders.priority), asc(aiProviders.name))
+      return providers.map(this.mapDbProviderToAiProvider)
     } catch (error) {
-      logger.error('Failed to fetch enabled AI providers:', error);
-      throw new AggregatorError('Failed to fetch enabled AI providers', 'DATABASE_ERROR');
+      logger.error('Failed to fetch enabled AI providers:', error)
+      throw new AggregatorError('Failed to fetch enabled AI providers', 'DATABASE_ERROR')
     }
   }
 
@@ -80,44 +80,44 @@ export class AiProviderManager {
           eq(aiProviderKeys.providerId, providerId),
           eq(aiProviderKeys.enabled, true)
         ))
-        .orderBy(desc(aiProviderKeys.priority), asc(aiProviderKeys.keyName));
+        .orderBy(desc(aiProviderKeys.priority), asc(aiProviderKeys.keyName))
 
-      return keys.map(this.mapDbKeyToAiProviderKey);
+      return keys.map(this.mapDbKeyToAiProviderKey)
     } catch (error) {
-      logger.error(`Failed to fetch keys for provider ${providerId}:`, error);
-      throw new AggregatorError('Failed to fetch provider keys', 'DATABASE_ERROR');
+      logger.error(`Failed to fetch keys for provider ${providerId}:`, error)
+      throw new AggregatorError('Failed to fetch provider keys', 'DATABASE_ERROR')
     }
   }
 
   async getAvailableKey(providerId: string): Promise<AiProviderKey | null> {
-    const keys = await this.getProviderKeys(providerId);
-    if (keys.length === 0) return null;
+    const keys = await this.getProviderKeys(providerId)
+    if (keys.length === 0) return null
 
     // Filter out keys with circuit breakers open
     const availableKeys = keys.filter(key => {
-      const circuitBreaker = this.circuitBreakers.get(`${providerId}:${key.id}`);
-      return !circuitBreaker || !circuitBreaker.isOpen();
-    });
+      const circuitBreaker = this.circuitBreakers.get(`${providerId}:${key.id}`)
+      return !circuitBreaker || !circuitBreaker.isOpen()
+    })
 
-    if (availableKeys.length === 0) return null;
+    if (availableKeys.length === 0) return null
 
     // Use round-robin rotation
-    const currentIndex = this.keyRotationIndex.get(providerId) || 0;
-    const selectedKey = availableKeys[currentIndex % availableKeys.length];
-    this.keyRotationIndex.set(providerId, (currentIndex + 1) % availableKeys.length);
+    const currentIndex = this.keyRotationIndex.get(providerId) || 0
+    const selectedKey = availableKeys[currentIndex % availableKeys.length]
+    this.keyRotationIndex.set(providerId, (currentIndex + 1) % availableKeys.length)
 
     // Check rate limits
     if (this.isRateLimited(selectedKey)) {
       // Try next available key
-      const nextIndex = (currentIndex + 1) % availableKeys.length;
+      const nextIndex = (currentIndex + 1) % availableKeys.length
       if (nextIndex !== currentIndex) {
-        this.keyRotationIndex.set(providerId, nextIndex);
-        return this.getAvailableKey(providerId);
+        this.keyRotationIndex.set(providerId, nextIndex)
+        return this.getAvailableKey(providerId)
       }
-      return null; // All keys rate limited
+      return null // All keys rate limited
     }
 
-    return selectedKey;
+    return selectedKey
   }
 
   async executeWithProvider<T>(
@@ -125,65 +125,65 @@ export class AiProviderManager {
     operation: (provider: AiProvider, key: AiProviderKey) => Promise<T>,
     retries = 3
   ): Promise<T> {
-    const provider = await this.getProviderById(providerId);
+    const provider = await this.getProviderById(providerId)
     if (!provider || !provider.enabled) {
-      throw new AggregatorError(`Provider ${providerId} not found or disabled`, 'PROVIDER_UNAVAILABLE');
+      throw new AggregatorError(`Provider ${providerId} not found or disabled`, 'PROVIDER_UNAVAILABLE')
     }
 
     for (let attempt = 0; attempt < retries; attempt++) {
-      const key = await this.getAvailableKey(providerId);
+      const key = await this.getAvailableKey(providerId)
       if (!key) {
-        logger.warn(`No available keys for provider ${providerId} on attempt ${attempt + 1}`);
+        logger.warn(`No available keys for provider ${providerId} on attempt ${attempt + 1}`)
         if (attempt < retries - 1) {
-          await this.delay(Math.pow(2, attempt) * 1000); // Exponential backoff
-          continue;
+          await this.delay(Math.pow(2, attempt) * 1000) // Exponential backoff
+          continue
         }
-        throw new AggregatorError(`No available keys for provider ${providerId}`, 'NO_AVAILABLE_KEYS');
+        throw new AggregatorError(`No available keys for provider ${providerId}`, 'NO_AVAILABLE_KEYS')
       }
 
-      const circuitBreaker = this.getOrCreateCircuitBreaker(providerId, key.id);
+      const circuitBreaker = this.getOrCreateCircuitBreaker(providerId, key.id)
 
       try {
         const result = await circuitBreaker.execute(async () => {
-          this.trackRateLimit(key);
-          const startTime = Date.now();
-          
+          this.trackRateLimit(key)
+          const startTime = Date.now()
+
           try {
-            const result = await operation(provider, key);
-            
+            const result = await operation(provider, key)
+
             // Update success metrics
             await this.updateKeyMetrics(key.id, {
               lastUsed: new Date(),
               successCount: key.successCount + 1,
               currentUsage: (key.currentUsage || 0) + 1
-            });
+            })
 
-            logger.debug(`AI operation successful for ${providerId}:${key.keyName} in ${Date.now() - startTime}ms`);
-            return result;
+            logger.debug(`AI operation successful for ${providerId}:${key.keyName} in ${Date.now() - startTime}ms`)
+            return result
           } catch (error) {
             // Handle rate limit errors specially
             if (this.isRateLimitError(error)) {
-              await this.handleRateLimit(key);
-              throw new AggregatorError('Rate limit exceeded', 'RATE_LIMIT', 429);
+              await this.handleRateLimit(key)
+              throw new AggregatorError('Rate limit exceeded', 'RATE_LIMIT', 429)
             }
 
             // Update error metrics
             await this.updateKeyMetrics(key.id, {
               errorCount: key.errorCount + 1,
               rateLimitHits: this.isRateLimitError(error) ? (key.rateLimitHits || 0) + 1 : (key.rateLimitHits || 0)
-            });
+            })
 
-            throw error;
+            throw error
           }
-        });
+        })
 
-        return result;
+        return result
       } catch (error) {
         // Store error for debugging but don't use it currently
-        logger.warn(`AI operation failed for ${providerId}:${key.keyName} on attempt ${attempt + 1}:`, error);
-        
+        logger.warn(`AI operation failed for ${providerId}:${key.keyName} on attempt ${attempt + 1}:`, error)
+
         if (attempt < retries - 1) {
-          await this.delay(Math.pow(2, attempt) * 1000 + Math.random() * 1000); // Jitter
+          await this.delay(Math.pow(2, attempt) * 1000 + Math.random() * 1000) // Jitter
         }
       }
     }
@@ -192,35 +192,35 @@ export class AiProviderManager {
       `All retries exhausted for provider ${providerId}`,
       'OPERATION_FAILED',
       500
-    );
+    )
   }
 
   async getProviderHealth(providerId: string): Promise<ProviderHealthStatus> {
-    const provider = await this.getProviderById(providerId);
-    const keys = await this.getProviderKeys(providerId);
-    
+    const provider = await this.getProviderById(providerId)
+    const keys = await this.getProviderKeys(providerId)
+
     if (!provider) {
-      throw new AggregatorError(`Provider ${providerId} not found`, 'NOT_FOUND', 404);
+      throw new AggregatorError(`Provider ${providerId} not found`, 'NOT_FOUND', 404)
     }
 
     const availableKeys = keys.filter(key => {
-      const circuitBreaker = this.circuitBreakers.get(`${providerId}:${key.id}`);
-      return !circuitBreaker || !circuitBreaker.isOpen();
-    });
+      const circuitBreaker = this.circuitBreakers.get(`${providerId}:${key.id}`)
+      return !circuitBreaker || !circuitBreaker.isOpen()
+    })
 
-    const totalRequests = keys.reduce((sum, key) => sum + key.successCount + key.errorCount, 0);
-    const errorCount = keys.reduce((sum, key) => sum + key.errorCount, 0);
-    const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
+    const totalRequests = keys.reduce((sum, key) => sum + key.successCount + key.errorCount, 0)
+    const errorCount = keys.reduce((sum, key) => sum + key.errorCount, 0)
+    const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0
 
     // Get overall circuit state (worst case)
-    let circuitState: 'closed' | 'open' | 'half-open' = 'closed';
+    let circuitState: 'closed' | 'open' | 'half-open' = 'closed'
     for (const key of keys) {
-      const breaker = this.circuitBreakers.get(`${providerId}:${key.id}`);
+      const breaker = this.circuitBreakers.get(`${providerId}:${key.id}`)
       if (breaker?.isOpen()) {
-        circuitState = 'open';
-        break;
+        circuitState = 'open'
+        break
       } else if (breaker?.isHalfOpen()) {
-        circuitState = 'half-open';
+        circuitState = 'half-open'
       }
     }
 
@@ -231,7 +231,7 @@ export class AiProviderManager {
       totalKeys: keys.length,
       errorRate,
       lastCheck: new Date()
-    };
+    }
   }
 
   private async getProviderById(id: string): Promise<AiProvider | null> {
@@ -240,18 +240,18 @@ export class AiProviderManager {
         .select()
         .from(aiProviders)
         .where(eq(aiProviders.id, id))
-        .limit(1);
+        .limit(1)
 
-      return providers.length > 0 ? this.mapDbProviderToAiProvider(providers[0]) : null;
+      return providers.length > 0 ? this.mapDbProviderToAiProvider(providers[0]) : null
     } catch (error) {
-      logger.error(`Failed to fetch provider ${id}:`, error);
-      return null;
+      logger.error(`Failed to fetch provider ${id}:`, error)
+      return null
     }
   }
 
   private getOrCreateCircuitBreaker(providerId: string, keyId: string): CircuitBreaker {
-    const breakerId = `${providerId}:${keyId}`;
-    
+    const breakerId = `${providerId}:${keyId}`
+
     if (!this.circuitBreakers.has(breakerId)) {
       // Get provider settings for circuit breaker options
       this.getProviderById(providerId).then(provider => {
@@ -260,74 +260,74 @@ export class AiProviderManager {
             threshold: provider.circuitBreakerThreshold,
             timeout: provider.circuitBreakerTimeout,
             resetTimeout: provider.healthCheckInterval || 30000
-          };
-          
-          this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, options));
+          }
+
+          this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, options))
         }
-      });
-      
+      })
+
       // Create with default options in the meantime
       const defaultOptions: CircuitBreakerOptions = {
         threshold: 5,
         timeout: 60000,
         resetTimeout: 30000
-      };
-      
-      this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, defaultOptions));
+      }
+
+      this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, defaultOptions))
     }
 
-    return this.circuitBreakers.get(breakerId)!;
+    return this.circuitBreakers.get(breakerId)!
   }
 
   private isRateLimited(key: AiProviderKey): boolean {
-    const trackingKey = key.id;
-    const tracking = this.rateLimitTracking.get(trackingKey);
-    
-    if (!tracking) return false;
-    
-    const now = Date.now();
+    const trackingKey = key.id
+    const tracking = this.rateLimitTracking.get(trackingKey)
+
+    if (!tracking) return false
+
+    const now = Date.now()
     if (now >= tracking.resetTime) {
-      this.rateLimitTracking.delete(trackingKey);
-      return false;
+      this.rateLimitTracking.delete(trackingKey)
+      return false
     }
-    
+
     // Check daily quota
     if (key.dailyQuota && (key.currentUsage || 0) >= key.dailyQuota) {
-      return true;
+      return true
     }
-    
+
     // Check rate limits (simplified - could be more sophisticated)
-    return tracking.count >= 60; // 60 requests per minute
+    return tracking.count >= 60 // 60 requests per minute
   }
 
   private trackRateLimit(key: AiProviderKey): void {
-    const trackingKey = key.id;
-    const now = Date.now();
-    const resetTime = now + 60000; // Reset every minute
-    
-    const tracking = this.rateLimitTracking.get(trackingKey);
+    const trackingKey = key.id
+    const now = Date.now()
+    const resetTime = now + 60000 // Reset every minute
+
+    const tracking = this.rateLimitTracking.get(trackingKey)
     if (!tracking || now >= tracking.resetTime) {
-      this.rateLimitTracking.set(trackingKey, { count: 1, resetTime });
+      this.rateLimitTracking.set(trackingKey, { count: 1, resetTime })
     } else {
-      tracking.count++;
+      tracking.count++
     }
   }
 
   private isRateLimitError(error: unknown): boolean {
     if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-      return message.includes('rate limit') || 
-             message.includes('too many requests') ||
-             message.includes('quota exceeded');
+      const message = error.message.toLowerCase()
+      return message.includes('rate limit') ||
+        message.includes('too many requests') ||
+        message.includes('quota exceeded')
     }
-    return false;
+    return false
   }
 
   private async handleRateLimit(key: AiProviderKey): Promise<void> {
-    logger.warn(`Rate limit hit for key ${key.keyName}`);
+    logger.warn(`Rate limit hit for key ${key.keyName}`)
     await this.updateKeyMetrics(key.id, {
       rateLimitHits: (key.rateLimitHits || 0) + 1
-    });
+    })
   }
 
   private async updateKeyMetrics(keyId: string, updates: Partial<AiProviderKey>): Promise<void> {
@@ -342,20 +342,20 @@ export class AiProviderManager {
           ...(updates.currentUsage !== undefined && { currentUsage: updates.currentUsage }),
           updatedAt: new Date()
         })
-        .where(eq(aiProviderKeys.id, keyId));
+        .where(eq(aiProviderKeys.id, keyId))
     } catch (error) {
-      logger.error(`Failed to update key metrics for ${keyId}:`, error);
+      logger.error(`Failed to update key metrics for ${keyId}:`, error)
     }
   }
 
   private async initializeCircuitBreakers(): Promise<void> {
-    const providers = await this.getAllProviders();
-    
+    const providers = await this.getAllProviders()
+
     for (const provider of providers) {
-      const keys = await this.getProviderKeys(provider.id);
-      
+      const keys = await this.getProviderKeys(provider.id)
+
       for (const key of keys) {
-        this.getOrCreateCircuitBreaker(provider.id, key.id);
+        this.getOrCreateCircuitBreaker(provider.id, key.id)
       }
     }
   }
@@ -363,13 +363,13 @@ export class AiProviderManager {
   private startPeriodicTasks(): void {
     // Reset daily quotas every 24 hours
     setInterval(() => {
-      this.resetDailyQuotas();
-    }, 24 * 60 * 60 * 1000);
+      this.resetDailyQuotas()
+    }, 24 * 60 * 60 * 1000)
 
     // Clean up old rate limit tracking
     setInterval(() => {
-      this.cleanupRateLimit();
-    }, 5 * 60 * 1000);
+      this.cleanupRateLimit()
+    }, 5 * 60 * 1000)
   }
 
   private async resetDailyQuotas(): Promise<void> {
@@ -380,25 +380,25 @@ export class AiProviderManager {
           currentUsage: 0,
           updatedAt: new Date()
         })
-        .where(gte(aiProviderKeys.lastReset, new Date(Date.now() - 24 * 60 * 60 * 1000)));
-      
-      logger.info('Daily quotas reset for all provider keys');
+        .where(gte(aiProviderKeys.lastReset, new Date(Date.now() - 24 * 60 * 60 * 1000)))
+
+      logger.info('Daily quotas reset for all provider keys')
     } catch (error) {
-      logger.error('Failed to reset daily quotas:', error);
+      logger.error('Failed to reset daily quotas:', error)
     }
   }
 
   private cleanupRateLimit(): void {
-    const now = Date.now();
+    const now = Date.now()
     for (const [key, tracking] of this.rateLimitTracking.entries()) {
       if (now >= tracking.resetTime) {
-        this.rateLimitTracking.delete(key);
+        this.rateLimitTracking.delete(key)
       }
     }
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   private mapDbProviderToAiProvider(dbProvider: DbAiProvider): AiProvider {
@@ -418,7 +418,7 @@ export class AiProviderManager {
       healthCheckInterval: dbProvider.healthCheckInterval,
       createdAt: dbProvider.createdAt,
       updatedAt: dbProvider.updatedAt,
-    };
+    }
   }
 
   private mapDbKeyToAiProviderKey(dbKey: DbAiProviderKey): AiProviderKey {
@@ -440,7 +440,7 @@ export class AiProviderManager {
       successCount: dbKey.successCount,
       createdAt: dbKey.createdAt,
       updatedAt: dbKey.updatedAt,
-    };
+    }
   }
 
   private async seedInitialProviders(): Promise<void> {
@@ -475,81 +475,81 @@ export class AiProviderManager {
         healthCheckInterval: 60000,
         metadata: { models: ['Helsinki-NLP/opus-mt-en-zh'] }
       }
-    ];
+    ]
 
     for (const providerData of initialProviders) {
       const [created] = await this.db
         .insert(aiProviders)
         .values(providerData as NewAiProvider)
-        .returning();
+        .returning()
 
-      logger.info(`Seeded AI provider: ${created.displayName} (${created.id})`);
+      logger.info(`Seeded AI provider: ${created.displayName} (${created.id})`)
     }
 
-    logger.info(`Seeded ${initialProviders.length} initial AI providers`);
+    logger.info(`Seeded ${initialProviders.length} initial AI providers`)
   }
 
   async bulkEnableProviders(providerIds: string[]): Promise<void> {
     try {
-      if (providerIds.length === 0) return;
+      if (providerIds.length === 0) return
 
       await this.db
         .update(aiProviders)
         .set({ enabled: true })
-        .where(inArray(aiProviders.id, providerIds));
+        .where(inArray(aiProviders.id, providerIds))
 
-      logger.info(`Bulk enabled ${providerIds.length} AI providers`);
+      logger.info(`Bulk enabled ${providerIds.length} AI providers`)
     } catch (error) {
-      logger.error('Failed to bulk enable AI providers:', error);
-      throw new AggregatorError('Failed to bulk enable AI providers', 'DATABASE_ERROR');
+      logger.error('Failed to bulk enable AI providers:', error)
+      throw new AggregatorError('Failed to bulk enable AI providers', 'DATABASE_ERROR')
     }
   }
 
   async bulkDisableProviders(providerIds: string[]): Promise<void> {
     try {
-      if (providerIds.length === 0) return;
+      if (providerIds.length === 0) return
 
       await this.db
         .update(aiProviders)
         .set({ enabled: false })
-        .where(inArray(aiProviders.id, providerIds));
+        .where(inArray(aiProviders.id, providerIds))
 
-      logger.info(`Bulk disabled ${providerIds.length} AI providers`);
+      logger.info(`Bulk disabled ${providerIds.length} AI providers`)
     } catch (error) {
-      logger.error('Failed to bulk disable AI providers:', error);
-      throw new AggregatorError('Failed to bulk disable AI providers', 'DATABASE_ERROR');
+      logger.error('Failed to bulk disable AI providers:', error)
+      throw new AggregatorError('Failed to bulk disable AI providers', 'DATABASE_ERROR')
     }
   }
 
   async bulkEnableKeys(keyIds: string[]): Promise<void> {
     try {
-      if (keyIds.length === 0) return;
+      if (keyIds.length === 0) return
 
       await this.db
         .update(aiProviderKeys)
         .set({ enabled: true })
-        .where(inArray(aiProviderKeys.id, keyIds));
+        .where(inArray(aiProviderKeys.id, keyIds))
 
-      logger.info(`Bulk enabled ${keyIds.length} AI provider keys`);
+      logger.info(`Bulk enabled ${keyIds.length} AI provider keys`)
     } catch (error) {
-      logger.error('Failed to bulk enable AI provider keys:', error);
-      throw new AggregatorError('Failed to bulk enable AI provider keys', 'DATABASE_ERROR');
+      logger.error('Failed to bulk enable AI provider keys:', error)
+      throw new AggregatorError('Failed to bulk enable AI provider keys', 'DATABASE_ERROR')
     }
   }
 
   async bulkDisableKeys(keyIds: string[]): Promise<void> {
     try {
-      if (keyIds.length === 0) return;
+      if (keyIds.length === 0) return
 
       await this.db
         .update(aiProviderKeys)
         .set({ enabled: false })
-        .where(inArray(aiProviderKeys.id, keyIds));
+        .where(inArray(aiProviderKeys.id, keyIds))
 
-      logger.info(`Bulk disabled ${keyIds.length} AI provider keys`);
+      logger.info(`Bulk disabled ${keyIds.length} AI provider keys`)
     } catch (error) {
-      logger.error('Failed to bulk disable AI provider keys:', error);
-      throw new AggregatorError('Failed to bulk disable AI provider keys', 'DATABASE_ERROR');
+      logger.error('Failed to bulk disable AI provider keys:', error)
+      throw new AggregatorError('Failed to bulk disable AI provider keys', 'DATABASE_ERROR')
     }
   }
 }

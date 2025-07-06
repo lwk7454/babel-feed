@@ -1,23 +1,23 @@
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { getDatabase } from './connection.js';
-import { resolve } from 'path';
+import { migrate } from 'drizzle-orm/postgres-js/migrator'
+import { getDatabase } from './connection.js'
+import { resolve } from 'path'
 
 /**
  * Run database migrations
  */
 export async function runMigrations(): Promise<void> {
   try {
-    console.log('🔄 Running database migrations...');
+    console.log('🔄 Running database migrations...')
     
-    const db = getDatabase();
-    const migrationsFolder = resolve(import.meta.url, 'migrations');
+    const db = getDatabase()
+    const migrationsFolder = resolve(import.meta.url, 'migrations')
     
-    await migrate(db, { migrationsFolder });
+    await migrate(db, { migrationsFolder })
     
-    console.log('✅ Database migrations completed successfully');
+    console.log('✅ Database migrations completed successfully')
   } catch (error) {
-    console.error('❌ Database migration failed:', error);
-    throw error;
+    console.error('❌ Database migration failed:', error)
+    throw error
   }
 }
 
@@ -26,17 +26,17 @@ export async function runMigrations(): Promise<void> {
  */
 export async function runMigrationsWithFolder(migrationsFolder: string): Promise<void> {
   try {
-    console.log('🔄 Running database migrations...');
+    console.log('🔄 Running database migrations...')
     
-    const db = getDatabase();
-    const resolvedFolder = resolve(migrationsFolder);
+    const db = getDatabase()
+    const resolvedFolder = resolve(migrationsFolder)
     
-    await migrate(db, { migrationsFolder: resolvedFolder });
+    await migrate(db, { migrationsFolder: resolvedFolder })
     
-    console.log('✅ Database migrations completed successfully');
+    console.log('✅ Database migrations completed successfully')
   } catch (error) {
-    console.error('❌ Database migration failed:', error);
-    throw error;
+    console.error('❌ Database migration failed:', error)
+    throw error
   }
 }
 
@@ -45,7 +45,7 @@ export async function runMigrationsWithFolder(migrationsFolder: string): Promise
  */
 export async function checkMigrationStatus(): Promise<{ needsMigration: boolean; error?: string }> {
   try {
-    const db = getDatabase();
+    const db = getDatabase()
     
     // Check if migration table exists
     const result = await db.execute(`
@@ -54,22 +54,22 @@ export async function checkMigrationStatus(): Promise<{ needsMigration: boolean;
         WHERE table_schema = 'public' 
         AND table_name = '__drizzle_migrations'
       );
-    `);
+    `)
     
-    const tableExists = result[0]?.exists;
+    const tableExists = result[0]?.exists
     
     if (!tableExists) {
-      return { needsMigration: true };
+      return { needsMigration: true }
     }
     
     // For now, assume no migration needed if table exists
     // In a real implementation, you'd compare applied migrations with available ones
-    return { needsMigration: false };
+    return { needsMigration: false }
   } catch (error) {
     return { 
       needsMigration: false, 
       error: error instanceof Error ? error.message : 'Unknown error'
-    };
+    }
   }
 }
 
@@ -78,15 +78,15 @@ export async function checkMigrationStatus(): Promise<{ needsMigration: boolean;
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    console.log('🚀 Initializing database...');
+    console.log('🚀 Initializing database...')
     
     // Run migrations to create tables
-    await runMigrations();
+    await runMigrations()
     
-    console.log('✅ Database initialization completed');
+    console.log('✅ Database initialization completed')
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    throw error;
+    console.error('❌ Database initialization failed:', error)
+    throw error
   }
 }
 
@@ -95,14 +95,14 @@ export async function initializeDatabase(): Promise<void> {
  */
 export async function initializeDatabaseWithFolder(migrationsFolder: string): Promise<void> {
   try {
-    console.log('🚀 Initializing database...');
+    console.log('🚀 Initializing database...')
     
     // Run migrations to create tables
-    await runMigrationsWithFolder(migrationsFolder);
+    await runMigrationsWithFolder(migrationsFolder)
     
-    console.log('✅ Database initialization completed');
+    console.log('✅ Database initialization completed')
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    throw error;
+    console.error('❌ Database initialization failed:', error)
+    throw error
   }
 }

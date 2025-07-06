@@ -1,6 +1,6 @@
-import { logger } from '../modules/common/logger';
-import { NewsSourceManager } from './news-source-manager';
-import { AiProviderManager } from './ai-provider-manager';
+import { logger } from '../modules/common/logger'
+import { NewsSourceManager } from './news-source-manager'
+import { AiProviderManager } from './ai-provider-manager'
 
 export interface HealthStatus {
   status: 'healthy' | 'unhealthy' | 'degraded';
@@ -24,47 +24,47 @@ export interface ServiceHealth {
 }
 
 export class HealthChecker {
-  private startTime: Date = new Date();
-  private sourceManager?: NewsSourceManager;
-  private aiProviderManager?: AiProviderManager;
+  private startTime: Date = new Date()
+  private sourceManager?: NewsSourceManager
+  private aiProviderManager?: AiProviderManager
 
   constructor(sourceManager?: NewsSourceManager, aiProviderManager?: AiProviderManager) {
-    this.sourceManager = sourceManager;
-    this.aiProviderManager = aiProviderManager;
+    this.sourceManager = sourceManager
+    this.aiProviderManager = aiProviderManager
   }
 
   async getHealthStatus(): Promise<HealthStatus> {
-    const services: ServiceHealth[] = [];
+    const services: ServiceHealth[] = []
 
     // Check database connectivity
-    services.push(await this.checkDatabase());
+    services.push(await this.checkDatabase())
 
     // Check source manager
     if (this.sourceManager) {
-      services.push(await this.checkSourceManager());
+      services.push(await this.checkSourceManager())
     }
 
     // Check AI provider manager
     if (this.aiProviderManager) {
-      services.push(await this.checkAiProviderManager());
+      services.push(await this.checkAiProviderManager())
     }
 
     // Check external services
-    services.push(await this.checkExternalServices());
+    services.push(await this.checkExternalServices())
 
     // Calculate overall status
-    const unhealthyServices = services.filter(s => s.status === 'unhealthy');
-    const degradedServices = services.filter(s => s.status === 'degraded');
+    const unhealthyServices = services.filter(s => s.status === 'unhealthy')
+    const degradedServices = services.filter(s => s.status === 'degraded')
 
-    let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy';
+    let overallStatus: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
     if (unhealthyServices.length > 0) {
-      overallStatus = 'unhealthy';
+      overallStatus = 'unhealthy'
     } else if (degradedServices.length > 0) {
-      overallStatus = 'degraded';
+      overallStatus = 'degraded'
     }
 
     // Get source summary
-    const sourceSummary = await this.getSourceSummary();
+    const sourceSummary = await this.getSourceSummary()
 
     return {
       status: overallStatus,
@@ -72,16 +72,16 @@ export class HealthChecker {
       uptime: Date.now() - this.startTime.getTime(),
       services,
       summary: sourceSummary,
-    };
+    }
   }
 
   private async checkDatabase(): Promise<ServiceHealth> {
-    const startTime = Date.now();
+    const startTime = Date.now()
     
     try {
       // TODO: Implement actual database health check
       // For now, assume database is healthy
-      const responseTime = Date.now() - startTime;
+      const responseTime = Date.now() - startTime
       
       return {
         name: 'database',
@@ -91,9 +91,9 @@ export class HealthChecker {
         details: {
           connection: 'active',
         },
-      };
+      }
     } catch (error) {
-      logger.error('Database health check failed:', error);
+      logger.error('Database health check failed:', error)
       return {
         name: 'database',
         status: 'unhealthy',
@@ -102,7 +102,7 @@ export class HealthChecker {
         details: {
           error: error instanceof Error ? error.message : 'Unknown error',
         },
-      };
+      }
     }
   }
 
@@ -116,21 +116,21 @@ export class HealthChecker {
           details: {
             error: 'Source manager not initialized',
           },
-        };
+        }
       }
 
-      const sources = await this.sourceManager.getAllSources();
-      const enabledSources = await this.sourceManager.getEnabledSources();
+      const sources = await this.sourceManager.getAllSources()
+      const enabledSources = await this.sourceManager.getEnabledSources()
 
       // For database-based source manager, we don't have unhealthy sources tracking yet
       // This would need to be implemented based on recent fetch errors
-      const unhealthySources = sources.filter(s => s.errorCount > s.successCount);
+      const unhealthySources = sources.filter(s => s.errorCount > s.successCount)
 
-      let status: 'healthy' | 'unhealthy' | 'degraded' = 'healthy';
+      let status: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
       if (unhealthySources.length > enabledSources.length * 0.5) {
-        status = 'unhealthy';
+        status = 'unhealthy'
       } else if (unhealthySources.length > 0) {
-        status = 'degraded';
+        status = 'degraded'
       }
 
       return {
@@ -142,9 +142,9 @@ export class HealthChecker {
           enabledSources: enabledSources.length,
           unhealthySources: unhealthySources.length,
         },
-      };
+      }
     } catch (error) {
-      logger.error('Source manager health check failed:', error);
+      logger.error('Source manager health check failed:', error)
       return {
         name: 'source-manager',
         status: 'unhealthy',
@@ -152,7 +152,7 @@ export class HealthChecker {
         details: {
           error: error instanceof Error ? error.message : 'Unknown error',
         },
-      };
+      }
     }
   }
 
@@ -166,26 +166,26 @@ export class HealthChecker {
           details: {
             error: 'AI provider manager not initialized',
           },
-        };
+        }
       }
 
-      const providers = await this.aiProviderManager.getAllProviders();
-      const enabledProviders = await this.aiProviderManager.getEnabledProviders();
+      const providers = await this.aiProviderManager.getAllProviders()
+      const enabledProviders = await this.aiProviderManager.getEnabledProviders()
       
       // Check health of each provider
       const healthStatuses = await Promise.all(
         enabledProviders.map(p => this.aiProviderManager!.getProviderHealth(p.id))
-      );
+      )
       
-      const healthyProviders = healthStatuses.filter(h => h.healthy);
-      const degradedProviders = healthStatuses.filter(h => !h.healthy && h.availableKeys > 0);
-      const unhealthyProviders = healthStatuses.filter(h => !h.healthy && h.availableKeys === 0);
+      const healthyProviders = healthStatuses.filter(h => h.healthy)
+      const degradedProviders = healthStatuses.filter(h => !h.healthy && h.availableKeys > 0)
+      const unhealthyProviders = healthStatuses.filter(h => !h.healthy && h.availableKeys === 0)
 
-      let status: 'healthy' | 'unhealthy' | 'degraded' = 'healthy';
+      let status: 'healthy' | 'unhealthy' | 'degraded' = 'healthy'
       if (unhealthyProviders.length === enabledProviders.length) {
-        status = 'unhealthy';
+        status = 'unhealthy'
       } else if (degradedProviders.length > 0 || unhealthyProviders.length > 0) {
-        status = 'degraded';
+        status = 'degraded'
       }
 
       return {
@@ -199,9 +199,9 @@ export class HealthChecker {
           degradedProviders: degradedProviders.length,
           unhealthyProviders: unhealthyProviders.length,
         },
-      };
+      }
     } catch (error) {
-      logger.error('AI provider manager health check failed:', error);
+      logger.error('AI provider manager health check failed:', error)
       return {
         name: 'ai-provider-manager',
         status: 'unhealthy',
@@ -209,7 +209,7 @@ export class HealthChecker {
         details: {
           error: error instanceof Error ? error.message : 'Unknown error',
         },
-      };
+      }
     }
   }
 
@@ -222,7 +222,7 @@ export class HealthChecker {
       details: {
         message: 'External services check not implemented yet',
       },
-    };
+    }
   }
 
   private async getSourceSummary() {
@@ -232,28 +232,28 @@ export class HealthChecker {
         healthySources: 0,
         unhealthySources: 0,
         lastUpdate: new Date(),
-      };
+      }
     }
 
     try {
-      const allSources = await this.sourceManager.getAllSources();
-      const healthySources = allSources.filter(s => s.errorCount <= s.successCount);
-      const unhealthySources = allSources.filter(s => s.errorCount > s.successCount);
+      const allSources = await this.sourceManager.getAllSources()
+      const healthySources = allSources.filter(s => s.errorCount <= s.successCount)
+      const unhealthySources = allSources.filter(s => s.errorCount > s.successCount)
 
       return {
         totalSources: allSources.length,
         healthySources: healthySources.length,
         unhealthySources: unhealthySources.length,
         lastUpdate: new Date(),
-      };
+      }
     } catch (error) {
-      logger.error('Failed to get source summary:', error);
+      logger.error('Failed to get source summary:', error)
       return {
         totalSources: 0,
         healthySources: 0,
         unhealthySources: 0,
         lastUpdate: new Date(),
-      };
+      }
     }
   }
 }

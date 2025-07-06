@@ -1,15 +1,15 @@
 // Error classes
 export class AggregatorError extends Error {
   constructor(message: string, public code?: string, public statusCode?: number) {
-    super(message);
-    this.name = 'AggregatorError';
+    super(message)
+    this.name = 'AggregatorError'
   }
 }
 
 export class ValidationError extends AggregatorError {
   constructor(message: string, public field?: string) {
-    super(message, 'VALIDATION_ERROR', 400);
-    this.name = 'ValidationError';
+    super(message, 'VALIDATION_ERROR', 400)
+    this.name = 'ValidationError'
   }
 }
 

@@ -1,14 +1,14 @@
-import { logger } from '../common/logger';
+import { logger } from '../common/logger'
 
 export class DeduplicationService {
-  private contentHashes = new Map<string, any>();
+  private contentHashes = new Map<string, any>()
 
   async initialize(): Promise<void> {
-    logger.info('Deduplication service initialized');
+    logger.info('Deduplication service initialized')
   }
 
   async deduplicateArticles(articles: any[]): Promise<any[]> {
-    logger.info('Deduplicating articles (placeholder):', articles.length);
+    logger.info('Deduplicating articles (placeholder):', articles.length)
     
     // TODO: Implement sophisticated deduplication logic
     // - Content-based hashing with fuzzy matching
@@ -17,31 +17,31 @@ export class DeduplicationService {
     // - Time-based deduplication windows
     // - Cross-source duplicate detection
     
-    return articles; // Placeholder return
+    return articles // Placeholder return
   }
 
   async generateContentHash(_content: string): Promise<string> {
     // Placeholder implementation
-    logger.info('Generating content hash (placeholder)');
-    throw new Error('Not implemented - needs content hashing logic');
+    logger.info('Generating content hash (placeholder)')
+    throw new Error('Not implemented - needs content hashing logic')
   }
 
   async findSimilarArticles(_article: any): Promise<any[]> {
     // Placeholder implementation
-    logger.info('Finding similar articles (placeholder)');
-    throw new Error('Not implemented - needs similarity detection');
+    logger.info('Finding similar articles (placeholder)')
+    throw new Error('Not implemented - needs similarity detection')
   }
 
   async normalizeURL(url: string): Promise<string> {
     // Placeholder implementation
-    logger.info('Normalizing URL (placeholder):', url);
-    throw new Error('Not implemented - needs URL normalization');
+    logger.info('Normalizing URL (placeholder):', url)
+    throw new Error('Not implemented - needs URL normalization')
   }
 
   async calculateSimilarity(_article1: any, _article2: any): Promise<number> {
     // Placeholder implementation
-    logger.info('Calculating similarity (placeholder)');
-    throw new Error('Not implemented - needs similarity calculation');
+    logger.info('Calculating similarity (placeholder)')
+    throw new Error('Not implemented - needs similarity calculation')
   }
 
   // TODO: Advanced deduplication features
@@ -52,11 +52,11 @@ export class DeduplicationService {
   // - Duplicate clustering and analysis
 
   clearCache(): void {
-    this.contentHashes.clear();
-    logger.info('Deduplication cache cleared');
+    this.contentHashes.clear()
+    logger.info('Deduplication cache cleared')
   }
 
   getStats(): { cacheSize: number } {
-    return { cacheSize: this.contentHashes.size };
+    return { cacheSize: this.contentHashes.size }
   }
 }

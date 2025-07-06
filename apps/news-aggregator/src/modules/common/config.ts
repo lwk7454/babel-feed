@@ -19,9 +19,9 @@ const config: Config = {
     contentCacheMaxAge: parseInt(process.env.CONTENT_CACHE_MAX_AGE || '3600000'), // 1 hour
     translationCacheMaxAge: parseInt(process.env.TRANSLATION_CACHE_MAX_AGE || '86400000'), // 24 hours
   },
-};
+}
 
-export { config };
+export { config }
 
 // TODO: Enhanced configuration management can be added here
 // - Environment-specific configuration validation

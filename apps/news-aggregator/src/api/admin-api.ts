@@ -1,21 +1,21 @@
-import { logger } from '../modules/common/logger';
+import { logger } from '../modules/common/logger'
 // import { config } from '../modules/common/config';
 
 export class AdminAPIServer {
-  private isRunning = false;
+  private isRunning = false
 
   async initialize(): Promise<void> {
-    logger.info('Admin API server initialized');
+    logger.info('Admin API server initialized')
   }
 
   async start(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('Admin API server is already running');
-      return;
+      logger.warn('Admin API server is already running')
+      return
     }
 
-    this.isRunning = true;
-    logger.info('Starting Admin API server (placeholder)');
+    this.isRunning = true
+    logger.info('Starting Admin API server (placeholder)')
     
     // TODO: Implement Express/Fastify server
     // - Source management endpoints
@@ -27,12 +27,12 @@ export class AdminAPIServer {
 
   async stop(): Promise<void> {
     if (!this.isRunning) {
-      logger.warn('Admin API server is not running');
-      return;
+      logger.warn('Admin API server is not running')
+      return
     }
 
-    this.isRunning = false;
-    logger.info('Stopping Admin API server (placeholder)');
+    this.isRunning = false
+    logger.info('Stopping Admin API server (placeholder)')
   }
 
   // TODO: Implement API endpoints
@@ -47,6 +47,6 @@ export class AdminAPIServer {
   // GET /admin/metrics - System metrics
 
   getStatus(): { running: boolean } {
-    return { running: this.isRunning };
+    return { running: this.isRunning }
   }
 }

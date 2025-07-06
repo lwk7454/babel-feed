@@ -1,13 +1,13 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema.js';
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema.js'
 
 /**
  * Database connection configuration based on environment
  */
-const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-const isProduction = process.env.NODE_ENV === 'production';
-const isTest = process.env.NODE_ENV === 'test';
+const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
+const isProduction = process.env.NODE_ENV === 'production'
+const isTest = process.env.NODE_ENV === 'test'
 
 /**
  * Database connection URL configuration
@@ -15,27 +15,27 @@ const isTest = process.env.NODE_ENV === 'test';
 function getDatabaseUrl(): string {
   // Production: Use DATABASE_URL environment variable
   if (isProduction && process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
+    return process.env.DATABASE_URL
   }
   
   // Development: Use local Docker PostgreSQL
-  const host = process.env.DB_HOST || 'localhost';
-  const port = process.env.DB_PORT || '5432';
-  let database = process.env.DB_NAME || 'babel_feed_dev';
-  const username = process.env.DB_USER || 'babel_dev';
-  const password = process.env.DB_PASSWORD || 'babel_dev_password';
+  const host = process.env.DB_HOST || 'localhost'
+  const port = process.env.DB_PORT || '5432'
+  let database = process.env.DB_NAME || 'babel_feed_dev'
+  const username = process.env.DB_USER || 'babel_dev'
+  const password = process.env.DB_PASSWORD || 'babel_dev_password'
   if (isTest) {
-    database = process.env.DB_NAME_TEST || 'babel_feed_test';
+    database = process.env.DB_NAME_TEST || 'babel_feed_test'
   }
   
-  return `postgres://${username}:${password}@${host}:${port}/${database}`;
+  return `postgres://${username}:${password}@${host}:${port}/${database}`
 }
 
 /**
  * PostgreSQL connection configuration
  */
 function createPostgresConnection() {
-  const connectionString = getDatabaseUrl();
+  const connectionString = getDatabaseUrl()
   
   const sql = postgres(connectionString, {
     max: process.env.DB_POOL_SIZE ? parseInt(process.env.DB_POOL_SIZE) : 10,
@@ -45,33 +45,33 @@ function createPostgresConnection() {
     prepare: false, // Disable prepared statements for better compatibility
     debug: isDevelopment && process.env.DB_DEBUG === 'true',
     onnotice: isDevelopment && !isTest ? console.log : undefined
-  });
+  })
   
-  return drizzle(sql, { schema, logger: isDevelopment });
+  return drizzle(sql, { schema, logger: isDevelopment })
 }
 
 /**
  * Database connection singleton
  */
-let dbInstance: ReturnType<typeof createPostgresConnection> | null = null;
+let dbInstance: ReturnType<typeof createPostgresConnection> | null = null
 
 export function getDatabase() {
   if (!dbInstance) {
     try {
-      dbInstance = createPostgresConnection();
-      const envType = isProduction ? 'production' : isTest ? 'test' : 'development';
+      dbInstance = createPostgresConnection()
+      const envType = isProduction ? 'production' : isTest ? 'test' : 'development'
       if (!isTest) {
-        console.log(`🗄️  Database connection established (${envType})`);
+        console.log(`🗄️  Database connection established (${envType})`)
       }
     } catch (error) {
       if (!isTest) {
-        console.error('❌ Failed to connect to database:', error);
+        console.error('❌ Failed to connect to database:', error)
       }
-      throw new Error('Database connection failed');
+      throw new Error('Database connection failed')
     }
   }
   
-  return dbInstance;
+  return dbInstance
 }
 
 /**
@@ -79,20 +79,20 @@ export function getDatabase() {
  */
 export async function checkDatabaseHealth(): Promise<{ healthy: boolean; error?: string }> {
   try {
-    const db = getDatabase();
+    const db = getDatabase()
     
     // Simple query to check connection
-    await db.execute('SELECT 1');
+    await db.execute('SELECT 1')
     
-    return { healthy: true };
+    return { healthy: true }
   } catch (error) {
     if (!isTest) {
-      console.error('Database health check failed:', error);
+      console.error('Database health check failed:', error)
     }
     return { 
       healthy: false, 
       error: error instanceof Error ? error.message : 'Unknown database error'
-    };
+    }
   }
 }
 
@@ -104,15 +104,15 @@ export async function closeDatabaseConnection(): Promise<void> {
     try {
       // The postgres client doesn't have an explicit close method in the newer versions
       // The connection will be closed when the process exits
-      dbInstance = null;
-      console.log('🗄️  Database connection closed');
+      dbInstance = null
+      console.log('🗄️  Database connection closed')
     } catch (error) {
-      console.error('Error closing database connection:', error);
+      console.error('Error closing database connection:', error)
     }
   }
 }
 
 
 // Export the database instance as default
-export const db = getDatabase();
-export default db;
+export const db = getDatabase()
+export default db

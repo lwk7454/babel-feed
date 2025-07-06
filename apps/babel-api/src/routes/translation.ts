@@ -1,12 +1,12 @@
-import { Elysia, t } from "elysia";
-import { Stream } from "@elysiajs/stream";
-import { translationService } from "../services/translation.service.js";
+import { Elysia, t } from "elysia"
+import { Stream } from "@elysiajs/stream"
+import { translationService } from "../services/translation.service.js"
 import { 
   TranslationRequest, 
   TranslationError, 
   BatchedTranslationRequest,
   BatchedTranslationElement 
-} from "../types/translation.js";
+} from "../types/translation.js"
 
 // Validation schemas
 const translationRequestSchema = t.Object({
@@ -43,7 +43,7 @@ const translationRequestSchema = t.Object({
   })),
   streaming: t.Boolean(),
   requestId: t.String({ minLength: 1 })
-});
+})
 
 // Validation schema for batched translation requests
 const batchedTranslationRequestSchema = t.Object({
@@ -90,28 +90,28 @@ const batchedTranslationRequestSchema = t.Object({
     domainSpecific: t.Optional(t.String())
   })),
   requestId: t.String({ minLength: 1 })
-});
+})
 
 export const translationRoutes = new Elysia({ prefix: "/api/translation" })
   // Health check endpoint
   .get("/health", async () => {
-    const isAvailable = await translationService.isAvailable();
+    const isAvailable = await translationService.isAvailable()
     return {
       status: isAvailable ? "healthy" : "unhealthy",
       timestamp: new Date().toISOString(),
       service: "translation",
       version: "1.0.0"
-    };
+    }
   })
 
   // Streaming translation endpoint
   .post("/stream", async ({ body, set }) => {
-    const request = body as TranslationRequest;
+    const request = body as TranslationRequest
     
     try {
       // Validate request
       if (!request.content || request.content.trim().length === 0) {
-        set.status = 400;
+        set.status = 400
         return {
           requestId: request.requestId || "unknown",
           error: {
@@ -120,11 +120,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: null
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       if (request.content.length > 50000) {
-        set.status = 413;
+        set.status = 413
         return {
           requestId: request.requestId,
           error: {
@@ -133,11 +133,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { contentLength: request.content.length, maxLength: 50000 }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       if (request.fromLanguage === request.toLanguage) {
-        set.status = 400;
+        set.status = 400
         return {
           requestId: request.requestId,
           error: {
@@ -146,7 +146,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { fromLanguage: request.fromLanguage, toLanguage: request.toLanguage }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       // Set appropriate headers for streaming
@@ -157,24 +157,24 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS"
-      };
+      }
 
       // Return streaming response
       return new Stream(async (stream) => {
         try {
           for await (const result of translationService.streamTranslation(request)) {
             // Format as Server-Sent Event
-            const eventData = JSON.stringify(result);
-            stream.send(`data: ${eventData}\n\n`);
+            const eventData = JSON.stringify(result)
+            stream.send(`data: ${eventData}\n\n`)
             
             // Close stream if translation is complete
             if (result.isComplete) {
-              stream.close();
-              break;
+              stream.close()
+              break
             }
           }
         } catch (error) {
-          console.error("Streaming error:", error);
+          console.error("Streaming error:", error)
           
           // Send error as final event
           const errorResult: TranslationError = {
@@ -185,16 +185,16 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
               details: error instanceof Error ? { name: error.name, stack: error.stack } : null
             },
             timestamp: new Date().toISOString()
-          };
+          }
           
-          stream.send(`data: ${JSON.stringify(errorResult)}\n\n`);
-          stream.close();
+          stream.send(`data: ${JSON.stringify(errorResult)}\n\n`)
+          stream.close()
         }
-      });
+      })
 
     } catch (error) {
-      console.error("Translation request error:", error);
-      set.status = 500;
+      console.error("Translation request error:", error)
+      set.status = 500
       
       return {
         requestId: request.requestId || "unknown",
@@ -204,7 +204,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
           details: error instanceof Error ? { name: error.name } : null
         },
         timestamp: new Date().toISOString()
-      } as TranslationError;
+      } as TranslationError
     }
   }, {
     body: translationRequestSchema,
@@ -217,12 +217,12 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
 
   // Batched NDJSON streaming translation endpoint
   .post("/batch", async ({ body, set }) => {
-    const request = body as BatchedTranslationRequest;
+    const request = body as BatchedTranslationRequest
     
     try {
       // Validate request
       if (!request.elements || request.elements.length === 0) {
-        set.status = 400;
+        set.status = 400
         return {
           requestId: request.requestId || "unknown",
           error: {
@@ -231,11 +231,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: null
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       if (request.elements.length > 50) {
-        set.status = 413;
+        set.status = 413
         return {
           requestId: request.requestId,
           error: {
@@ -244,13 +244,13 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { elementCount: request.elements.length, maxElements: 50 }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       // Calculate total content length
-      const totalContentLength = request.elements.reduce((sum, el) => sum + el.text.length, 0);
+      const totalContentLength = request.elements.reduce((sum, el) => sum + el.text.length, 0)
       if (totalContentLength > 100000) {
-        set.status = 413;
+        set.status = 413
         return {
           requestId: request.requestId,
           error: {
@@ -259,11 +259,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { totalContentLength, maxLength: 100000 }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       if (request.fromLanguage === request.toLanguage) {
-        set.status = 400;
+        set.status = 400
         return {
           requestId: request.requestId,
           error: {
@@ -272,7 +272,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { fromLanguage: request.fromLanguage, toLanguage: request.toLanguage }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       // Set appropriate headers for NDJSON streaming
@@ -283,18 +283,18 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS"
-      };
+      }
 
       // Return NDJSON streaming response
       return new Stream(async (stream) => {
         try {
           for await (const ndjsonLine of translationService.streamBatchedTranslation(request)) {
             // Send raw NDJSON line (already includes newline)
-            stream.send(ndjsonLine);
+            stream.send(ndjsonLine)
           }
-          stream.close();
+          stream.close()
         } catch (error) {
-          console.error("Batched streaming error:", error);
+          console.error("Batched streaming error:", error)
           
           // Send error as final NDJSON line
           const errorResult: TranslationError = {
@@ -305,16 +305,16 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
               details: error instanceof Error ? { name: error.name, stack: error.stack } : null
             },
             timestamp: new Date().toISOString()
-          };
+          }
           
-          stream.send(JSON.stringify(errorResult) + '\n');
-          stream.close();
+          stream.send(JSON.stringify(errorResult) + '\n')
+          stream.close()
         }
-      });
+      })
 
     } catch (error) {
-      console.error("Batched translation request error:", error);
-      set.status = 500;
+      console.error("Batched translation request error:", error)
+      set.status = 500
       
       return {
         requestId: request.requestId || "unknown",
@@ -324,7 +324,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
           details: error instanceof Error ? { name: error.name } : null
         },
         timestamp: new Date().toISOString()
-      } as TranslationError;
+      } as TranslationError
     }
   }, {
     body: batchedTranslationRequestSchema,
@@ -337,12 +337,12 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
 
   // Non-streaming translation endpoint (fallback)
   .post("/translate", async ({ body, set }) => {
-    const request = body as TranslationRequest;
+    const request = body as TranslationRequest
     
     try {
       // Validate request (same as streaming endpoint)
       if (!request.content || request.content.trim().length === 0) {
-        set.status = 400;
+        set.status = 400
         return {
           requestId: request.requestId || "unknown",
           error: {
@@ -351,11 +351,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: null
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       if (request.content.length > 50000) {
-        set.status = 413;
+        set.status = 413
         return {
           requestId: request.requestId,
           error: {
@@ -364,11 +364,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { contentLength: request.content.length, maxLength: 50000 }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
 
       if (request.fromLanguage === request.toLanguage) {
-        set.status = 400;
+        set.status = 400
         return {
           requestId: request.requestId,
           error: {
@@ -377,21 +377,21 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: { fromLanguage: request.fromLanguage, toLanguage: request.toLanguage }
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
       
       // Convert streaming to single result
-      let finalResult = null;
+      let finalResult = null
       
       for await (const result of translationService.streamTranslation(request)) {
-        finalResult = result;
+        finalResult = result
         if (result.isComplete) {
-          break;
+          break
         }
       }
       
       if (!finalResult) {
-        set.status = 500;
+        set.status = 500
         return {
           requestId: request.requestId,
           error: {
@@ -400,14 +400,14 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
             details: null
           },
           timestamp: new Date().toISOString()
-        } as TranslationError;
+        } as TranslationError
       }
       
-      return finalResult;
+      return finalResult
       
     } catch (error) {
-      console.error("Translation error:", error);
-      set.status = 500;
+      console.error("Translation error:", error)
+      set.status = 500
       
       return {
         requestId: request.requestId,
@@ -417,7 +417,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
           details: null
         },
         timestamp: new Date().toISOString()
-      } as TranslationError;
+      } as TranslationError
     }
   }, {
     body: translationRequestSchema,
@@ -447,7 +447,7 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
       ],
       supportedPairs: "All combinations except same-language pairs",
       timestamp: new Date().toISOString()
-    };
+    }
   }, {
     detail: {
       summary: "Get supported languages",
@@ -467,11 +467,11 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
       },
       defaultSelection: "automatic_based_on_complexity",
       timestamp: new Date().toISOString()
-    };
+    }
   }, {
     detail: {
       summary: "Get available models",
       description: "Returns available models organized by complexity level",
       tags: ["Translation"]
     }
-  });
+  })

@@ -1,20 +1,20 @@
-import { cors } from "@elysiajs/cors";
-import { swagger } from "@elysiajs/swagger";
-import { Elysia } from "elysia";
-import { authGuard } from '../middleware/auth.middleware.js';
-import { cacheStatsRoute } from "../middleware/cache.js";
-import { statsMiddleware, statsRoute } from "../middleware/logging.js";
-import { articleRoutes } from "../routes/article.routes.js";
-import { authRoutes } from "../routes/auth.routes.js";
-import { translationRoutes } from "../routes/translation.js";
-import { getTestDb } from '@babel-feed/pgdb';
+import { cors } from "@elysiajs/cors"
+import { swagger } from "@elysiajs/swagger"
+import { Elysia } from "elysia"
+import { authGuard } from '../middleware/auth.middleware.js'
+import { cacheStatsRoute } from "../middleware/cache.js"
+import { statsMiddleware, statsRoute } from "../middleware/logging.js"
+import { articleRoutes } from "../routes/article.routes.js"
+import { authRoutes } from "../routes/auth.routes.js"
+import { translationRoutes } from "../routes/translation.js"
+import { getTestDb } from '@babel-feed/pgdb'
 
 /**
  * Test server setup that uses test database
  */
 export function createTestServer() {
   // Set test environment
-  process.env.NODE_ENV = 'test';
+  process.env.NODE_ENV = 'test'
   
   const app = new Elysia()
     // Add CORS support
@@ -76,7 +76,7 @@ export function createTestServer() {
           databaseConfigured: true
         },
         timestamp: new Date().toISOString()
-      };
+      }
     })
 
     // Add authentication routes
@@ -96,11 +96,11 @@ export function createTestServer() {
 
     // Error handling
     .onError(({ code, error, set }) => {
-      console.error(`Test Server Error [${code}]:`, error);
+      console.error(`Test Server Error [${code}]:`, error)
       
       switch (code) {
         case "VALIDATION":
-          set.status = 400;
+          set.status = 400
           return {
             error: {
               code: "VALIDATION_ERROR",
@@ -108,10 +108,10 @@ export function createTestServer() {
               details: error.message
             },
             timestamp: new Date().toISOString()
-          };
+          }
         
         case "NOT_FOUND":
-          set.status = 404;
+          set.status = 404
           return {
             error: {
               code: "NOT_FOUND",
@@ -119,10 +119,10 @@ export function createTestServer() {
               details: null
             },
             timestamp: new Date().toISOString()
-          };
+          }
         
         default:
-          set.status = 500;
+          set.status = 500
           return {
             error: {
               code: "INTERNAL_ERROR",
@@ -130,32 +130,32 @@ export function createTestServer() {
               details: error instanceof Error ? error.message : null
             },
             timestamp: new Date().toISOString()
-          };
+          }
       }
-    });
+    })
 
-  return app;
+  return app
 }
 
 /**
  * Test server instance management
  */
-let testServerInstance: ReturnType<typeof createTestServer> | null = null;
+let testServerInstance: ReturnType<typeof createTestServer> | null = null
 
-export async function startTestServer(port: number = 3010): Promise<{ server: ReturnType<typeof createTestServer>; url: string }> {
+export async function startTestServer(port = 3010): Promise<{ server: ReturnType<typeof createTestServer>; url: string }> {
   if (testServerInstance) {
-    await stopTestServer();
+    await stopTestServer()
   }
 
   // Ensure test database is available
   try {
-    getTestDb();
+    getTestDb()
   } catch (error) {
-    console.error('Test database not available:', error);
-    throw error;
+    console.error('Test database not available:', error)
+    throw error
   }
 
-  testServerInstance = createTestServer();
+  testServerInstance = createTestServer()
   
   await new Promise<void>((resolve, reject) => {
     try {
@@ -163,30 +163,30 @@ export async function startTestServer(port: number = 3010): Promise<{ server: Re
         port,
         hostname: "localhost"
       }, () => {
-        console.log(`🧪 Test server started at http://localhost:${port}`);
-        resolve();
-      });
+        console.log(`🧪 Test server started at http://localhost:${port}`)
+        resolve()
+      })
     } catch (error) {
-      reject(error);
+      reject(error)
     }
-  });
+  })
 
-  const url = `http://localhost:${port}`;
+  const url = `http://localhost:${port}`
   
   // Wait a bit more for server to be ready
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 500))
   
-  return { server: testServerInstance, url };
+  return { server: testServerInstance, url }
 }
 
 export async function stopTestServer(): Promise<void> {
   if (testServerInstance) {
-    testServerInstance.stop();
-    testServerInstance = null;
-    console.log('🧪 Test server stopped');
+    testServerInstance.stop()
+    testServerInstance = null
+    console.log('🧪 Test server stopped')
   }
 }
 
-export function getTestServerUrl(port: number = 3010): string {
-  return `http://localhost:${port}`;
+export function getTestServerUrl(port = 3010): string {
+  return `http://localhost:${port}`
 }

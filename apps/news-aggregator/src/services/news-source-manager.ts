@@ -4,24 +4,24 @@ import {
   newsSources,
   type NewsSource as DbNewsSource,
   type NewNewsSource
-} from '@babel-feed/pgdb';
-import { asc, desc, eq, inArray } from 'drizzle-orm';
-import { NewsSource, AggregatorError, ValidationError } from '../modules/common/types';
-import { logger } from '../modules/common/logger';
+} from '@babel-feed/pgdb'
+import { asc, desc, eq, inArray } from 'drizzle-orm'
+import { NewsSource, AggregatorError, ValidationError } from '../modules/common/types'
+import { logger } from '../modules/common/logger'
 
 export class NewsSourceManager {
-  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase();
+  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()
 
   async initialize(): Promise<void> {
-    logger.info('Initializing database-based source manager...');
+    logger.info('Initializing database-based source manager...')
     
     // Seed initial sources if none exist
-    const existingSources = await this.getAllSources();
+    const existingSources = await this.getAllSources()
     if (existingSources.length === 0) {
-      await this.seedInitialSources();
+      await this.seedInitialSources()
     }
     
-    logger.info(`Database source manager initialized with ${existingSources.length} sources`);
+    logger.info(`Database source manager initialized with ${existingSources.length} sources`)
   }
 
   async getAllSources(): Promise<NewsSource[]> {
@@ -29,12 +29,12 @@ export class NewsSourceManager {
       const sources = await this.db
         .select()
         .from(newsSources)
-        .orderBy(asc(newsSources.priority), asc(newsSources.name));
+        .orderBy(asc(newsSources.priority), asc(newsSources.name))
 
-      return sources.map(this.mapDbSourceToNewsSource);
+      return sources.map(this.mapDbSourceToNewsSource)
     } catch (error) {
-      logger.error('Failed to fetch all sources:', error);
-      throw new AggregatorError('Failed to fetch sources from database', 'DATABASE_ERROR');
+      logger.error('Failed to fetch all sources:', error)
+      throw new AggregatorError('Failed to fetch sources from database', 'DATABASE_ERROR')
     }
   }
 
@@ -44,12 +44,12 @@ export class NewsSourceManager {
         .select()
         .from(newsSources)
         .where(eq(newsSources.enabled, true))
-        .orderBy(desc(newsSources.priority), asc(newsSources.name));
+        .orderBy(desc(newsSources.priority), asc(newsSources.name))
 
-      return sources.map(this.mapDbSourceToNewsSource);
+      return sources.map(this.mapDbSourceToNewsSource)
     } catch (error) {
-      logger.error('Failed to fetch enabled sources:', error);
-      throw new AggregatorError('Failed to fetch enabled sources from database', 'DATABASE_ERROR');
+      logger.error('Failed to fetch enabled sources:', error)
+      throw new AggregatorError('Failed to fetch enabled sources from database', 'DATABASE_ERROR')
     }
   }
 
@@ -59,12 +59,12 @@ export class NewsSourceManager {
         .select()
         .from(newsSources)
         .where(eq(newsSources.id, id))
-        .limit(1);
+        .limit(1)
 
-      return sources.length > 0 ? this.mapDbSourceToNewsSource(sources[0]) : null;
+      return sources.length > 0 ? this.mapDbSourceToNewsSource(sources[0]) : null
     } catch (error) {
-      logger.error(`Failed to fetch source ${id}:`, error);
-      throw new AggregatorError('Failed to fetch source from database', 'DATABASE_ERROR');
+      logger.error(`Failed to fetch source ${id}:`, error)
+      throw new AggregatorError('Failed to fetch source from database', 'DATABASE_ERROR')
     }
   }
 
@@ -74,12 +74,12 @@ export class NewsSourceManager {
         .select()
         .from(newsSources)
         .where(eq(newsSources.slug, slug))
-        .limit(1);
+        .limit(1)
 
-      return sources.length > 0 ? this.mapDbSourceToNewsSource(sources[0]) : null;
+      return sources.length > 0 ? this.mapDbSourceToNewsSource(sources[0]) : null
     } catch (error) {
-      logger.error(`Failed to fetch source by slug ${slug}:`, error);
-      throw new AggregatorError('Failed to fetch source from database', 'DATABASE_ERROR');
+      logger.error(`Failed to fetch source by slug ${slug}:`, error)
+      throw new AggregatorError('Failed to fetch source from database', 'DATABASE_ERROR')
     }
   }
 
@@ -89,12 +89,12 @@ export class NewsSourceManager {
         .select()
         .from(newsSources)
         .where(eq(newsSources.language, language))
-        .orderBy(desc(newsSources.priority), asc(newsSources.name));
+        .orderBy(desc(newsSources.priority), asc(newsSources.name))
 
-      return sources.map(this.mapDbSourceToNewsSource);
+      return sources.map(this.mapDbSourceToNewsSource)
     } catch (error) {
-      logger.error(`Failed to fetch sources for language ${language}:`, error);
-      throw new AggregatorError('Failed to fetch sources by language from database', 'DATABASE_ERROR');
+      logger.error(`Failed to fetch sources for language ${language}:`, error)
+      throw new AggregatorError('Failed to fetch sources by language from database', 'DATABASE_ERROR')
     }
   }
 
@@ -104,18 +104,18 @@ export class NewsSourceManager {
         .select()
         .from(newsSources)
         .where(eq(newsSources.category, category))
-        .orderBy(desc(newsSources.priority), asc(newsSources.name));
+        .orderBy(desc(newsSources.priority), asc(newsSources.name))
 
-      return sources.map(this.mapDbSourceToNewsSource);
+      return sources.map(this.mapDbSourceToNewsSource)
     } catch (error) {
-      logger.error(`Failed to fetch sources for category ${category}:`, error);
-      throw new AggregatorError('Failed to fetch sources by category from database', 'DATABASE_ERROR');
+      logger.error(`Failed to fetch sources for category ${category}:`, error)
+      throw new AggregatorError('Failed to fetch sources by category from database', 'DATABASE_ERROR')
     }
   }
 
   async createSource(sourceData: Omit<NewsSource, 'id' | 'createdAt' | 'updatedAt' | 'errorCount' | 'successCount'>): Promise<NewsSource> {
     try {
-      this.validateSourceData(sourceData);
+      this.validateSourceData(sourceData)
 
       const newSource: NewNewsSource = {
         name: sourceData.name,
@@ -133,28 +133,28 @@ export class NewsSourceManager {
         lastFetched: sourceData.lastFetched,
         // lastSuccess: sourceData.lastSuccess,
         lastError: sourceData.lastError,
-      };
+      }
 
       const [created] = await this.db
         .insert(newsSources)
         .values(newSource)
-        .returning();
+        .returning()
 
-      logger.info(`Created new source: ${created.name} (${created.id})`);
-      return this.mapDbSourceToNewsSource(created);
+      logger.info(`Created new source: ${created.name} (${created.id})`)
+      return this.mapDbSourceToNewsSource(created)
     } catch (error) {
-      logger.error('Failed to create source:', error);
+      logger.error('Failed to create source:', error)
       if (error instanceof ValidationError) {
-        throw error;
+        throw error
       }
-      throw new AggregatorError('Failed to create source in database', 'DATABASE_ERROR');
+      throw new AggregatorError('Failed to create source in database', 'DATABASE_ERROR')
     }
   }
 
   async updateSource(id: string, updates: Partial<Omit<NewsSource, 'id' | 'createdAt' | 'updatedAt'>>): Promise<NewsSource> {
     try {
       if (updates.slug || updates.name) {
-        this.validateSourceData(updates as any);
+        this.validateSourceData(updates as any)
       }
 
       const updateData: Partial<NewNewsSource> = {
@@ -175,26 +175,26 @@ export class NewsSourceManager {
         ...(updates.lastError !== undefined && { lastError: updates.lastError }),
         ...(updates.errorCount !== undefined && { errorCount: updates.errorCount }),
         ...(updates.successCount !== undefined && { successCount: updates.successCount }),
-      };
+      }
 
       const [updated] = await this.db
         .update(newsSources)
         .set(updateData)
         .where(eq(newsSources.id, id))
-        .returning();
+        .returning()
 
       if (!updated) {
-        throw new AggregatorError(`Source with id ${id} not found`, 'NOT_FOUND', 404);
+        throw new AggregatorError(`Source with id ${id} not found`, 'NOT_FOUND', 404)
       }
 
-      logger.info(`Updated source: ${updated.name} (${id})`);
-      return this.mapDbSourceToNewsSource(updated);
+      logger.info(`Updated source: ${updated.name} (${id})`)
+      return this.mapDbSourceToNewsSource(updated)
     } catch (error) {
-      logger.error(`Failed to update source ${id}:`, error);
+      logger.error(`Failed to update source ${id}:`, error)
       if (error instanceof AggregatorError || error instanceof ValidationError) {
-        throw error;
+        throw error
       }
-      throw new AggregatorError('Failed to update source in database', 'DATABASE_ERROR');
+      throw new AggregatorError('Failed to update source in database', 'DATABASE_ERROR')
     }
   }
 
@@ -203,128 +203,128 @@ export class NewsSourceManager {
       const deleted = await this.db
         .delete(newsSources)
         .where(eq(newsSources.id, id))
-        .returning({ name: newsSources.name });
+        .returning({ name: newsSources.name })
 
       if (deleted.length === 0) {
-        throw new AggregatorError(`Source with id ${id} not found`, 'NOT_FOUND', 404);
+        throw new AggregatorError(`Source with id ${id} not found`, 'NOT_FOUND', 404)
       }
 
-      logger.info(`Deleted source: ${deleted[0].name} (${id})`);
+      logger.info(`Deleted source: ${deleted[0].name} (${id})`)
     } catch (error) {
-      logger.error(`Failed to delete source ${id}:`, error);
+      logger.error(`Failed to delete source ${id}:`, error)
       if (error instanceof AggregatorError) {
-        throw error;
+        throw error
       }
-      throw new AggregatorError('Failed to delete source from database', 'DATABASE_ERROR');
+      throw new AggregatorError('Failed to delete source from database', 'DATABASE_ERROR')
     }
   }
 
   async enableSource(id: string): Promise<NewsSource> {
-    return this.updateSource(id, { enabled: true });
+    return this.updateSource(id, { enabled: true })
   }
 
   async disableSource(id: string): Promise<NewsSource> {
-    return this.updateSource(id, { enabled: false });
+    return this.updateSource(id, { enabled: false })
   }
 
   async updateSourceFetchStatus(id: string, success: boolean, error?: string): Promise<void> {
     try {
-      const source = await this.getSourceById(id);
+      const source = await this.getSourceById(id)
       if (!source) {
-        logger.warn(`Attempted to update status for unknown source: ${id}`);
-        return;
+        logger.warn(`Attempted to update status for unknown source: ${id}`)
+        return
       }
 
       const updates: Partial<NewsSource> = {
         lastFetched: new Date(),
-      };
+      }
 
       if (success) {
         // updates.lastSuccess = new Date();
-        updates.lastError = undefined;
-        updates.successCount = source.successCount + 1;
+        updates.lastError = undefined
+        updates.successCount = source.successCount + 1
         
         // Improve reliability on success
-        updates.reliability = Math.min(100, source.reliability + 1);
+        updates.reliability = Math.min(100, source.reliability + 1)
       } else {
-        updates.lastError = error;
-        updates.errorCount = source.errorCount + 1;
+        updates.lastError = error
+        updates.errorCount = source.errorCount + 1
         
         // Decrease reliability on failure
-        updates.reliability = Math.max(0, source.reliability - 5);
+        updates.reliability = Math.max(0, source.reliability - 5)
       }
 
-      await this.updateSource(id, updates);
+      await this.updateSource(id, updates)
     } catch (error) {
-      logger.error(`Failed to update source fetch status for ${id}:`, error);
+      logger.error(`Failed to update source fetch status for ${id}:`, error)
       // Don't throw here as this shouldn't break the main flow
     }
   }
 
   async bulkEnableSources(ids: string[]): Promise<void> {
     try {
-      if (ids.length === 0) return;
+      if (ids.length === 0) return
 
       await this.db
         .update(newsSources)
         .set({ enabled: true })
-        .where(inArray(newsSources.id, ids));
+        .where(inArray(newsSources.id, ids))
 
-      logger.info(`Bulk enabled ${ids.length} sources`);
+      logger.info(`Bulk enabled ${ids.length} sources`)
     } catch (error) {
-      logger.error('Failed to bulk enable sources:', error);
-      throw new AggregatorError('Failed to bulk enable sources', 'DATABASE_ERROR');
+      logger.error('Failed to bulk enable sources:', error)
+      throw new AggregatorError('Failed to bulk enable sources', 'DATABASE_ERROR')
     }
   }
 
   async bulkDisableSources(ids: string[]): Promise<void> {
     try {
-      if (ids.length === 0) return;
+      if (ids.length === 0) return
 
       await this.db
         .update(newsSources)
         .set({ enabled: false })
-        .where(inArray(newsSources.id, ids));
+        .where(inArray(newsSources.id, ids))
 
-      logger.info(`Bulk disabled ${ids.length} sources`);
+      logger.info(`Bulk disabled ${ids.length} sources`)
     } catch (error) {
-      logger.error('Failed to bulk disable sources:', error);
-      throw new AggregatorError('Failed to bulk disable sources', 'DATABASE_ERROR');
+      logger.error('Failed to bulk disable sources:', error)
+      throw new AggregatorError('Failed to bulk disable sources', 'DATABASE_ERROR')
     }
   }
 
   private validateSourceData(data: Partial<NewsSource>): void {
     if (data.slug && !/^[a-z0-9-]+$/.test(data.slug)) {
-      throw new ValidationError('Slug must contain only lowercase letters, numbers, and hyphens', 'slug');
+      throw new ValidationError('Slug must contain only lowercase letters, numbers, and hyphens', 'slug')
     }
 
     if (data.url && !this.isValidUrl(data.url)) {
-      throw new ValidationError('Invalid URL format', 'url');
+      throw new ValidationError('Invalid URL format', 'url')
     }
 
     if (data.sourceType && !['rss', 'api', 'scraper'].includes(data.sourceType)) {
-      throw new ValidationError('Source type must be rss, api, or scraper', 'sourceType');
+      throw new ValidationError('Source type must be rss, api, or scraper', 'sourceType')
     }
 
     if (data.priority !== undefined && (data.priority < 1 || data.priority > 10)) {
-      throw new ValidationError('Priority must be between 1 and 10', 'priority');
+      throw new ValidationError('Priority must be between 1 and 10', 'priority')
     }
 
     if (data.reliability !== undefined && (data.reliability < 0 || data.reliability > 100)) {
-      throw new ValidationError('Reliability must be between 0 and 100', 'reliability');
+      throw new ValidationError('Reliability must be between 0 and 100', 'reliability')
     }
 
     if (data.pollingInterval && data.pollingInterval < 60000) {
-      throw new ValidationError('Polling interval must be at least 60 seconds', 'pollingInterval');
+      throw new ValidationError('Polling interval must be at least 60 seconds', 'pollingInterval')
     }
   }
 
   private isValidUrl(url: string): boolean {
     try {
-      new URL(url);
-      return true;
+      new URL(url)
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -350,7 +350,7 @@ export class NewsSourceManager {
       successCount: dbSource.successCount,
       createdAt: dbSource.createdAt,
       updatedAt: dbSource.updatedAt,
-    };
+    }
   }
 
   private async seedInitialSources(): Promise<void> {
@@ -439,12 +439,12 @@ export class NewsSourceManager {
         priority: 7,
         metadata: { region: 'china', credibility: 'medium' }
       }
-    ];
+    ]
 
     for (const sourceData of initialSources) {
-      await this.createSource(sourceData);
+      await this.createSource(sourceData)
     }
 
-    logger.info(`Seeded ${initialSources.length} initial sources`);
+    logger.info(`Seeded ${initialSources.length} initial sources`)
   }
 }

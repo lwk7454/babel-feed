@@ -1,5 +1,5 @@
-const { defineConfig } = require('drizzle-kit');
-const path = require('path');
+const { defineConfig } = require('drizzle-kit')
+const path = require('path')
 
 module.exports = defineConfig({
   dialect: 'postgresql',
@@ -16,4 +16,4 @@ module.exports = defineConfig({
   migrations: { prefix: 'timestamp' },
   verbose: process.env.NODE_ENV !== 'production',
   strict: true
-});
+})

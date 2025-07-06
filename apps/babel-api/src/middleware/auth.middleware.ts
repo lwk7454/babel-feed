@@ -1,5 +1,5 @@
-import { Elysia } from 'elysia';
-import { userService } from '../services/user.service.js';
+import { Elysia } from 'elysia'
+import { userService } from '../services/user.service.js'
 
 /**
  * Lightweight user context - safe to use globally
@@ -7,21 +7,21 @@ import { userService } from '../services/user.service.js';
  */
 export const userContext = new Elysia({ name: 'userContext' })
   .derive(({ headers }) => {
-    const authorization = headers.authorization;
+    const authorization = headers.authorization
     const token = authorization?.startsWith('Bearer ') 
       ? authorization.substring(7) 
-      : null;
+      : null
     
     return { 
       authToken: token,
       // Lazy user loading - only validate when actually needed
       async getUser() {
-        if (!token) return null;
-        return await userService.validateAccessToken(token);
+        if (!token) return null
+        return await userService.validateAccessToken(token)
       }
-    };
+    }
   })
-  .as('scoped');
+  .as('scoped')
 
 /**
  * Factory function to create auth guard with custom user service
@@ -29,34 +29,34 @@ export const userContext = new Elysia({ name: 'userContext' })
 export function createAuthGuard(customUserService?: any) {
   return new Elysia({ name: 'authGuard' })
     .derive(({ headers }) => {
-      const authorization = headers.authorization;
+      const authorization = headers.authorization
       const token = authorization?.startsWith('Bearer ') 
         ? authorization.substring(7) 
-        : null;
+        : null
       
       return { 
         authToken: token,
         async getUser() {
-          if (!token) return null;
-          const service = customUserService || userService;
-          return await service.validateAccessToken(token);
+          if (!token) return null
+          const service = customUserService || userService
+          return await service.validateAccessToken(token)
         }
-      };
+      }
     })
     .derive(async ({ getUser }) => {
-      const user = await getUser();
-      return { user };
+      const user = await getUser()
+      return { user }
     })
     .macro(({ onBeforeHandle }) => ({
       /**
        * Require authentication for this route
        */
-      requireAuth(enabled: boolean = true) {
-        if (!enabled) return;
+      requireAuth(enabled = true) {
+        if (!enabled) return
         
         onBeforeHandle(({ user, set }) => {
           if (!user) {
-            set.status = 401;
+            set.status = 401
             return {
               error: {
                 code: 'UNAUTHORIZED',
@@ -64,22 +64,22 @@ export function createAuthGuard(customUserService?: any) {
                 details: null
               },
               timestamp: new Date().toISOString()
-            };
+            }
           }
           // Don't return anything to avoid overriding the actual response
-          return;
-        });
+          return
+        })
       },
       
       /**
        * Require verified email for this route
        */
-      requireVerifiedEmail(enabled: boolean = true) {
-        if (!enabled) return;
+      requireVerifiedEmail(enabled = true) {
+        if (!enabled) return
         
         onBeforeHandle(({ user, set }) => {
           if (!user) {
-            set.status = 401;
+            set.status = 401
             return {
               error: {
                 code: 'UNAUTHORIZED',
@@ -87,11 +87,11 @@ export function createAuthGuard(customUserService?: any) {
                 details: null
               },
               timestamp: new Date().toISOString()
-            };
+            }
           }
           
           if (!user.emailVerified) {
-            set.status = 403;
+            set.status = 403
             return {
               error: {
                 code: 'EMAIL_NOT_VERIFIED',
@@ -99,23 +99,23 @@ export function createAuthGuard(customUserService?: any) {
                 details: 'Please verify your email address to access this resource'
               },
               timestamp: new Date().toISOString()
-            };
+            }
           }
           // Don't return anything to avoid overriding the actual response
-          return;
-        });
+          return
+        })
       }
     }))
-    .as('scoped');
+    .as('scoped')
 }
 
 /**
  * Auth guards - apply selectively to routes that need authentication
  */
-export const authGuard = createAuthGuard();
+export const authGuard = createAuthGuard()
 
 /**
  * Backward compatibility - use authGuard for existing code
  * @deprecated Use authGuard instead for better flexibility
  */
-export const authMiddleware = authGuard;
+export const authMiddleware = authGuard

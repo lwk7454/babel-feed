@@ -1,14 +1,14 @@
-import { logger } from '../common/logger';
+import { logger } from '../common/logger'
 
 export class ProcessorService {
-  private isRunning = false;
+  private isRunning = false
 
   async initialize(): Promise<void> {
-    logger.info('Processor service initialized');
+    logger.info('Processor service initialized')
   }
 
   async processArticles(articles: any[]): Promise<any[]> {
-    logger.info('Processing articles (placeholder):', articles.length);
+    logger.info('Processing articles (placeholder):', articles.length)
     
     // TODO: Implement article processing pipeline
     // - Content extraction and normalization
@@ -18,31 +18,31 @@ export class ProcessorService {
     // - Content sanitization
     // - Image processing and optimization
     
-    return articles; // Placeholder return
+    return articles // Placeholder return
   }
 
   async extractContent(_rawContent: string): Promise<any> {
     // Placeholder implementation
-    logger.info('Extracting content (placeholder)');
-    throw new Error('Not implemented - needs content extraction logic');
+    logger.info('Extracting content (placeholder)')
+    throw new Error('Not implemented - needs content extraction logic')
   }
 
   async validateContent(_content: any): Promise<boolean> {
     // Placeholder implementation
-    logger.info('Validating content (placeholder)');
-    throw new Error('Not implemented - needs content validation logic');
+    logger.info('Validating content (placeholder)')
+    throw new Error('Not implemented - needs content validation logic')
   }
 
   async normalizeContent(_content: any): Promise<any> {
     // Placeholder implementation
-    logger.info('Normalizing content (placeholder)');
-    throw new Error('Not implemented - needs content normalization logic');
+    logger.info('Normalizing content (placeholder)')
+    throw new Error('Not implemented - needs content normalization logic')
   }
 
   async enrichContent(_content: any): Promise<any> {
     // Placeholder implementation
-    logger.info('Enriching content (placeholder)');
-    throw new Error('Not implemented - needs content enrichment logic');
+    logger.info('Enriching content (placeholder)')
+    throw new Error('Not implemented - needs content enrichment logic')
   }
 
   // TODO: Advanced processing features
@@ -54,6 +54,6 @@ export class ProcessorService {
   // - Factual accuracy indicators
 
   getStatus(): { running: boolean } {
-    return { running: this.isRunning };
+    return { running: this.isRunning }
   }
 }

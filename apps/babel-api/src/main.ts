@@ -1,2 +1,2 @@
 // Entry point for the application
-import './index.js';
+import './index.js'

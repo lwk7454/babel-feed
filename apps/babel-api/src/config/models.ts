@@ -1,4 +1,4 @@
-import { ComplexityLevel, ModelConfig } from "../types/translation.js";
+import { ComplexityLevel, ModelConfig } from "../types/translation.js"
 
 // Model configuration based on complexity levels - PAID MODELS WITH LOW LATENCY
 export const MODEL_CONFIGS: Record<ComplexityLevel, ModelConfig[]> = {
@@ -130,41 +130,41 @@ export const MODEL_CONFIGS: Record<ComplexityLevel, ModelConfig[]> = {
       complexityTypes: ["technical"]
     }
   ]
-};
+}
 
 // Get optimal model for complexity level with fallback support
 export function selectModelForComplexity(complexity: ComplexityLevel): ModelConfig {
-  const availableModels = MODEL_CONFIGS[complexity];
+  const availableModels = MODEL_CONFIGS[complexity]
   if (!availableModels || availableModels.length === 0) {
     // Fallback to simple models if no specific models available
-    return MODEL_CONFIGS.simple[0];
+    return MODEL_CONFIGS.simple[0]
   }
   
   // Select first available model (could be enhanced with load balancing)
-  return availableModels[0];
+  return availableModels[0]
 }
 
 // Get fallback model for when primary model fails
 export function getFallbackModel(originalComplexity: ComplexityLevel): ModelConfig {
   // Fallback hierarchy: simple -> contextual -> creative -> technical
-  const fallbackOrder: ComplexityLevel[] = ["simple", "contextual", "creative", "technical"];
+  const fallbackOrder: ComplexityLevel[] = ["simple", "contextual", "creative", "technical"]
   
   for (const complexity of fallbackOrder) {
     if (complexity !== originalComplexity) {
-      const models = MODEL_CONFIGS[complexity];
+      const models = MODEL_CONFIGS[complexity]
       if (models && models.length > 0) {
-        return models[0];
+        return models[0]
       }
     }
   }
   
   // Ultimate fallback - return the most reliable simple model
-  return MODEL_CONFIGS.simple[0];
+  return MODEL_CONFIGS.simple[0]
 }
 
 // Get all free models for load balancing/rotation
 export function getAllFreeModels(): ModelConfig[] {
-  return Object.values(MODEL_CONFIGS).flat();
+  return Object.values(MODEL_CONFIGS).flat()
 }
 
 // Get all supported language pairs
@@ -181,38 +181,38 @@ export const SUPPORTED_LANGUAGES = [
   "ru", // Russian
   "ar", // Arabic
   "hi", // Hindi
-] as const;
+] as const
 
 export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
 
 // Validate language pair support (case-insensitive)
 export function isLanguagePairSupported(from: string, to: string): boolean {
   // Normalize language codes to handle case variations
-  const normalizedFrom = normalizeLanguageCode(from);
-  const normalizedTo = normalizeLanguageCode(to);
+  const normalizedFrom = normalizeLanguageCode(from)
+  const normalizedTo = normalizeLanguageCode(to)
   
   return SUPPORTED_LANGUAGES.includes(normalizedFrom as SupportedLanguage) &&
          SUPPORTED_LANGUAGES.includes(normalizedTo as SupportedLanguage) &&
-         normalizedFrom !== normalizedTo;
+         normalizedFrom !== normalizedTo
 }
 
 // Normalize language codes to match our supported format
 function normalizeLanguageCode(languageCode: string): string {
-  const normalized = languageCode.toLowerCase();
+  const normalized = languageCode.toLowerCase()
   
   // Handle common variations
   switch (normalized) {
     case 'zh-cn':
     case 'zh_cn':
     case 'zh-hans':
-      return 'zh-CN';
+      return 'zh-CN'
     case 'zh-tw':
     case 'zh_tw':
     case 'zh-hant':
-      return 'zh-TW';
+      return 'zh-TW'
     default:
       // For other languages, just lowercase should work
-      return normalized;
+      return normalized
   }
 }
 
@@ -228,4 +228,4 @@ export const CONFIG = {
   ENABLE_CACHING: process.env.ENABLE_CACHING === "true",
   ENABLE_STREAMING: process.env.ENABLE_STREAMING !== "false", // default true
   ENABLE_QUALITY_ASSESSMENT: process.env.ENABLE_QUALITY_ASSESSMENT === "true",
-} as const;
+} as const

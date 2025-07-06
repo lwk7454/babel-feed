@@ -1,46 +1,46 @@
-import { Elysia } from "elysia";
+import { Elysia } from "elysia"
 
 // Simple in-memory rate limiter (for development)
 // In production, you'd want to use Redis or a proper rate limiting service
 class InMemoryRateLimiter {
-  private requests: Map<string, { count: number; resetTime: number }> = new Map();
-  public maxRequests: number;
-  private windowMs: number;
+  private requests: Map<string, { count: number; resetTime: number }> = new Map()
+  public maxRequests: number
+  private windowMs: number
 
-  constructor(maxRequests: number = 1000, windowMs: number = 86400000) { // 24 hours
-    this.maxRequests = maxRequests;
-    this.windowMs = windowMs;
+  constructor(maxRequests = 1000, windowMs = 86400000) { // 24 hours
+    this.maxRequests = maxRequests
+    this.windowMs = windowMs
     
     // Clean up expired entries every hour
-    setInterval(() => this.cleanup(), 3600000);
+    setInterval(() => this.cleanup(), 3600000)
   }
 
   private cleanup() {
-    const now = Date.now();
+    const now = Date.now()
     for (const [key, data] of this.requests.entries()) {
       if (now > data.resetTime) {
-        this.requests.delete(key);
+        this.requests.delete(key)
       }
     }
   }
 
   isAllowed(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
-    const now = Date.now();
-    const data = this.requests.get(identifier);
+    const now = Date.now()
+    const data = this.requests.get(identifier)
 
     if (!data || now > data.resetTime) {
       // First request or window expired
-      const resetTime = now + this.windowMs;
-      this.requests.set(identifier, { count: 1, resetTime });
-      return { allowed: true, remaining: this.maxRequests - 1, resetTime };
+      const resetTime = now + this.windowMs
+      this.requests.set(identifier, { count: 1, resetTime })
+      return { allowed: true, remaining: this.maxRequests - 1, resetTime }
     }
 
     if (data.count >= this.maxRequests) {
-      return { allowed: false, remaining: 0, resetTime: data.resetTime };
+      return { allowed: false, remaining: 0, resetTime: data.resetTime }
     }
 
-    data.count++;
-    return { allowed: true, remaining: this.maxRequests - data.count, resetTime: data.resetTime };
+    data.count++
+    return { allowed: true, remaining: this.maxRequests - data.count, resetTime: data.resetTime }
   }
 }
 
@@ -48,7 +48,7 @@ class InMemoryRateLimiter {
 const rateLimiter = new InMemoryRateLimiter(
   parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "1000"),
   parseInt(process.env.RATE_LIMIT_WINDOW_MS || "86400000")
-);
+)
 
 // Rate limiting middleware  
 export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
@@ -61,28 +61,28 @@ export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
         "X-RateLimit-Limit": "1000",
         "X-RateLimit-Remaining": "999", 
         "X-RateLimit-Reset": Math.ceil(Date.now() / 1000 + 86400).toString(),
-      });
-      return;
+      })
+      return
     }
 
     // Get client identifier (IP address or API key)
     const clientIp = headers["x-forwarded-for"] || 
                     headers["x-real-ip"] || 
-                    "127.0.0.1";
+                    "127.0.0.1"
     
-    const identifier = Array.isArray(clientIp) ? clientIp[0] : clientIp;
+    const identifier = Array.isArray(clientIp) ? clientIp[0] : clientIp
     
-    const result = rateLimiter.isAllowed(identifier);
+    const result = rateLimiter.isAllowed(identifier)
     
     // Always add rate limit headers
     Object.assign(set.headers, {
       "X-RateLimit-Limit": rateLimiter.maxRequests.toString(),
       "X-RateLimit-Remaining": result.remaining.toString(),
       "X-RateLimit-Reset": Math.ceil(result.resetTime / 1000).toString(),
-    });
+    })
 
     if (!result.allowed) {
-      set.status = 429;
+      set.status = 429
       return {
         error: {
           code: "RATE_LIMIT_EXCEEDED",
@@ -94,24 +94,24 @@ export const rateLimitMiddleware = new Elysia({ name: "rateLimit" })
           }
         },
         timestamp: new Date().toISOString()
-      };
+      }
     }
     // Don't return anything to avoid overriding the actual response
-    return;
+    return
   })
-  .as('scoped');
+  .as('scoped')
 
 // Content length validation middleware
 export const contentValidationMiddleware = new Elysia({ name: "contentValidation" })
   .onBeforeHandle(({ set, headers }) => {
-    const contentLength = headers["content-length"];
+    const contentLength = headers["content-length"]
     
     if (contentLength) {
-      const length = parseInt(contentLength);
-      const maxLength = 100000; // 100KB max request size
+      const length = parseInt(contentLength)
+      const maxLength = 100000 // 100KB max request size
       
       if (length > maxLength) {
-        set.status = 413;
+        set.status = 413
         return {
           error: {
             code: "CONTENT_TOO_LARGE",
@@ -119,13 +119,13 @@ export const contentValidationMiddleware = new Elysia({ name: "contentValidation
             details: { contentLength: length, maxLength }
           },
           timestamp: new Date().toISOString()
-        };
+        }
       }
     }
     // Don't return anything to avoid overriding the actual response
-    return;
+    return
   })
-  .as('scoped');
+  .as('scoped')
 
 // Security headers middleware
 export const securityMiddleware = new Elysia({ name: "security" })
@@ -136,6 +136,6 @@ export const securityMiddleware = new Elysia({ name: "security" })
       "X-XSS-Protection": "1; mode=block",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Content-Security-Policy": "default-src 'self'",
-    });
+    })
   })
-  .as('scoped');
+  .as('scoped')

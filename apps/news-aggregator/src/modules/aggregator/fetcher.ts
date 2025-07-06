@@ -1,25 +1,25 @@
-import { logger } from '../common/logger';
+import { logger } from '../common/logger'
 
 export class FetcherService {
   async initialize(): Promise<void> {
-    logger.info('Fetcher service initialized');
+    logger.info('Fetcher service initialized')
   }
 
   async fetchFromAllSources(): Promise<any> {
-    logger.info('Fetching from all sources');
+    logger.info('Fetching from all sources')
     // TODO: Implement independent fetching logic
     return {
       processed: 0,
       articles: [],
       errors: 0,
       skipped: 0
-    };
+    }
   }
 
   async fetchFromSource(sourceId: string): Promise<any> {
-    logger.info('Fetching from source:', sourceId);
+    logger.info('Fetching from source:', sourceId)
     // TODO: Implement single source fetching
-    throw new Error('Not implemented - needs single source fetching');
+    throw new Error('Not implemented - needs single source fetching')
   }
 
   // TODO: Enhanced fetching capabilities
@@ -32,25 +32,25 @@ export class FetcherService {
 
   async fetchRSS(url: string): Promise<any> {
     // Placeholder implementation
-    logger.info('Fetching RSS (placeholder):', url);
-    throw new Error('Not implemented - needs RSS fetching logic');
+    logger.info('Fetching RSS (placeholder):', url)
+    throw new Error('Not implemented - needs RSS fetching logic')
   }
 
   async fetchHTML(url: string): Promise<any> {
     // Placeholder implementation
-    logger.info('Fetching HTML (placeholder):', url);
-    throw new Error('Not implemented - needs HTML content extraction');
+    logger.info('Fetching HTML (placeholder):', url)
+    throw new Error('Not implemented - needs HTML content extraction')
   }
 
   async fetchJSON(url: string): Promise<any> {
     // Placeholder implementation
-    logger.info('Fetching JSON (placeholder):', url);
-    throw new Error('Not implemented - needs JSON API fetching');
+    logger.info('Fetching JSON (placeholder):', url)
+    throw new Error('Not implemented - needs JSON API fetching')
   }
 
   // Legacy method will be removed after full migration
   getRssProcessor(): any {
-    logger.warn('Using legacy getRssProcessor - should be replaced with module methods');
-    return null;
+    logger.warn('Using legacy getRssProcessor - should be replaced with module methods')
+    return null
   }
 }

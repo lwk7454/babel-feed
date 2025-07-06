@@ -1,31 +1,31 @@
-import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
-import { createAuthGuard } from '../middleware/auth.middleware';
-import { UserService } from '../services/user.service';
+import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { eq } from 'drizzle-orm'
+import { Elysia, t } from 'elysia'
+import { createAuthGuard } from '../middleware/auth.middleware'
+import { UserService } from '../services/user.service'
 
 describe('User Verification E2E Tests', () => {
-  let app: any;
-  let testUserService: UserService;
+  let app: any
+  let testUserService: UserService
 
   beforeAll(async () => {
-    await setupTestDatabase();
-  });
+    await setupTestDatabase()
+  })
 
   afterAll(async () => {
-    await cleanupTestDatabase();
-  });
+    await cleanupTestDatabase()
+  })
 
   afterEach(async () => {
-    await clearTestData();
-  });
+    await clearTestData()
+  })
 
   beforeEach(() => {
-    testUserService = new UserService(getTestDb());
+    testUserService = new UserService(getTestDb())
     
     // Create auth guard with test user service
-    const testAuthGuard = createAuthGuard(testUserService);
+    const testAuthGuard = createAuthGuard(testUserService)
     
     // Create test app with manually defined auth routes using test user service
     // This ensures the auth routes use the test database instead of the production one
@@ -36,8 +36,8 @@ describe('User Verification E2E Tests', () => {
           .post('/guest', 
             async ({ body }) => {
               try {
-                const deviceFingerprint = (body as any).deviceFingerprint;
-                const user = await testUserService.createGuestUser(deviceFingerprint);
+                const deviceFingerprint = (body as any).deviceFingerprint
+                const user = await testUserService.createGuestUser(deviceFingerprint)
                 
                 return {
                   success: true,
@@ -47,9 +47,9 @@ describe('User Verification E2E Tests', () => {
                     createdAt: user.createdAt
                   },
                   message: 'Guest profile created successfully'
-                };
+                }
               } catch (error) {
-                throw new Error('Failed to create guest profile');
+                throw new Error('Failed to create guest profile')
               }
             },
             {
@@ -62,8 +62,8 @@ describe('User Verification E2E Tests', () => {
           .post('/start-verification',
             async ({ body }) => {
               try {
-                const { guestId, email } = body as any;
-                const result = await testUserService.startVerification(guestId, email);
+                const { guestId, email } = body as any
+                const result = await testUserService.startVerification(guestId, email)
                 
                 return {
                   success: true,
@@ -76,14 +76,14 @@ describe('User Verification E2E Tests', () => {
                   message: result.isExistingUser 
                     ? 'Verification code sent to your email address.'
                     : 'Account created successfully. Please check your email for verification.'
-                };
+                }
               } catch (error) {
                 if (error instanceof Error) {
                   if (error.message === 'Guest user not found') {
-                    throw new Error('Invalid guest user');
+                    throw new Error('Invalid guest user')
                   }
                 }
-                throw new Error('Failed to start verification');
+                throw new Error('Failed to start verification')
               }
             },
             {
@@ -97,8 +97,8 @@ describe('User Verification E2E Tests', () => {
           .post('/verify',
             async ({ body }) => {
               try {
-                const { verificationToken } = body as any;
-                const result = await testUserService.verifyEmail(verificationToken);
+                const { verificationToken } = body as any
+                const result = await testUserService.verifyEmail(verificationToken)
                 
                 const responseData: any = {
                   user: {
@@ -111,27 +111,27 @@ describe('User Verification E2E Tests', () => {
                   },
                   accessToken: result.tokens.accessToken,
                   refreshToken: result.tokens.refreshToken
-                };
+                }
 
                 if (result.preferences) {
-                  responseData.preferences = result.preferences;
+                  responseData.preferences = result.preferences
                 }
                 
                 return {
                   success: true,
                   data: responseData,
                   message: 'Email verified successfully'
-                };
+                }
               } catch (error) {
                 if (error instanceof Error) {
                   if (error.message.includes('Invalid or expired')) {
-                    throw new Error('Invalid or expired verification token');
+                    throw new Error('Invalid or expired verification token')
                   }
                   if (error.message.includes('expired')) {
-                    throw new Error('Verification token has expired');
+                    throw new Error('Verification token has expired')
                   }
                 }
-                throw new Error('Email verification failed');
+                throw new Error('Email verification failed')
               }
             },
             {
@@ -144,20 +144,20 @@ describe('User Verification E2E Tests', () => {
           .post('/resend-verification',
             async ({ body }) => {
               try {
-                const { email } = body as any;
-                await testUserService.resendVerificationCode(email);
+                const { email } = body as any
+                await testUserService.resendVerificationCode(email)
                 
                 return {
                   success: true,
                   message: 'Verification code sent successfully'
-                };
+                }
               } catch (error) {
                 if (error instanceof Error) {
                   if (error.message.includes('User not found')) {
-                    throw new Error('User not found');
+                    throw new Error('User not found')
                   }
                 }
-                throw new Error('Failed to resend verification code');
+                throw new Error('Failed to resend verification code')
               }
             },
             {
@@ -170,7 +170,7 @@ describe('User Verification E2E Tests', () => {
           .get('/profile',
             async ({ user, set }) => {
               if (!user) {
-                set.status = 401;
+                set.status = 401
                 return {
                   error: {
                     code: 'UNAUTHORIZED',
@@ -178,7 +178,7 @@ describe('User Verification E2E Tests', () => {
                     details: null
                   },
                   timestamp: new Date().toISOString()
-                };
+                }
               }
               
               return {
@@ -192,14 +192,14 @@ describe('User Verification E2E Tests', () => {
                   createdAt: user.createdAt,
                   updatedAt: user.updatedAt
                 }
-              };
+              }
             }
           )
           
           .put('/preferences',
             async ({ user, body, set }) => {
               if (!user) {
-                set.status = 401;
+                set.status = 401
                 return {
                   error: {
                     code: 'UNAUTHORIZED',
@@ -207,27 +207,27 @@ describe('User Verification E2E Tests', () => {
                     details: null
                   },
                   timestamp: new Date().toISOString()
-                };
+                }
               }
               
               try {
-                await testUserService.updateUserPreferences(user.id, body as any);
-                const preferences = await testUserService.getUserPreferences(user.id);
+                await testUserService.updateUserPreferences(user.id, body as any)
+                const preferences = await testUserService.getUserPreferences(user.id)
                 
                 return {
                   success: true,
                   data: preferences,
                   message: 'Preferences updated successfully'
-                };
+                }
               } catch (error) {
-                set.status = 500;
+                set.status = 500
                 return {
                   success: false,
                   error: {
                     code: 'PREFERENCES_UPDATE_FAILED',
                     message: 'Failed to update preferences'
                   }
-                };
+                }
               }
             },
             {
@@ -254,7 +254,7 @@ describe('User Verification E2E Tests', () => {
           .get('/preferences',
             async ({ user, set }) => {
               if (!user) {
-                set.status = 401;
+                set.status = 401
                 return {
                   error: {
                     code: 'UNAUTHORIZED',
@@ -262,25 +262,25 @@ describe('User Verification E2E Tests', () => {
                     details: null
                   },
                   timestamp: new Date().toISOString()
-                };
+                }
               }
               
               try {
-                const preferences = await testUserService.getUserPreferences(user.id);
+                const preferences = await testUserService.getUserPreferences(user.id)
                 
                 return {
                   success: true,
                   data: preferences || null
-                };
+                }
               } catch (error) {
-                set.status = 500;
+                set.status = 500
                 return {
                   success: false,
                   error: {
                     code: 'PREFERENCES_FETCH_FAILED',
                     message: 'Failed to get preferences'
                   }
-                };
+                }
               }
             }
           )
@@ -288,7 +288,7 @@ describe('User Verification E2E Tests', () => {
           .post('/save-settings',
             async ({ user, body, set }) => {
               if (!user) {
-                set.status = 401;
+                set.status = 401
                 return {
                   error: {
                     code: 'UNAUTHORIZED',
@@ -296,38 +296,38 @@ describe('User Verification E2E Tests', () => {
                     details: null
                   },
                   timestamp: new Date().toISOString()
-                };
+                }
               }
               
               if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
-                set.status = 403;
+                set.status = 403
                 return {
                   success: false,
                   error: {
                     code: 'SETTINGS_SYNC_FORBIDDEN',
                     message: 'Settings sync requires verified account'
                   }
-                };
+                }
               }
               
               try {
-                await testUserService.updateUserPreferences(user.id, body as any);
-                const preferences = await testUserService.getUserPreferences(user.id);
+                await testUserService.updateUserPreferences(user.id, body as any)
+                const preferences = await testUserService.getUserPreferences(user.id)
                 
                 return {
                   success: true,
                   data: preferences,
                   message: 'Settings saved and synced to server successfully'
-                };
+                }
               } catch (error) {
-                set.status = 500;
+                set.status = 500
                 return {
                   success: false,
                   error: {
                     code: 'SETTINGS_SAVE_FAILED',
                     message: 'Failed to save settings'
                   }
-                };
+                }
               }
             },
             {
@@ -360,33 +360,33 @@ describe('User Verification E2E Tests', () => {
                   emailVerified: user?.emailVerified || false,
                   userId: user?.id || null
                 }
-              };
+              }
             }
           )
           
           .post('/logout',
             async ({ headers }) => {
               try {
-                const authorization = headers.authorization;
+                const authorization = headers.authorization
                 if (authorization && authorization.startsWith('Bearer ')) {
-                  const accessToken = authorization.substring(7);
-                  await testUserService.logout(accessToken);
+                  const accessToken = authorization.substring(7)
+                  await testUserService.logout(accessToken)
                 }
                 
                 return {
                   success: true,
                   message: 'Logged out successfully'
-                };
+                }
               } catch (error) {
                 return {
                   success: true,
                   message: 'Logged out successfully'
-                };
+                }
               }
             }
           )
-      );
-  });
+      )
+  })
 
   describe('Complete User Verification Flow (Mobile Screen Flow)', () => {
     it('should complete the full verification flow as described in mobile screen specifications', async () => {
@@ -399,13 +399,13 @@ describe('User Verification E2E Tests', () => {
             deviceFingerprint: 'test-device-e2e-verification' 
           })
         })
-      );
+      )
 
-      expect(guestResponse.status).toBe(200);
-      const guestData = await guestResponse.json();
-      expect(guestData.success).toBe(true);
-      expect(guestData.data.guestId).toBeTruthy();
-      expect(guestData.data.guestId).toMatch(/^guest_/);
+      expect(guestResponse.status).toBe(200)
+      const guestData = await guestResponse.json()
+      expect(guestData.success).toBe(true)
+      expect(guestData.data.guestId).toBeTruthy()
+      expect(guestData.data.guestId).toMatch(/^guest_/)
 
       // Step 2: Start verification process (Profile Screen -> Verification Screen)
       // This corresponds to user clicking "Verify" button with valid email
@@ -418,23 +418,23 @@ describe('User Verification E2E Tests', () => {
             email: 'verification-e2e@example.com'
           })
         })
-      );
+      )
 
-      expect(startVerificationResponse.status).toBe(200);
-      const startVerificationData = await startVerificationResponse.json();
-      expect(startVerificationData.success).toBe(true);
-      expect(startVerificationData.data.email).toBe('verification-e2e@example.com');
-      expect(startVerificationData.data.verificationSent).toBe(true);
-      expect(startVerificationData.data.isExistingUser).toBe(false);
-      expect(startVerificationData.message).toBe('Account created successfully. Please check your email for verification.');
+      expect(startVerificationResponse.status).toBe(200)
+      const startVerificationData = await startVerificationResponse.json()
+      expect(startVerificationData.success).toBe(true)
+      expect(startVerificationData.data.email).toBe('verification-e2e@example.com')
+      expect(startVerificationData.data.verificationSent).toBe(true)
+      expect(startVerificationData.data.isExistingUser).toBe(false)
+      expect(startVerificationData.message).toBe('Account created successfully. Please check your email for verification.')
 
       // Step 3: Verify that verification email was "sent" (get OTP from database)
-      const [user] = await getTestDb().select().from(users).limit(1);
-      expect(user.verificationToken).toBeTruthy();
-      expect(user.verificationToken).toMatch(/^\d{4}$/); // 4-digit OTP
-      expect(user.verificationTokenExpiry).toBeTruthy();
-      expect(user.emailVerified).toBe(false);
-      expect(user.userStatus).toBe('guest'); // Still guest until verified
+      const [user] = await getTestDb().select().from(users).limit(1)
+      expect(user.verificationToken).toBeTruthy()
+      expect(user.verificationToken).toMatch(/^\d{4}$/) // 4-digit OTP
+      expect(user.verificationTokenExpiry).toBeTruthy()
+      expect(user.emailVerified).toBe(false)
+      expect(user.userStatus).toBe('guest') // Still guest until verified
 
       // Step 4: Complete verification (Verification Screen -> Profile Screen)
       // This corresponds to user entering OTP and clicking submit
@@ -446,23 +446,23 @@ describe('User Verification E2E Tests', () => {
             verificationToken: user.verificationToken 
           })
         })
-      );
+      )
 
-      expect(verifyResponse.status).toBe(200);
-      const verifyData = await verifyResponse.json();
-      expect(verifyData.success).toBe(true);
-      expect(verifyData.data.user.emailVerified).toBe(true);
-      expect(verifyData.data.user.userStatus).toBe('verified');
-      expect(verifyData.data.accessToken).toBeTruthy();
-      expect(verifyData.data.refreshToken).toBeTruthy();
-      expect(verifyData.message).toBe('Email verified successfully');
+      expect(verifyResponse.status).toBe(200)
+      const verifyData = await verifyResponse.json()
+      expect(verifyData.success).toBe(true)
+      expect(verifyData.data.user.emailVerified).toBe(true)
+      expect(verifyData.data.user.userStatus).toBe('verified')
+      expect(verifyData.data.accessToken).toBeTruthy()
+      expect(verifyData.data.refreshToken).toBeTruthy()
+      expect(verifyData.message).toBe('Email verified successfully')
 
       // Step 5: Verify token works with direct user service validation
-      const validatedUser = await testUserService.validateAccessToken(verifyData.data.accessToken);
-      expect(validatedUser).toBeTruthy();
-      expect(validatedUser!.email).toBe('verification-e2e@example.com');
-      expect(validatedUser!.userStatus).toBe('verified');
-      expect(validatedUser!.emailVerified).toBe(true);
+      const validatedUser = await testUserService.validateAccessToken(verifyData.data.accessToken)
+      expect(validatedUser).toBeTruthy()
+      expect(validatedUser!.email).toBe('verification-e2e@example.com')
+      expect(validatedUser!.userStatus).toBe('verified')
+      expect(validatedUser!.emailVerified).toBe(true)
 
       // Step 6: Test auth status endpoint (no auth required)
       const statusResponse = await app.handle(
@@ -471,13 +471,13 @@ describe('User Verification E2E Tests', () => {
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
         })
-      );
+      )
 
-      expect(statusResponse.status).toBe(200);
-      const statusData = await statusResponse.json();
-      expect(statusData.success).toBe(true);
-      expect(statusData.data.authenticated).toBe(true);
-      expect(statusData.data.emailVerified).toBe(true);
+      expect(statusResponse.status).toBe(200)
+      const statusData = await statusResponse.json()
+      expect(statusData.success).toBe(true)
+      expect(statusData.data.authenticated).toBe(true)
+      expect(statusData.data.emailVerified).toBe(true)
 
       // Step 7: Verify user preferences can be updated via service
       await testUserService.updateUserPreferences(validatedUser!.id, {
@@ -487,13 +487,13 @@ describe('User Verification E2E Tests', () => {
           autoTranslate: true,
           defaultTargetLanguage: 'en'
         }
-      });
+      })
 
-      const savedPreferences = await testUserService.getUserPreferences(validatedUser!.id);
-      expect(savedPreferences).toBeTruthy();
-      expect(savedPreferences!.preferredLanguages).toEqual(['en', 'zh-CN']);
-      expect(savedPreferences!.themePreference).toBe('dark');
-    });
+      const savedPreferences = await testUserService.getUserPreferences(validatedUser!.id)
+      expect(savedPreferences).toBeTruthy()
+      expect(savedPreferences!.preferredLanguages).toEqual(['en', 'zh-CN'])
+      expect(savedPreferences!.themePreference).toBe('dark')
+    })
 
     it('should handle existing user verification flow correctly', async () => {
       // Setup: Create and verify a user first
@@ -503,8 +503,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -515,16 +515,16 @@ describe('User Verification E2E Tests', () => {
             email: 'existing-user@example.com'
           })
         })
-      );
+      )
 
-      const [existingUser] = await getTestDb().select().from(users).limit(1);
+      const [existingUser] = await getTestDb().select().from(users).limit(1)
       await app.handle(
         new Request('http://localhost/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationToken: existingUser.verificationToken })
         })
-      );
+      )
 
       // Test: New guest user tries to verify with existing email
       const newGuestResponse = await app.handle(
@@ -533,8 +533,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const newGuestData = await newGuestResponse.json();
+      )
+      const newGuestData = await newGuestResponse.json()
 
       const existingUserVerificationResponse = await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -545,21 +545,21 @@ describe('User Verification E2E Tests', () => {
             email: 'existing-user@example.com'
           })
         })
-      );
+      )
 
-      expect(existingUserVerificationResponse.status).toBe(200);
-      const existingUserData = await existingUserVerificationResponse.json();
-      expect(existingUserData.success).toBe(true);
-      expect(existingUserData.data.isExistingUser).toBe(true);
-      expect(existingUserData.message).toBe('Verification code sent to your email address.');
+      expect(existingUserVerificationResponse.status).toBe(200)
+      const existingUserData = await existingUserVerificationResponse.json()
+      expect(existingUserData.success).toBe(true)
+      expect(existingUserData.data.isExistingUser).toBe(true)
+      expect(existingUserData.message).toBe('Verification code sent to your email address.')
 
       // Verify the existing user gets new verification token
       const [updatedUser] = await getTestDb().select().from(users)
         .where(eq(users.email, 'existing-user@example.com'))
-        .limit(1);
-      expect(updatedUser.verificationToken).toBeTruthy();
-      expect(updatedUser.verificationToken).not.toBe(existingUser.verificationToken);
-    });
+        .limit(1)
+      expect(updatedUser.verificationToken).toBeTruthy()
+      expect(updatedUser.verificationToken).not.toBe(existingUser.verificationToken)
+    })
 
     it('should handle resend verification code functionality', async () => {
       // Setup: Create user with verification pending
@@ -569,8 +569,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -581,10 +581,10 @@ describe('User Verification E2E Tests', () => {
             email: 'resend-test@example.com'
           })
         })
-      );
+      )
 
-      const [userBeforeResend] = await getTestDb().select().from(users).limit(1);
-      const originalToken = userBeforeResend.verificationToken;
+      const [userBeforeResend] = await getTestDb().select().from(users).limit(1)
+      const originalToken = userBeforeResend.verificationToken
 
       // Test: Resend verification code
       const resendResponse = await app.handle(
@@ -595,18 +595,18 @@ describe('User Verification E2E Tests', () => {
             email: 'resend-test@example.com'
           })
         })
-      );
+      )
 
-      expect(resendResponse.status).toBe(200);
-      const resendData = await resendResponse.json();
-      expect(resendData.success).toBe(true);
-      expect(resendData.message).toBe('Verification code sent successfully');
+      expect(resendResponse.status).toBe(200)
+      const resendData = await resendResponse.json()
+      expect(resendData.success).toBe(true)
+      expect(resendData.message).toBe('Verification code sent successfully')
 
       // Verify new token was generated
-      const [userAfterResend] = await getTestDb().select().from(users).limit(1);
-      expect(userAfterResend.verificationToken).toBeTruthy();
-      expect(userAfterResend.verificationToken).not.toBe(originalToken);
-      expect(userAfterResend.verificationTokenExpiry).toBeTruthy();
+      const [userAfterResend] = await getTestDb().select().from(users).limit(1)
+      expect(userAfterResend.verificationToken).toBeTruthy()
+      expect(userAfterResend.verificationToken).not.toBe(originalToken)
+      expect(userAfterResend.verificationTokenExpiry).toBeTruthy()
 
       // Test: Verify with new token works
       const verifyResponse = await app.handle(
@@ -617,14 +617,14 @@ describe('User Verification E2E Tests', () => {
             verificationToken: userAfterResend.verificationToken 
           })
         })
-      );
+      )
 
-      expect(verifyResponse.status).toBe(200);
-      const verifyData = await verifyResponse.json();
-      expect(verifyData.success).toBe(true);
-      expect(verifyData.data.user.emailVerified).toBe(true);
-    });
-  });
+      expect(verifyResponse.status).toBe(200)
+      const verifyData = await verifyResponse.json()
+      expect(verifyData.success).toBe(true)
+      expect(verifyData.data.user.emailVerified).toBe(true)
+    })
+  })
 
   describe('Verification Error Handling', () => {
     it('should handle invalid verification tokens', async () => {
@@ -634,11 +634,11 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationToken: '9999' })
         })
-      );
+      )
 
-      expect(invalidTokenResponse.status).toBe(500);
+      expect(invalidTokenResponse.status).toBe(500)
       // Custom test routes throw errors which get caught by Elysia error handling
-    });
+    })
 
     it('should handle expired verification tokens', async () => {
       // Setup: Create user with expired token
@@ -648,8 +648,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -660,15 +660,15 @@ describe('User Verification E2E Tests', () => {
             email: 'expired-token@example.com'
           })
         })
-      );
+      )
 
       // Manually expire the token
       const [user] = await getTestDb().select().from(users)
         .where(eq(users.email, 'expired-token@example.com'))
-        .limit(1);
+        .limit(1)
       await getTestDb().update(users)
         .set({ verificationTokenExpiry: new Date(Date.now() - 1000) }) // 1 second ago
-        .where(eq(users.id, user.id));
+        .where(eq(users.id, user.id))
 
       const expiredTokenResponse = await app.handle(
         new Request('http://localhost/api/auth/verify', {
@@ -676,11 +676,11 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationToken: user.verificationToken })
         })
-      );
+      )
 
-      expect(expiredTokenResponse.status).toBe(500);
+      expect(expiredTokenResponse.status).toBe(500)
       // Custom test routes throw errors which get caught by Elysia error handling
-    });
+    })
 
     it('should handle invalid guest ID in start verification', async () => {
       const invalidGuestResponse = await app.handle(
@@ -692,11 +692,11 @@ describe('User Verification E2E Tests', () => {
             email: 'test@example.com'
           })
         })
-      );
+      )
 
-      expect(invalidGuestResponse.status).toBe(500);
+      expect(invalidGuestResponse.status).toBe(500)
       // Custom test routes throw errors which get caught by Elysia error handling
-    });
+    })
 
     it('should handle resend verification for non-existent email', async () => {
       const nonExistentEmailResponse = await app.handle(
@@ -707,12 +707,12 @@ describe('User Verification E2E Tests', () => {
             email: 'nonexistent@example.com'
           })
         })
-      );
+      )
 
-      expect(nonExistentEmailResponse.status).toBe(500);
+      expect(nonExistentEmailResponse.status).toBe(500)
       // Custom test routes throw errors which get caught by Elysia error handling
-    });
-  });
+    })
+  })
 
   describe('User Status Transitions', () => {
     it('should correctly transition user status from guest to verified', async () => {
@@ -723,13 +723,13 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       // Verify initial status
-      const [initialUser] = await getTestDb().select().from(users).limit(1);
-      expect(initialUser.userStatus).toBe('guest');
-      expect(initialUser.emailVerified).toBe(false);
+      const [initialUser] = await getTestDb().select().from(users).limit(1)
+      expect(initialUser.userStatus).toBe('guest')
+      expect(initialUser.emailVerified).toBe(false)
 
       // Start verification
       await app.handle(
@@ -741,13 +741,13 @@ describe('User Verification E2E Tests', () => {
             email: 'status-transition@example.com'
           })
         })
-      );
+      )
 
       // Verify status still guest with email added
-      const [pendingUser] = await getTestDb().select().from(users).limit(1);
-      expect(pendingUser.userStatus).toBe('guest');
-      expect(pendingUser.emailVerified).toBe(false);
-      expect(pendingUser.email).toBe('status-transition@example.com');
+      const [pendingUser] = await getTestDb().select().from(users).limit(1)
+      expect(pendingUser.userStatus).toBe('guest')
+      expect(pendingUser.emailVerified).toBe(false)
+      expect(pendingUser.email).toBe('status-transition@example.com')
 
       // Complete verification
       await app.handle(
@@ -758,15 +758,15 @@ describe('User Verification E2E Tests', () => {
             verificationToken: pendingUser.verificationToken 
           })
         })
-      );
+      )
 
       // Verify final status
-      const [verifiedUser] = await getTestDb().select().from(users).limit(1);
-      expect(verifiedUser.userStatus).toBe('verified');
-      expect(verifiedUser.emailVerified).toBe(true);
-      expect(verifiedUser.verificationToken).toBeNull();
-      expect(verifiedUser.verificationTokenExpiry).toBeNull();
-    });
+      const [verifiedUser] = await getTestDb().select().from(users).limit(1)
+      expect(verifiedUser.userStatus).toBe('verified')
+      expect(verifiedUser.emailVerified).toBe(true)
+      expect(verifiedUser.verificationToken).toBeNull()
+      expect(verifiedUser.verificationTokenExpiry).toBeNull()
+    })
 
     it('should create session and tokens upon successful verification', async () => {
       // Setup user for verification
@@ -776,8 +776,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -788,13 +788,13 @@ describe('User Verification E2E Tests', () => {
             email: 'session-test@example.com'
           })
         })
-      );
+      )
 
-      const [user] = await getTestDb().select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1)
 
       // Verify no sessions exist initially
-      let sessions = await getTestDb().select().from(userSessions);
-      expect(sessions).toHaveLength(0);
+      let sessions = await getTestDb().select().from(userSessions)
+      expect(sessions).toHaveLength(0)
 
       // Complete verification
       const verifyResponse = await app.handle(
@@ -805,21 +805,21 @@ describe('User Verification E2E Tests', () => {
             verificationToken: user.verificationToken 
           })
         })
-      );
+      )
 
-      const verifyData = await verifyResponse.json();
+      const verifyData = await verifyResponse.json()
 
       // Verify session was created
-      sessions = await getTestDb().select().from(userSessions);
-      expect(sessions).toHaveLength(1);
-      expect(sessions[0].userId).toBe(user.id);
+      sessions = await getTestDb().select().from(userSessions)
+      expect(sessions).toHaveLength(1)
+      expect(sessions[0].userId).toBe(user.id)
 
       // Verify tokens work
-      const validatedUser = await testUserService.validateAccessToken(verifyData.data.accessToken);
-      expect(validatedUser).toBeTruthy();
-      expect(validatedUser!.id).toBe(user.id);
-    });
-  });
+      const validatedUser = await testUserService.validateAccessToken(verifyData.data.accessToken)
+      expect(validatedUser).toBeTruthy()
+      expect(validatedUser!.id).toBe(user.id)
+    })
+  })
 
   describe('Token Authentication After Verification', () => {
     it('should allow authenticated API requests with issued tokens', async () => {
@@ -830,8 +830,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -842,11 +842,11 @@ describe('User Verification E2E Tests', () => {
             email: 'token-auth-test@example.com'
           })
         })
-      );
+      )
 
       const [user] = await getTestDb().select().from(users)
         .where(eq(users.email, 'token-auth-test@example.com'))
-        .limit(1);
+        .limit(1)
       
       const verifyResponse = await app.handle(
         new Request('http://localhost/api/auth/verify', {
@@ -856,8 +856,8 @@ describe('User Verification E2E Tests', () => {
             verificationToken: user.verificationToken 
           })
         })
-      );
-      const verifyData = await verifyResponse.json();
+      )
+      const verifyData = await verifyResponse.json()
 
       // Test 1: Get user profile with issued token
       const profileResponse = await app.handle(
@@ -866,14 +866,14 @@ describe('User Verification E2E Tests', () => {
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
         })
-      );
+      )
 
-      expect(profileResponse.status).toBe(200);
-      const profileData = await profileResponse.json();
-      expect(profileData.success).toBe(true);
-      expect(profileData.data.email).toBe('token-auth-test@example.com');
-      expect(profileData.data.userStatus).toBe('verified');
-      expect(profileData.data.emailVerified).toBe(true);
+      expect(profileResponse.status).toBe(200)
+      const profileData = await profileResponse.json()
+      expect(profileData.success).toBe(true)
+      expect(profileData.data.email).toBe('token-auth-test@example.com')
+      expect(profileData.data.userStatus).toBe('verified')
+      expect(profileData.data.emailVerified).toBe(true)
 
       // Test 2: Update preferences with issued token
       const preferencesResponse = await app.handle(
@@ -896,14 +896,14 @@ describe('User Verification E2E Tests', () => {
             }
           })
         })
-      );
+      )
 
-      expect(preferencesResponse.status).toBe(200);
-      const preferencesData = await preferencesResponse.json();
-      expect(preferencesData.success).toBe(true);
-      expect(preferencesData.data.preferredLanguages).toEqual(['en', 'zh-CN', 'ja']);
-      expect(preferencesData.data.themePreference).toBe('dark');
-      expect(preferencesData.data.translationSettings.autoTranslate).toBe(true);
+      expect(preferencesResponse.status).toBe(200)
+      const preferencesData = await preferencesResponse.json()
+      expect(preferencesData.success).toBe(true)
+      expect(preferencesData.data.preferredLanguages).toEqual(['en', 'zh-CN', 'ja'])
+      expect(preferencesData.data.themePreference).toBe('dark')
+      expect(preferencesData.data.translationSettings.autoTranslate).toBe(true)
 
       // Test 3: Get preferences back to confirm they were saved
       const getPreferencesResponse = await app.handle(
@@ -912,13 +912,13 @@ describe('User Verification E2E Tests', () => {
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
         })
-      );
+      )
 
-      expect(getPreferencesResponse.status).toBe(200);
-      const getPreferencesData = await getPreferencesResponse.json();
-      expect(getPreferencesData.success).toBe(true);
-      expect(getPreferencesData.data.preferredLanguages).toEqual(['en', 'zh-CN', 'ja']);
-      expect(getPreferencesData.data.themePreference).toBe('dark');
+      expect(getPreferencesResponse.status).toBe(200)
+      const getPreferencesData = await getPreferencesResponse.json()
+      expect(getPreferencesData.success).toBe(true)
+      expect(getPreferencesData.data.preferredLanguages).toEqual(['en', 'zh-CN', 'ja'])
+      expect(getPreferencesData.data.themePreference).toBe('dark')
 
       // Test 4: Save settings (for verified users)
       const saveSettingsResponse = await app.handle(
@@ -937,15 +937,15 @@ describe('User Verification E2E Tests', () => {
             }
           })
         })
-      );
+      )
 
-      expect(saveSettingsResponse.status).toBe(200);
-      const saveSettingsData = await saveSettingsResponse.json();
-      expect(saveSettingsData.success).toBe(true);
-      expect(saveSettingsData.message).toBe('Settings saved and synced to server successfully');
-      expect(saveSettingsData.data.preferredLanguages).toEqual(['en', 'ja']);
-      expect(saveSettingsData.data.themePreference).toBe('light');
-    });
+      expect(saveSettingsResponse.status).toBe(200)
+      const saveSettingsData = await saveSettingsResponse.json()
+      expect(saveSettingsData.success).toBe(true)
+      expect(saveSettingsData.message).toBe('Settings saved and synced to server successfully')
+      expect(saveSettingsData.data.preferredLanguages).toEqual(['en', 'ja'])
+      expect(saveSettingsData.data.themePreference).toBe('light')
+    })
 
     it('should reject requests with invalid tokens', async () => {
       // Test with invalid token
@@ -955,20 +955,20 @@ describe('User Verification E2E Tests', () => {
             'Authorization': 'Bearer invalid-token-12345'
           }
         })
-      );
+      )
 
-      expect(invalidTokenResponse.status).toBe(401);
-      const errorData = await invalidTokenResponse.json();
-      expect(errorData.error.code).toBe('UNAUTHORIZED');
+      expect(invalidTokenResponse.status).toBe(401)
+      const errorData = await invalidTokenResponse.json()
+      expect(errorData.error.code).toBe('UNAUTHORIZED')
 
       // Test with no token
       const noTokenResponse = await app.handle(
         new Request('http://localhost/api/auth/profile')
-      );
+      )
 
-      expect(noTokenResponse.status).toBe(401);
-    });
-  });
+      expect(noTokenResponse.status).toBe(401)
+    })
+  })
 
   describe('Authentication Integration', () => {
     it('should maintain authentication state across verification process', async () => {
@@ -979,8 +979,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -991,9 +991,9 @@ describe('User Verification E2E Tests', () => {
             email: 'auth-state@example.com'
           })
         })
-      );
+      )
 
-      const [user] = await getTestDb().select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1)
       const verifyResponse = await app.handle(
         new Request('http://localhost/api/auth/verify', {
           method: 'POST',
@@ -1002,8 +1002,8 @@ describe('User Verification E2E Tests', () => {
             verificationToken: user.verificationToken 
           })
         })
-      );
-      const verifyData = await verifyResponse.json();
+      )
+      const verifyData = await verifyResponse.json()
 
       // Test authentication status endpoint
       const statusResponse = await app.handle(
@@ -1012,15 +1012,15 @@ describe('User Verification E2E Tests', () => {
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
         })
-      );
+      )
 
-      expect(statusResponse.status).toBe(200);
-      const statusData = await statusResponse.json();
-      expect(statusData.success).toBe(true);
-      expect(statusData.data.authenticated).toBe(true);
-      expect(statusData.data.emailVerified).toBe(true);
-      expect(statusData.data.userId).toBe(user.id);
-    });
+      expect(statusResponse.status).toBe(200)
+      const statusData = await statusResponse.json()
+      expect(statusData.success).toBe(true)
+      expect(statusData.data.authenticated).toBe(true)
+      expect(statusData.data.emailVerified).toBe(true)
+      expect(statusData.data.userId).toBe(user.id)
+    })
 
     it('should handle logout after verification', async () => {
       // Complete verification and get tokens
@@ -1030,8 +1030,8 @@ describe('User Verification E2E Tests', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         })
-      );
-      const guestData = await guestResponse.json();
+      )
+      const guestData = await guestResponse.json()
 
       await app.handle(
         new Request('http://localhost/api/auth/start-verification', {
@@ -1042,9 +1042,9 @@ describe('User Verification E2E Tests', () => {
             email: 'logout-after-verify@example.com'
           })
         })
-      );
+      )
 
-      const [user] = await getTestDb().select().from(users).limit(1);
+      const [user] = await getTestDb().select().from(users).limit(1)
       const verifyResponse = await app.handle(
         new Request('http://localhost/api/auth/verify', {
           method: 'POST',
@@ -1053,8 +1053,8 @@ describe('User Verification E2E Tests', () => {
             verificationToken: user.verificationToken 
           })
         })
-      );
-      const verifyData = await verifyResponse.json();
+      )
+      const verifyData = await verifyResponse.json()
 
       // Logout
       const logoutResponse = await app.handle(
@@ -1064,19 +1064,19 @@ describe('User Verification E2E Tests', () => {
             'Authorization': `Bearer ${verifyData.data.accessToken}`
           }
         })
-      );
+      )
 
-      expect(logoutResponse.status).toBe(200);
-      const logoutData = await logoutResponse.json();
-      expect(logoutData.success).toBe(true);
+      expect(logoutResponse.status).toBe(200)
+      const logoutData = await logoutResponse.json()
+      expect(logoutData.success).toBe(true)
 
       // Verify session was invalidated
-      const sessions = await getTestDb().select().from(userSessions);
-      expect(sessions).toHaveLength(0);
+      const sessions = await getTestDb().select().from(userSessions)
+      expect(sessions).toHaveLength(0)
 
       // Verify token no longer works
-      const validatedUser = await testUserService.validateAccessToken(verifyData.data.accessToken);
-      expect(validatedUser).toBeNull();
-    });
-  });
-});
+      const validatedUser = await testUserService.validateAccessToken(verifyData.data.accessToken)
+      expect(validatedUser).toBeNull()
+    })
+  })
+})

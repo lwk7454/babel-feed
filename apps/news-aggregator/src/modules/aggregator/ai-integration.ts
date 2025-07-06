@@ -1,8 +1,8 @@
-import { logger } from '../common/logger';
+import { logger } from '../common/logger'
 
 export class AIIntegrationService {
   async initialize(): Promise<void> {
-    logger.info('AI integration service initialized');
+    logger.info('AI integration service initialized')
   }
 
   // TODO: Implement AI-powered content enhancement
@@ -15,43 +15,43 @@ export class AIIntegrationService {
 
   async translateContent(_content: string, targetLanguage: string): Promise<string> {
     // Placeholder implementation
-    logger.info('Translating content (placeholder):', { targetLanguage });
-    throw new Error('Not implemented - needs AI translation pipeline');
+    logger.info('Translating content (placeholder):', { targetLanguage })
+    throw new Error('Not implemented - needs AI translation pipeline')
   }
 
   async summarizeArticle(_content: string): Promise<string> {
     // Placeholder implementation
-    logger.info('Summarizing article (placeholder)');
-    throw new Error('Not implemented - needs AI summarization pipeline');
+    logger.info('Summarizing article (placeholder)')
+    throw new Error('Not implemented - needs AI summarization pipeline')
   }
 
   async tagContent(_content: string): Promise<string[]> {
     // Placeholder implementation
-    logger.info('Tagging content (placeholder)');
-    throw new Error('Not implemented - needs AI tagging pipeline');
+    logger.info('Tagging content (placeholder)')
+    throw new Error('Not implemented - needs AI tagging pipeline')
   }
 
   async analyzeSentiment(_content: string): Promise<any> {
     // Placeholder implementation
-    logger.info('Analyzing sentiment (placeholder)');
-    throw new Error('Not implemented - needs AI sentiment analysis');
+    logger.info('Analyzing sentiment (placeholder)')
+    throw new Error('Not implemented - needs AI sentiment analysis')
   }
 
   async categorizeContent(_content: string): Promise<string> {
     // Placeholder implementation
-    logger.info('Categorizing content (placeholder)');
-    throw new Error('Not implemented - needs AI categorization pipeline');
+    logger.info('Categorizing content (placeholder)')
+    throw new Error('Not implemented - needs AI categorization pipeline')
   }
 
   async detectTrends(articles: any[]): Promise<any[]> {
     // Placeholder implementation
-    logger.info('Detecting trends (placeholder):', articles.length);
-    throw new Error('Not implemented - needs AI trend detection');
+    logger.info('Detecting trends (placeholder):', articles.length)
+    throw new Error('Not implemented - needs AI trend detection')
   }
 
   // Legacy method will be removed after full migration
   getAiProviderManager(): any {
-    logger.warn('Using legacy getAiProviderManager - should be replaced with module methods');
-    return null;
+    logger.warn('Using legacy getAiProviderManager - should be replaced with module methods')
+    return null
   }
 }

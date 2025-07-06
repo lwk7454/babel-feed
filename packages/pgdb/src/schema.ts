@@ -1,5 +1,5 @@
-import { pgTable, uuid, varchar, boolean, timestamp, jsonb, text, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, varchar, boolean, timestamp, jsonb, text, integer, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
 
 /**
  * Users table - stores both guest and verified users
@@ -15,7 +15,7 @@ export const users = pgTable('users', {
   deviceFingerprint: varchar('device_fingerprint', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
+})
 
 /**
  * User sessions table - manages JWT tokens and session persistence
@@ -31,7 +31,7 @@ export const userSessions = pgTable('user_sessions', {
   userAgent: text('user_agent'),
   lastAccessedAt: timestamp('last_accessed_at').defaultNow(),
   createdAt: timestamp('created_at').defaultNow().notNull()
-});
+})
 
 /**
  * User preferences table - stores app settings and customization
@@ -45,7 +45,7 @@ export const userPreferences = pgTable('user_preferences', {
   notificationSettings: jsonb('notification_settings').default('{}'),
   privacySettings: jsonb('privacy_settings').default('{}'),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
+})
 
 /**
  * Content cache table - cache news articles and video metadata
@@ -64,7 +64,7 @@ export const contentCache = pgTable('content_cache', {
   metadata: jsonb('metadata').default('{}'), // Flexible metadata storage
   cachedAt: timestamp('cached_at').defaultNow().notNull(),
   expiresAt: timestamp('expires_at')
-});
+})
 
 /**
  * User activity table - track user interactions for analytics
@@ -80,7 +80,7 @@ export const userActivity = pgTable('user_activity', {
   metadata: jsonb('metadata').default('{}'), // Activity-specific data
   duration: integer('duration'), // Time spent (in seconds)
   createdAt: timestamp('created_at').defaultNow().notNull()
-});
+})
 
 /**
  * Translation cache table - cache translation results
@@ -98,7 +98,7 @@ export const translationCache = pgTable('translation_cache', {
   usageCount: integer('usage_count').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
+})
 
 /**
  * News sources table - stores RSS feeds and news source configurations
@@ -132,7 +132,7 @@ export const newsSources = pgTable('news_sources', {
   priorityIndex: index('news_sources_priority_idx').on(table.priority),
   enabledLanguageIndex: index('news_sources_enabled_language_idx').on(table.enabled, table.language),
   enabledCategoryIndex: index('news_sources_enabled_category_idx').on(table.enabled, table.category)
-}));
+}))
 
 /**
  * AI providers table - stores LLM provider configurations and API keys
@@ -159,7 +159,7 @@ export const aiProviders = pgTable('ai_providers', {
   typeIndex: index('ai_providers_type_idx').on(table.providerType),
   priorityIndex: index('ai_providers_priority_idx').on(table.priority),
   enabledTypeIndex: index('ai_providers_enabled_type_idx').on(table.enabled, table.providerType)
-}));
+}))
 
 /**
  * AI provider API keys - stores multiple API keys per provider for rotation
@@ -187,7 +187,7 @@ export const aiProviderKeys = pgTable('ai_provider_keys', {
   priorityIndex: index('ai_provider_keys_priority_idx').on(table.priority),
   providerEnabledIndex: index('ai_provider_keys_provider_enabled_idx').on(table.providerId, table.enabled),
   uniqueProviderKeyName: uniqueIndex('unique_provider_key_name').on(table.providerId, table.keyName)
-}));
+}))
 
 /**
  * Circuit breaker states - tracks circuit breaker status for AI providers
@@ -208,7 +208,7 @@ export const circuitBreakerStates = pgTable('circuit_breaker_states', {
   keyIndex: index('circuit_breaker_key_idx').on(table.keyId),
   stateIndex: index('circuit_breaker_state_idx').on(table.state),
   uniqueProviderKey: uniqueIndex('unique_circuit_breaker_provider_key').on(table.providerId, table.keyId)
-}));
+}))
 
 /**
  * Articles table - stores news articles metadata
@@ -227,7 +227,7 @@ export const articles = pgTable('articles', {
   sourceIndex: index('articles_source_id_idx').on(table.sourceId),
   publishedIndex: index('articles_published_idx').on(table.publishedAt),
   sourcePublishedIndex: index('articles_source_published_idx').on(table.sourceId, table.publishedAt)
-}));
+}))
 
 /**
  * Article translations table - stores translated content for search optimization
@@ -251,14 +251,14 @@ export const articleTranslations = pgTable('article_translations', {
   summaryTextIndex: index('summary_text_idx').using('gin', sql`to_tsvector('simple', ${table.summary})`),
   // Combined index for common query patterns
   articleLanguageIndex: index('article_language_idx').on(table.articleId, table.language)
-}));
+}))
 
 // Define relationships for better query performance and type safety
 export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(userSessions),
   preferences: one(userPreferences),
   activities: many(userActivity)
-}));
+}))
 
 export const userSessionsRelations = relations(userSessions, ({ one, many }) => ({
   user: one(users, {
@@ -266,18 +266,18 @@ export const userSessionsRelations = relations(userSessions, ({ one, many }) => 
     references: [users.id]
   }),
   activities: many(userActivity)
-}));
+}))
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
   user: one(users, {
     fields: [userPreferences.userId],
     references: [users.id]
   })
-}));
+}))
 
 export const contentCacheRelations = relations(contentCache, ({ many }) => ({
   activities: many(userActivity)
-}));
+}))
 
 export const userActivityRelations = relations(userActivity, ({ one }) => ({
   user: one(users, {
@@ -292,18 +292,18 @@ export const userActivityRelations = relations(userActivity, ({ one }) => ({
     fields: [userActivity.contentId],
     references: [contentCache.id]
   })
-}));
+}))
 
 // News Sources Relations
 export const newsSourcesRelations = relations(newsSources, ({ many }) => ({
   articles: many(articles)
-}));
+}))
 
 // AI Providers Relations
 export const aiProvidersRelations = relations(aiProviders, ({ many }) => ({
   keys: many(aiProviderKeys),
   circuitBreakers: many(circuitBreakerStates)
-}));
+}))
 
 export const aiProviderKeysRelations = relations(aiProviderKeys, ({ one, many }) => ({
   provider: one(aiProviders, {
@@ -311,7 +311,7 @@ export const aiProviderKeysRelations = relations(aiProviderKeys, ({ one, many })
     references: [aiProviders.id]
   }),
   circuitBreakers: many(circuitBreakerStates)
-}));
+}))
 
 export const circuitBreakerStatesRelations = relations(circuitBreakerStates, ({ one }) => ({
   provider: one(aiProviders, {
@@ -322,7 +322,7 @@ export const circuitBreakerStatesRelations = relations(circuitBreakerStates, ({ 
     fields: [circuitBreakerStates.keyId],
     references: [aiProviderKeys.id]
   })
-}));
+}))
 
 // Updated Articles Relations
 export const articlesRelations = relations(articles, ({ many, one }) => ({
@@ -331,14 +331,14 @@ export const articlesRelations = relations(articles, ({ many, one }) => ({
     fields: [articles.sourceId],
     references: [newsSources.id]
   })
-}));
+}))
 
 export const articleTranslationsRelations = relations(articleTranslations, ({ one }) => ({
   article: one(articles, {
     fields: [articleTranslations.articleId],
     references: [articles.id]
   })
-}));
+}))
 
 // Export types for use in the application
 export type User = typeof users.$inferSelect;

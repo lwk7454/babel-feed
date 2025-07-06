@@ -1,8 +1,8 @@
-import { logger } from '../common/logger';
+import { logger } from '../common/logger'
 
 export class HealthMonitorService {
   async initialize(): Promise<void> {
-    logger.info('Health monitor service initialized');
+    logger.info('Health monitor service initialized')
   }
 
   async getHealthStatus(): Promise<any> {
@@ -17,7 +17,7 @@ export class HealthMonitorService {
         healthySources: 0,
         unhealthySources: 0
       }
-    };
+    }
   }
 
   // TODO: Enhanced health monitoring features
@@ -28,19 +28,19 @@ export class HealthMonitorService {
 
   async startHealthMonitoring(): Promise<void> {
     // Placeholder implementation
-    logger.info('Starting health monitoring (placeholder)');
+    logger.info('Starting health monitoring (placeholder)')
     // TODO: Implement periodic health checks
   }
 
   async stopHealthMonitoring(): Promise<void> {
     // Placeholder implementation
-    logger.info('Stopping health monitoring (placeholder)');
+    logger.info('Stopping health monitoring (placeholder)')
     // TODO: Implement cleanup
   }
 
   // Legacy method will be removed after full migration
   getHealthChecker(): any {
-    logger.warn('Using legacy getHealthChecker - should be replaced with module methods');
-    return null;
+    logger.warn('Using legacy getHealthChecker - should be replaced with module methods')
+    return null
   }
 }

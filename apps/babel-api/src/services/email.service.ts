@@ -1,43 +1,43 @@
-import Mailgun from 'mailgun.js';
-import type { MailgunMessageData } from 'mailgun.js';
+import Mailgun from 'mailgun.js'
+import type { MailgunMessageData } from 'mailgun.js'
 
 /**
  * Email service for sending emails via Mailgun
  * Configurable for both development and production environments
  */
 export class EmailService {
-  private mailgun: any;
-  private domain: string;
-  private isDevelopment: boolean;
+  private mailgun: any
+  private domain: string
+  private isDevelopment: boolean
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
-    this.domain = process.env.MAILGUN_DOMAIN || 'sandbox-your-domain.mailgun.org';
+    this.isDevelopment = process.env.NODE_ENV !== 'production'
+    this.domain = process.env.MAILGUN_DOMAIN || 'sandbox-your-domain.mailgun.org'
     
     // In development, we can either use real Mailgun or mock it
-    const apiKey = process.env.MAILGUN_API_KEY;
+    const apiKey = process.env.MAILGUN_API_KEY
     
     if (apiKey && !this.isDevelopment) {
       // Production: Use real Mailgun
-      const mailgun = new Mailgun(fetch);
+      const mailgun = new Mailgun(fetch)
       this.mailgun = mailgun.client({
         username: 'api',
         key: apiKey,
         url: 'https://api.mailgun.net' // or 'https://api.eu.mailgun.net' for EU
-      });
+      })
     } else if (apiKey && this.isDevelopment) {
       // Development with real Mailgun (for testing)
-      const mailgun = new Mailgun(fetch);
+      const mailgun = new Mailgun(fetch)
       this.mailgun = mailgun.client({
         username: 'api',
         key: apiKey,
         url: 'https://api.mailgun.net'
-      });
-      console.log('📧 Using real Mailgun for development testing');
+      })
+      console.log('📧 Using real Mailgun for development testing')
     } else {
       // Development without Mailgun (mock mode)
-      console.log('📧 Mailgun not configured - using console logging for development');
-      this.mailgun = null;
+      console.log('📧 Mailgun not configured - using console logging for development')
+      this.mailgun = null
     }
   }
 
@@ -45,18 +45,18 @@ export class EmailService {
    * Send OTP verification email
    */
   async sendOTPEmail(email: string, otp: string, userName?: string): Promise<void> {
-    const subject = 'Your Babel Feed Verification Code';
-    const htmlContent = this.generateOTPEmailHTML(otp, userName);
-    const textContent = this.generateOTPEmailText(otp, userName);
+    const subject = 'Your Babel Feed Verification Code'
+    const htmlContent = this.generateOTPEmailHTML(otp, userName)
+    const textContent = this.generateOTPEmailText(otp, userName)
 
     if (!this.mailgun) {
       // Development mode - log to console
-      console.log('📧 ===== OTP EMAIL (Development Mode) =====');
-      console.log(`To: ${email}`);
-      console.log(`Subject: ${subject}`);
-      console.log(`OTP Code: ${otp}`);
-      console.log('📧 ========================================');
-      return;
+      console.log('📧 ===== OTP EMAIL (Development Mode) =====')
+      console.log(`To: ${email}`)
+      console.log(`Subject: ${subject}`)
+      console.log(`OTP Code: ${otp}`)
+      console.log('📧 ========================================')
+      return
     }
 
     try {
@@ -66,20 +66,20 @@ export class EmailService {
         subject: subject,
         text: textContent,
         html: htmlContent
-      };
+      }
 
-      const result = await this.mailgun.messages.create(this.domain, messageData);
+      const result = await this.mailgun.messages.create(this.domain, messageData)
       
-      console.log(`📧 OTP email sent successfully to ${email}`);
-      console.log(`📧 Message ID: ${result.id}`);
+      console.log(`📧 OTP email sent successfully to ${email}`)
+      console.log(`📧 Message ID: ${result.id}`)
       
       // In development, also log the OTP for easy testing
       if (this.isDevelopment) {
-        console.log(`📧 OTP Code for testing: ${otp}`);
+        console.log(`📧 OTP Code for testing: ${otp}`)
       }
     } catch (error) {
-      console.error('📧 Failed to send OTP email:', error);
-      throw new Error('Failed to send verification email');
+      console.error('📧 Failed to send OTP email:', error)
+      throw new Error('Failed to send verification email')
     }
   }
 
@@ -87,17 +87,17 @@ export class EmailService {
    * Send welcome email after successful verification
    */
   async sendWelcomeEmail(email: string, userName?: string): Promise<void> {
-    const subject = 'Welcome to Babel Feed!';
-    const htmlContent = this.generateWelcomeEmailHTML(userName);
-    const textContent = this.generateWelcomeEmailText(userName);
+    const subject = 'Welcome to Babel Feed!'
+    const htmlContent = this.generateWelcomeEmailHTML(userName)
+    const textContent = this.generateWelcomeEmailText(userName)
 
     if (!this.mailgun) {
       // Development mode - log to console
-      console.log('📧 ===== WELCOME EMAIL (Development Mode) =====');
-      console.log(`To: ${email}`);
-      console.log(`Subject: ${subject}`);
-      console.log('📧 ==========================================');
-      return;
+      console.log('📧 ===== WELCOME EMAIL (Development Mode) =====')
+      console.log(`To: ${email}`)
+      console.log(`Subject: ${subject}`)
+      console.log('📧 ==========================================')
+      return
     }
 
     try {
@@ -107,12 +107,12 @@ export class EmailService {
         subject: subject,
         text: textContent,
         html: htmlContent
-      };
+      }
 
-      await this.mailgun.messages.create(this.domain, messageData);
-      console.log(`📧 Welcome email sent successfully to ${email}`);
+      await this.mailgun.messages.create(this.domain, messageData)
+      console.log(`📧 Welcome email sent successfully to ${email}`)
     } catch (error) {
-      console.error('📧 Failed to send welcome email:', error);
+      console.error('📧 Failed to send welcome email:', error)
       // Don't throw here - welcome email failure shouldn't block user registration
     }
   }
@@ -121,7 +121,7 @@ export class EmailService {
    * Generate HTML content for OTP email
    */
   private generateOTPEmailHTML(otp: string, userName?: string): string {
-    const greeting = userName ? `Hi ${userName}` : 'Hello';
+    const greeting = userName ? `Hi ${userName}` : 'Hello'
     
     return `
 <!DOCTYPE html>
@@ -170,14 +170,14 @@ export class EmailService {
     </div>
   </div>
 </body>
-</html>`;
+</html>`
   }
 
   /**
    * Generate text content for OTP email
    */
   private generateOTPEmailText(otp: string, userName?: string): string {
-    const greeting = userName ? `Hi ${userName}` : 'Hello';
+    const greeting = userName ? `Hi ${userName}` : 'Hello'
     
     return `
 ${greeting},
@@ -194,14 +194,14 @@ Best regards,
 The Babel Feed Team
 
 Breaking language barriers, one story at a time.
-`;
+`
   }
 
   /**
    * Generate HTML content for welcome email
    */
   private generateWelcomeEmailHTML(userName?: string): string {
-    const greeting = userName ? `Welcome ${userName}` : 'Welcome';
+    const greeting = userName ? `Welcome ${userName}` : 'Welcome'
     
     return `
 <!DOCTYPE html>
@@ -241,14 +241,14 @@ Breaking language barriers, one story at a time.
     </div>
   </div>
 </body>
-</html>`;
+</html>`
   }
 
   /**
    * Generate text content for welcome email
    */
   private generateWelcomeEmailText(userName?: string): string {
-    const greeting = userName ? `Welcome ${userName}` : 'Welcome';
+    const greeting = userName ? `Welcome ${userName}` : 'Welcome'
     
     return `
 ${greeting} to Babel Feed!
@@ -265,14 +265,14 @@ Start exploring global news in your language today!
 
 Happy reading!
 The Babel Feed Team
-`;
+`
   }
 
   /**
    * Check if email service is properly configured
    */
   isConfigured(): boolean {
-    return !!this.mailgun || this.isDevelopment;
+    return !!this.mailgun || this.isDevelopment
   }
 
   /**
@@ -283,9 +283,9 @@ The Babel Feed Team
       configured: this.isConfigured(),
       mode: this.mailgun ? 'mailgun' : 'console',
       domain: this.domain
-    };
+    }
   }
 }
 
 // Export singleton instance
-export const emailService = new EmailService();
+export const emailService = new EmailService()

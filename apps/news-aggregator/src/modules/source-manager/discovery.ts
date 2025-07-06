@@ -1,10 +1,10 @@
-import { logger } from '../common/logger';
+import { logger } from '../common/logger'
 
 export class SourceDiscoveryService {
-  private isRunning = false;
+  private isRunning = false
 
   async initialize(): Promise<void> {
-    logger.info('Source discovery service initialized');
+    logger.info('Source discovery service initialized')
   }
 
   // TODO: Implement automated source discovery pipeline
@@ -19,12 +19,12 @@ export class SourceDiscoveryService {
 
   async startDiscovery(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('Source discovery is already running');
-      return;
+      logger.warn('Source discovery is already running')
+      return
     }
 
-    this.isRunning = true;
-    logger.info('Starting source discovery (placeholder)');
+    this.isRunning = true
+    logger.info('Starting source discovery (placeholder)')
     
     // TODO: Implement discovery pipeline
     // 1. Crawl public source lists
@@ -35,33 +35,33 @@ export class SourceDiscoveryService {
 
   async stopDiscovery(): Promise<void> {
     if (!this.isRunning) {
-      logger.warn('Source discovery is not running');
-      return;
+      logger.warn('Source discovery is not running')
+      return
     }
 
-    this.isRunning = false;
-    logger.info('Stopping source discovery (placeholder)');
+    this.isRunning = false
+    logger.info('Stopping source discovery (placeholder)')
   }
 
   async discoverFromSeedList(seedUrls: string[]): Promise<any[]> {
     // Placeholder implementation
-    logger.info('Discovering sources from seed list (placeholder):', seedUrls);
-    throw new Error('Not implemented - needs automated source discovery');
+    logger.info('Discovering sources from seed list (placeholder):', seedUrls)
+    throw new Error('Not implemented - needs automated source discovery')
   }
 
   async validateSource(sourceUrl: string): Promise<boolean> {
     // Placeholder implementation
-    logger.info('Validating source (placeholder):', sourceUrl);
-    throw new Error('Not implemented - needs source validation logic');
+    logger.info('Validating source (placeholder):', sourceUrl)
+    throw new Error('Not implemented - needs source validation logic')
   }
 
   async scoreSource(sourceUrl: string): Promise<number> {
     // Placeholder implementation
-    logger.info('Scoring source (placeholder):', sourceUrl);
-    throw new Error('Not implemented - needs source quality scoring');
+    logger.info('Scoring source (placeholder):', sourceUrl)
+    throw new Error('Not implemented - needs source quality scoring')
   }
 
   getStatus(): { running: boolean } {
-    return { running: this.isRunning };
+    return { running: this.isRunning }
   }
 }

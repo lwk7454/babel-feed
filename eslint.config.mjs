@@ -1,4 +1,4 @@
-import nx from '@nx/eslint-plugin';
+import nx from '@nx/eslint-plugin'
 
 export default [
   ...nx.configs['flat/base'],
@@ -38,6 +38,8 @@ export default [
     ],
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'semi': ['error', 'never'],
     },
   },
   {
@@ -46,4 +48,4 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
     },
   }
-];
+]
