@@ -36,10 +36,43 @@ export class ProcessorService {
     return validatedArticles
   }
 
-  async extractContent(_rawContent: string): Promise<any> {
-    // Placeholder implementation
-    logger.info('Extracting content (placeholder)')
-    throw new Error('Not implemented - needs content extraction logic')
+  async extractContent(rawContent: string): Promise<{
+    title: string;
+    text: string;
+    authors: string[];
+    publishDate: Date | null;
+    images: string[];
+    summary: string;
+    keywords: string[];
+  }> {
+    try {
+      // Use newspaper4k-ts for content extraction
+      const { fulltext } = await import('../../../../../packages/newspaper4k-ts/src/index')
+      
+      // Extract text content first
+      const extractedText = await fulltext(rawContent, 'en')
+      
+      // For now, return basic extraction result
+      // In future, we can use the full Article class for complete extraction
+      return {
+        title: this.extractTitleFromHtml(rawContent),
+        text: extractedText,
+        authors: [],
+        publishDate: null,
+        images: [],
+        summary: extractedText.substring(0, 500),
+        keywords: []
+      }
+    } catch (error) {
+      logger.error('Content extraction failed:', error)
+      throw new Error('Content extraction failed')
+    }
+  }
+
+  private extractTitleFromHtml(html: string): string {
+    // Simple title extraction as fallback
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+    return titleMatch ? titleMatch[1].trim() : ''
   }
 
   async validateContent(article: RawArticle): Promise<boolean> {
@@ -50,6 +83,8 @@ export class ProcessorService {
     return this.contentValidator.normalize(article)
   }
 
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async enrichContent(_content: any): Promise<any> {
     // Placeholder implementation
     logger.info('Enriching content (placeholder)')

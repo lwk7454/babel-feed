@@ -52,6 +52,7 @@ export default [
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      'no-control-regex': 'off',
       'semi': ['error', 'never'],
     },
   },

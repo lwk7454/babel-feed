@@ -1,0 +1,33 @@
+{
+  "name": "newspaper4k-ts",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/newspaper4k-ts/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/newspaper4k-ts",
+        "main": "packages/newspaper4k-ts/src/index.ts",
+        "tsConfig": "packages/newspaper4k-ts/tsconfig.lib.json",
+        "assets": ["packages/newspaper4k-ts/*.md"]
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/newspaper4k-ts/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/newspaper4k-ts/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  }
+}

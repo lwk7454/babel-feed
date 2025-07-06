@@ -1,0 +1,23 @@
+{
+  "name": "@babel-feed/newspaper4k-ts",
+  "version": "1.0.0",
+  "description": "TypeScript implementation of newspaper4k for article extraction and processing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "bun run src/simple-test.ts"
+  },
+  "keywords": ["newspaper", "article", "extraction", "scraping", "nlp"],
+  "author": "Babel Feed",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "axios": "^1.6.2",
+    "date-fns": "^2.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
