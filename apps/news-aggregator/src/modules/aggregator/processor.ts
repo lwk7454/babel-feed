@@ -1,24 +1,39 @@
 import { logger } from '../common/logger'
+import { RawArticle } from '../common/types'
 
 export class ProcessorService {
   private isRunning = false
+  private contentValidator: ContentValidator
+
+  constructor() {
+    this.contentValidator = new ContentValidator()
+  }
 
   async initialize(): Promise<void> {
     logger.info('Processor service initialized')
   }
 
-  async processArticles(articles: any[]): Promise<any[]> {
-    logger.info('Processing articles (placeholder):', articles.length)
+  async processArticles(articles: RawArticle[]): Promise<RawArticle[]> {
+    logger.info('Processing articles:', articles.length)
     
-    // TODO: Implement article processing pipeline
-    // - Content extraction and normalization
-    // - Content validation and quality scoring
-    // - Deduplication using content hashes
-    // - Metadata extraction and enrichment
-    // - Content sanitization
-    // - Image processing and optimization
+    const validatedArticles: RawArticle[] = []
     
-    return articles // Placeholder return
+    for (const article of articles) {
+      try {
+        const isValid = await this.validateContent(article)
+        if (isValid) {
+          const processedArticle = await this.normalizeContent(article)
+          validatedArticles.push(processedArticle)
+        } else {
+          logger.debug(`Article validation failed: ${article.title}`)
+        }
+      } catch (error) {
+        logger.warn(`Error processing article: ${article.title}`, error)
+      }
+    }
+    
+    logger.info(`Processed ${validatedArticles.length}/${articles.length} articles successfully`)
+    return validatedArticles
   }
 
   async extractContent(_rawContent: string): Promise<any> {
@@ -27,16 +42,12 @@ export class ProcessorService {
     throw new Error('Not implemented - needs content extraction logic')
   }
 
-  async validateContent(_content: any): Promise<boolean> {
-    // Placeholder implementation
-    logger.info('Validating content (placeholder)')
-    throw new Error('Not implemented - needs content validation logic')
+  async validateContent(article: RawArticle): Promise<boolean> {
+    return this.contentValidator.validate(article)
   }
 
-  async normalizeContent(_content: any): Promise<any> {
-    // Placeholder implementation
-    logger.info('Normalizing content (placeholder)')
-    throw new Error('Not implemented - needs content normalization logic')
+  async normalizeContent(article: RawArticle): Promise<RawArticle> {
+    return this.contentValidator.normalize(article)
   }
 
   async enrichContent(_content: any): Promise<any> {
@@ -55,5 +66,183 @@ export class ProcessorService {
 
   getStatus(): { running: boolean } {
     return { running: this.isRunning }
+  }
+}
+
+class ContentValidator {
+  private readonly MIN_TITLE_LENGTH = 10
+  private readonly MAX_TITLE_LENGTH = 200
+  private readonly MIN_DESCRIPTION_LENGTH = 50
+  private readonly MAX_DESCRIPTION_LENGTH = 2000
+  private readonly SPAM_KEYWORDS = [
+    'click here', 'free download', 'make money fast', 'limited time offer',
+    'act now', 'buy now', 'special promotion', 'exclusive deal'
+  ]
+
+  async validate(article: RawArticle): Promise<boolean> {
+    try {
+      // Required field validation
+      if (!this.validateRequiredFields(article)) {
+        return false
+      }
+
+      // Content quality validation
+      if (!this.validateContentQuality(article)) {
+        return false
+      }
+
+      // Date validation
+      if (!this.validateDate(article.publishedAt)) {
+        return false
+      }
+
+      // URL validation
+      if (!this.validateUrl(article.url)) {
+        return false
+      }
+
+      // Spam detection
+      if (this.detectSpam(article)) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      logger.warn('Content validation error:', error)
+      return false
+    }
+  }
+
+  async normalize(article: RawArticle): Promise<RawArticle> {
+    return {
+      ...article,
+      title: this.normalizeText(article.title),
+      description: article.description ? this.normalizeText(article.description) : undefined,
+      author: article.author ? this.normalizeText(article.author) : undefined,
+      url: this.normalizeUrl(article.url),
+      imageUrl: article.imageUrl ? this.normalizeUrl(article.imageUrl) : undefined,
+    }
+  }
+
+  private validateRequiredFields(article: RawArticle): boolean {
+    if (!article.title || !article.url || !article.publishedAt || !article.source) {
+      logger.debug('Missing required fields')
+      return false
+    }
+    return true
+  }
+
+  private validateContentQuality(article: RawArticle): boolean {
+    // Title validation
+    if (article.title.length < this.MIN_TITLE_LENGTH || 
+        article.title.length > this.MAX_TITLE_LENGTH) {
+      logger.debug(`Invalid title length: ${article.title.length}`)
+      return false
+    }
+
+    // Description validation (if present)
+    if (article.description && 
+        (article.description.length < this.MIN_DESCRIPTION_LENGTH || 
+         article.description.length > this.MAX_DESCRIPTION_LENGTH)) {
+      logger.debug(`Invalid description length: ${article.description.length}`)
+      return false
+    }
+
+    // Check for obviously broken content
+    if (this.isGibberish(article.title)) {
+      logger.debug('Title appears to be gibberish')
+      return false
+    }
+
+    return true
+  }
+
+  private validateDate(date: Date): boolean {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      return false
+    }
+
+    const now = new Date()
+    const twoYearsAgo = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate())
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    return date >= twoYearsAgo && date <= oneWeekFromNow
+  }
+
+  private validateUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }
+
+  private detectSpam(article: RawArticle): boolean {
+    const textToCheck = `${article.title} ${article.description || ''}`.toLowerCase()
+    
+    for (const keyword of this.SPAM_KEYWORDS) {
+      if (textToCheck.includes(keyword.toLowerCase())) {
+        logger.debug(`Spam keyword detected: ${keyword}`)
+        return true
+      }
+    }
+
+    // Check for excessive capitalization
+    const capsRatio = (article.title.match(/[A-Z]/g) || []).length / article.title.length
+    if (capsRatio > 0.5 && article.title.length > 20) {
+      logger.debug('Excessive capitalization detected')
+      return true
+    }
+
+    // Check for suspicious punctuation patterns
+    if (article.title.includes('!!!') || article.title.includes('???')) {
+      logger.debug('Suspicious punctuation pattern detected')
+      return true
+    }
+
+    return false
+  }
+
+  private isGibberish(text: string): boolean {
+    // Check for reasonable vowel ratio
+    const vowels = (text.match(/[aeiouAEIOU]/g) || []).length
+    const consonants = (text.match(/[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]/g) || []).length
+    
+    if (consonants === 0) return true
+    
+    const vowelRatio = vowels / (vowels + consonants)
+    if (vowelRatio < 0.1 || vowelRatio > 0.8) {
+      return true
+    }
+
+    // Check for repeated characters
+    if (/(.)\1{4,}/.test(text)) {
+      return true
+    }
+
+    // Check for too many numbers
+    const numberRatio = (text.match(/\d/g) || []).length / text.length
+    if (numberRatio > 0.5) {
+      return true
+    }
+
+    return false
+  }
+
+  private normalizeText(text: string): string {
+    return text
+      .trim()
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+  }
+
+  private normalizeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url.trim())
+      return urlObj.toString()
+    } catch {
+      return url.trim()
+    }
   }
 }

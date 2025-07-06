@@ -305,22 +305,28 @@ nx run news-aggregator:cli discover-sources
 - [x] **Scheduling System**: Implement configurable polling intervals per source
 - [x] **Hybrid Ingestion Pipeline**: Implement logic to attempt RSS/Atom ingestion first, then fall back to HTML crawling and extraction if feeds are missing or insufficient. Periodically re-check for new/hidden feeds.
 
-#### 2.2 AI Integration 🚧 **PLACEHOLDER STRUCTURE CREATED**
+#### 2.2 HTML Content Extraction for Non-RSS Sources ✅ **COMPLETED**
+- [x] **HTML Content Extraction**: Implement web scraping and content extraction for sources without RSS feeds
+- [x] **Content Parser**: Extract article title, body, publication date, and images from HTML
+- [x] **Fallback Detection**: Automatically detect when RSS feeds are insufficient and trigger HTML extraction
+- [x] **Content Validation**: Validate extracted content quality and completeness
+- [x] **Site-Specific Extractors**: Implement custom extractors for major news sites with unique layouts. Organize these code carefully for scalable dev experience
+
+#### 2.3 Source Management & Admin API
+- [ ] **Source Management API**: RESTful API for source CRUD operations
+- [ ] **Source Health Monitoring**: Real-time source reliability and performance tracking
+- [ ] **Admin Authentication**: Secure admin access with API keys or JWT tokens, use bypass for dev and test environments
+- [ ] **Source Configuration**: Dynamic source configuration without service restart
+- [ ] **Bulk Operations**: API support for bulk source management operations
+
+#### 2.4 AI Integration 🚧 **PLACEHOLDER STRUCTURE CREATED**
 **Current Status**: Modular structure created with placeholders, needs implementation
 
-**TODO - High Priority Implementation Needed**:
-- [ ] **Database-Driven Source Management**: Replace JSON configuration with PostgreSQL-based source CRUD operations
 - [ ] **AI Translation Pipeline**: Implement multi-provider translation with failover and caching
 - [ ] **AI Summarization Pipeline**: Implement article summarization with quality thresholds
 - [ ] **AI Content Tagging**: Implement automated tagging and categorization
-- [ ] **Admin API Endpoints**: Implement Express/Fastify server with source management endpoints
-- [ ] **CLI Commands**: Implement functional CLI commands for source management and system control
-- [ ] **Source Discovery Pipeline**: Implement automated source discovery with validation and scoring
 - [ ] **Content Processing Pipeline**: Implement article processing, validation, and normalization
 - [ ] **Deduplication Logic**: Implement sophisticated content deduplication with fuzzy matching
-- [ ] **Database Storage**: Implement article storage with translations and metadata
-- [ ] **Health Monitoring**: Implement real-time health checks and alerting
-- [ ] **Content Extraction**: Implement HTML content extraction for non-RSS sources
 
 **Placeholder Modules Created**:
 - ✅ **Source Manager**: CRUD, health monitoring, discovery services (structure only)
@@ -331,28 +337,26 @@ nx run news-aggregator:cli discover-sources
 
 **Legacy Services**: Maintained for backward compatibility during transition
 
-#### 2.3 Database Operations
+#### 2.5 Database Operations
 - [ ] **Article Storage**: Implement article insertion with conflict resolution
 - [ ] **Translation Storage**: Store translations in appropriate database fields
 - [ ] **Metadata Management**: Store and manage article metadata and tags
 - [ ] **Query Optimization**: Implement efficient database queries for content retrieval
 - [ ] **Indexing Strategy**: Create appropriate indexes for performance
 
-### Phase 3: API & Admin Interface (Weeks 5-6)
+### Phase 3: Content Delivery API & Management Tools (Weeks 5-6)
 
-#### 3.1 REST API Development
+#### 3.1 Content Delivery API
 - [ ] **Article Endpoints**: GET /articles with pagination, filtering, and search
 - [ ] **Content Endpoints**: GET /articles/:id with full content and translations
 - [ ] **Search Endpoints**: Full-text search with relevance scoring
-- [ ] **Admin Endpoints**: Source management, system status, and configuration
-- [ ] **API Documentation**: Comprehensive API documentation and examples
+- [ ] **Feed Endpoints**: Personalized content feeds for mobile app integration
 
-#### 3.2 Admin Management Tools
+#### 3.2 CLI Management Tools
 - [ ] **CLI Interface**: Command-line tools for source management and system control
-- [ ] **Source Management**: Add/remove/configure news sources with validation
-- [ ] **System Status**: Health dashboard and performance metrics
-- [ ] **Content Moderation**: Tools for content review and management
-- [ ] **User Analytics**: Basic user interaction tracking and reporting
+- [ ] **System Status**: Health dashboard and performance metrics via CLI
+- [ ] **Content Moderation**: CLI tools for content review and management
+- [ ] **User Analytics**: Basic user interaction tracking and reporting via CLI
 
 #### 3.3 Monitoring & Observability
 - [ ] **Metrics Collection**: Performance metrics and system health indicators
