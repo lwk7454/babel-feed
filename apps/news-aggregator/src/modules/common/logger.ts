@@ -6,9 +6,17 @@ class Logger {
 
   private formatMessage(level: string, message: string, ...args: unknown[]): string {
     const timestamp = this.getTimestamp()
-    const formattedArgs = args.length > 0 ? ' ' + args.map(arg => 
-      typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ') : ''
+    const formattedArgs = args.length > 0 ? ' ' + args.map(arg => {
+      if (typeof arg === 'object') {
+        try {
+          return JSON.stringify(arg)
+        } catch (e) {
+          // Handle cyclic structures
+          return arg instanceof Error ? arg.message : '[Object]'
+        }
+      }
+      return String(arg)
+    }).join(' ') : ''
     return `[${timestamp}] ${level.toUpperCase()}: ${message}${formattedArgs}`
   }
 

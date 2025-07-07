@@ -305,12 +305,13 @@ nx run news-aggregator:cli discover-sources
 - [x] **Scheduling System**: Implement configurable polling intervals per source
 - [x] **Hybrid Ingestion Pipeline**: Implement logic to attempt RSS/Atom ingestion first, then fall back to HTML crawling and extraction if feeds are missing or insufficient. Periodically re-check for new/hidden feeds.
 
-#### 2.2 HTML Content Extraction for Non-RSS Sources ✅ **COMPLETED**
-- [x] **HTML Content Extraction**: Implement web scraping and content extraction for sources without RSS feeds
-- [x] **Content Parser**: Extract article title, body, publication date, and images from HTML
+#### 2.2 HTML Content Extraction for Non-RSS Sources ✅ **COMPLETED** (Updated to use newspaper4k-ts)
+- [x] **HTML Content Extraction**: ✅ **UPDATED** - Now uses newspaper4k-ts package for advanced article extraction with scoring algorithms
+- [x] **Content Parser**: ✅ **ENHANCED** - Leverages newspaper4k-ts specialized extractors (title, author, date, image, video, metadata)
 - [x] **Fallback Detection**: Automatically detect when RSS feeds are insufficient and trigger HTML extraction
-- [x] **Content Validation**: Validate extracted content quality and completeness
-- [x] **Site-Specific Extractors**: Implement custom extractors for major news sites with unique layouts. Organize these code carefully for scalable dev experience
+- [x] **Content Validation**: ✅ **IMPROVED** - Uses newspaper4k-ts built-in quality validation with configurable thresholds
+- [x] **Advanced Content Processing**: ✅ **NEW** - Language detection, keyword extraction, reading time calculation, complexity scoring
+- [x] **Site-Agnostic Extraction**: ✅ **REFACTORED** - Replaced site-specific extractors with universal newspaper4k-ts extraction engine
 
 #### 2.3 Source Management & Admin API
 - [ ] **Source Management API**: RESTful API for source CRUD operations

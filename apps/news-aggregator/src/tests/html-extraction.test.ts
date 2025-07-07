@@ -1,19 +1,70 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test'
-import axios from 'axios'
 import { FetcherService } from '../modules/aggregator/fetcher'
 import { NewsSource } from '../modules/common/types'
 
-// Mock axios
-mock.module('axios', () => ({
-  default: {
-    get: mock(),
-    isAxiosError: mock().mockReturnValue(false),
-  },
-}))
+// Mock newspaper4k-ts
+mock.module('../../../../../packages/newspaper4k-ts/src/article', () => ({
+  Article: class MockArticle {
+    url: string
+    title: string = ''
+    text: string = ''
+    authors: string[] = []
+    publishDate: Date | null = null
+    images: string[] = []
+    movies: string[] = []
+    metaDescription: string = ''
+    metaKeywords: string[] = []
+    language: string = ''
+    
+    constructor(url: string, config: any) {
+      this.url = url
+      // Mock configuration will be used by test setup
+    }
+    
+    async build() {
+      // Mock implementation will be set by individual tests
+    }
+    
+    isValidArticle(): boolean {
+      return this.title.length > 0 && this.publishDate !== null
+    }
+    
+    getExtractionResult() {
+      return {
+        title: this.title,
+        text: this.text,
+        authors: this.authors,
+        publishDate: this.publishDate,
+        images: this.images,
+        videos: this.movies,
+        language: this.language,
+        meta: {
+          description: this.metaDescription,
+          keywords: this.metaKeywords,
+          siteName: 'Mock Site',
+          canonicalUrl: this.url
+        }
+      }
+    }
+    
+    getStats() {
+      return {
+        wordCount: this.text.split(' ').length,
+        readingTime: Math.ceil(this.text.split(' ').length / 200),
+        complexity: 0.5,
+        sentenceCount: 1,
+        paragraphCount: 1,
+        imageCount: this.images.length,
+        videoCount: this.movies.length,
+        keywordCount: this.metaKeywords.length
+      }
+    }
+  }
+}));
 
-const mockedAxios = axios as any
+let mockArticleInstance: any
 
-describe('HTML Content Extraction', () => {
+describe('HTML Content Extraction with Newspaper4k-TS', () => {
   let fetcherService: FetcherService
   let mockSource: NewsSource
 
@@ -37,31 +88,27 @@ describe('HTML Content Extraction', () => {
       metadata: {},
     }
 
-    // Reset mocks
-    mockedAxios.get.mockReset()
-    mockedAxios.isAxiosError.mockReturnValue(false)
+    // Reset mock article instance
+    const { Article } = require('../../../../../packages/newspaper4k-ts/src/article')
+    mockArticleInstance = new Article('', {})
   })
 
-  describe('Generic HTML Extraction', () => {
-    it('should extract article from generic HTML with meta tags', async () => {
-      const mockHtml = `
-        <html>
-          <head>
-            <title>Test Article Title</title>
-            <meta property="og:title" content="Test Article Title">
-            <meta property="og:description" content="This is a test article description with sufficient length to pass validation">
-            <meta property="og:image" content="https://example.com/image.jpg">
-            <meta property="article:published_time" content="2024-01-15T10:00:00Z">
-            <meta name="author" content="John Doe">
-          </head>
-          <body>
-            <h1>Test Article Title</h1>
-            <p>This is a test article description with sufficient length to pass validation</p>
-          </body>
-        </html>
-      `
-
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+  describe('Newspaper4k-TS Integration', () => {
+    it('should extract article using newspaper4k-ts', async () => {
+      // Setup mock article data
+      mockArticleInstance.title = 'Test Article Title'
+      mockArticleInstance.text = 'This is a comprehensive test article with sufficient content to pass validation checks and provide meaningful information to readers.'
+      mockArticleInstance.authors = ['John Doe']
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.images = ['https://example.com/image.jpg']
+      mockArticleInstance.language = 'en'
+      mockArticleInstance.metaDescription = 'This is a test article description with sufficient length to pass validation'
+      mockArticleInstance.metaKeywords = ['test', 'article', 'news']
+      
+      // Mock the build method to setup the article
+      mockArticleInstance.build = mock(async () => {
+        // Article data is already set above
+      })
 
       const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
 
@@ -74,61 +121,55 @@ describe('HTML Content Extraction', () => {
         author: 'John Doe',
         source: 'Test News Source',
         sourceLanguage: 'en',
-        metadata: { extractor: 'generic' }
+        metadata: { 
+          extractor: 'newspaper4k-ts',
+          wordCount: expect.any(Number),
+          readingTime: expect.any(Number),
+          complexity: expect.any(Number),
+          keywords: 'test,article,news',
+          siteName: 'Mock Site',
+          canonicalUrl: 'https://example.com/article'
+        }
       })
       expect(articles[0].publishedAt).toBeInstanceOf(Date)
     })
 
-    it('should extract article using h1 title when meta tags missing', async () => {
-      const mockHtml = `
-        <html>
-          <body>
-            <h1>Article Title from H1</h1>
-            <meta property="article:published_time" content="2024-01-15T10:00:00Z">
-            <p>First paragraph content that serves as description</p>
-          </body>
-        </html>
-      `
-
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+    it('should generate description from article text when meta description is insufficient', async () => {
+      mockArticleInstance.title = 'Article Title from H1'
+      mockArticleInstance.text = 'First paragraph content that serves as description. This is a longer paragraph with more detailed content that would be used for description generation.'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.metaDescription = 'Short' // Too short, should fallback to text
+      mockArticleInstance.language = 'en'
+      
+      mockArticleInstance.build = mock(async () => {})
 
       const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
 
       expect(articles).toHaveLength(1)
       expect(articles[0].title).toBe('Article Title from H1')
-      expect(articles[0].description).toBe('First paragraph content that serves as description')
+      expect(articles[0].description).toBe('First paragraph content that serves as description. This is a longer paragraph with more detailed content that would be used for description generation.')
     })
 
     it('should return empty array when required fields missing', async () => {
-      const mockHtml = `
-        <html>
-          <body>
-            <p>Article without title or date</p>
-          </body>
-        </html>
-      `
-
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+      mockArticleInstance.title = '' // Missing title
+      mockArticleInstance.publishDate = null // Missing date
+      mockArticleInstance.text = 'Article without title or date'
+      
+      mockArticleInstance.build = mock(async () => {})
 
       const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
 
       expect(articles).toHaveLength(0)
     })
 
-    it('should reject articles with invalid dates', async () => {
-      const mockHtml = `
-        <html>
-          <head>
-            <title>Test Article</title>
-            <meta property="article:published_time" content="2020-01-01T00:00:00Z">
-          </head>
-          <body>
-            <h1>Test Article</h1>
-          </body>
-        </html>
-      `
-
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+    it('should return empty array when article quality validation fails', async () => {
+      mockArticleInstance.title = 'Test Article'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.text = 'Short' // Too short to pass validation
+      
+      // Mock isValidArticle to return false
+      mockArticleInstance.isValidArticle = mock(() => false)
+      mockArticleInstance.build = mock(async () => {})
 
       const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
 
@@ -136,158 +177,35 @@ describe('HTML Content Extraction', () => {
     })
   })
 
-  describe('Site-Specific Extraction', () => {
-    describe('CNN Extraction', () => {
-      it('should extract CNN article with specific selectors', async () => {
-        const mockHtml = `
-          <html>
-            <head>
-              <meta name="pubdate" content="2024-01-15T10:00:00Z">
-              <meta name="author" content="CNN Reporter">
-              <meta property="og:image" content="https://cdn.cnn.com/image.jpg">
-            </head>
-            <body>
-              <h1 class="headline__text">Breaking: CNN News Title</h1>
-              <div class="zn-body__paragraph">This is the first paragraph of the CNN article with sufficient content.</div>
-              <span class="byline__name">CNN Reporter</span>
-            </body>
-          </html>
-        `
+  describe('Multi-author Support', () => {
+    it('should handle multiple authors correctly', async () => {
+      mockArticleInstance.title = 'Multi-author Article'
+      mockArticleInstance.text = 'This is an article written by multiple authors with comprehensive content.'
+      mockArticleInstance.authors = ['Alice Smith', 'Bob Johnson', 'Carol Davis']
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.language = 'en'
+      
+      mockArticleInstance.build = mock(async () => {})
 
-        mockedAxios.get.mockResolvedValue({ data: mockHtml })
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
 
-        const articles = await fetcherService.fetchHTML('https://cnn.com/article', mockSource)
-
-        expect(articles).toHaveLength(1)
-        expect(articles[0]).toMatchObject({
-          title: 'Breaking: CNN News Title',
-          description: 'This is the first paragraph of the CNN article with sufficient content.',
-          imageUrl: 'https://cdn.cnn.com/image.jpg',
-          author: 'CNN Reporter',
-          metadata: { extractor: 'cnn' }
-        })
-      })
-
-      it('should fallback to meta tags when CNN selectors fail', async () => {
-        const mockHtml = `
-          <html>
-            <head>
-              <meta name="description" content="CNN article description from meta tag">
-              <meta name="pubdate" content="2024-01-15T10:00:00Z">
-            </head>
-            <body>
-              <h1 class="headline__text">CNN Title</h1>
-            </body>
-          </html>
-        `
-
-        mockedAxios.get.mockResolvedValue({ data: mockHtml })
-
-        const articles = await fetcherService.fetchHTML('https://cnn.com/article', mockSource)
-
-        expect(articles).toHaveLength(1)
-        expect(articles[0].description).toBe('CNN article description from meta tag')
-      })
+      expect(articles).toHaveLength(1)
+      expect(articles[0].author).toBe('Alice Smith, Bob Johnson, Carol Davis')
     })
 
-    describe('BBC Extraction', () => {
-      it('should extract BBC article with specific selectors', async () => {
-        const mockHtml = `
-          <html>
-            <head>
-              <meta property="og:image" content="https://ichef.bbci.co.uk/image.jpg">
-            </head>
-            <body>
-              <h1 data-testid="headline">BBC Breaking News Story</h1>
-              <p data-testid="paragraph">First paragraph of BBC article with detailed content.</p>
-              <p data-testid="byline">BBC News Reporter</p>
-              <time datetime="2024-01-15T10:00:00Z">15 January 2024</time>
-            </body>
-          </html>
-        `
+    it('should handle articles with no authors', async () => {
+      mockArticleInstance.title = 'Anonymous Article'
+      mockArticleInstance.text = 'This is an article with no specified authors.'
+      mockArticleInstance.authors = []
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.language = 'en'
+      
+      mockArticleInstance.build = mock(async () => {})
 
-        mockedAxios.get.mockResolvedValue({ data: mockHtml })
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
 
-        const articles = await fetcherService.fetchHTML('https://bbc.com/article', mockSource)
-
-        expect(articles).toHaveLength(1)
-        expect(articles[0]).toMatchObject({
-          title: 'BBC Breaking News Story',
-          description: 'First paragraph of BBC article with detailed content.',
-          imageUrl: 'https://ichef.bbci.co.uk/image.jpg',
-          author: 'BBC News Reporter',
-          metadata: { extractor: 'bbc' }
-        })
-      })
-
-      it('should work with BBC legacy selectors', async () => {
-        const mockHtml = `
-          <html>
-            <body>
-              <h1 class="story-headline">BBC Legacy Title</h1>
-              <time datetime="2024-01-15T10:00:00Z">15 January 2024</time>
-              <p>Legacy BBC article content.</p>
-            </body>
-          </html>
-        `
-
-        mockedAxios.get.mockResolvedValue({ data: mockHtml })
-
-        const articles = await fetcherService.fetchHTML('https://bbc.co.uk/article', mockSource)
-
-        expect(articles).toHaveLength(1)
-        expect(articles[0].title).toBe('BBC Legacy Title')
-      })
-    })
-
-    describe('Reuters Extraction', () => {
-      it('should extract Reuters article with specific selectors', async () => {
-        const mockHtml = `
-          <html>
-            <head>
-              <meta property="og:image" content="https://reuters.com/image.jpg">
-            </head>
-            <body>
-              <h1 data-testid="Headline">Reuters Market Update</h1>
-              <p data-testid="paragraph">Reuters reporting on financial markets with detailed analysis.</p>
-              <span data-testid="AuthorName">Reuters Staff</span>
-              <time datetime="2024-01-15T10:00:00Z">January 15, 2024</time>
-            </body>
-          </html>
-        `
-
-        mockedAxios.get.mockResolvedValue({ data: mockHtml })
-
-        const articles = await fetcherService.fetchHTML('https://reuters.com/article', mockSource)
-
-        expect(articles).toHaveLength(1)
-        expect(articles[0]).toMatchObject({
-          title: 'Reuters Market Update',
-          description: 'Reuters reporting on financial markets with detailed analysis.',
-          imageUrl: 'https://reuters.com/image.jpg',
-          author: 'Reuters Staff',
-          metadata: { extractor: 'reuters' }
-        })
-      })
-
-      it('should use legacy Reuters selectors when needed', async () => {
-        const mockHtml = `
-          <html>
-            <body>
-              <h1 class="ArticleHeader_headline">Reuters Legacy Title</h1>
-              <time datetime="2024-01-15T10:00:00Z">January 15, 2024</time>
-              <p>Legacy Reuters content.</p>
-            </body>
-          </html>
-        `
-
-        mockedAxios.get.mockResolvedValue({ data: mockHtml })
-
-        const articles = await fetcherService.fetchHTML('https://reuters.com/article', mockSource)
-
-        expect(articles).toHaveLength(1)
-        expect(articles[0].title).toBe('Reuters Legacy Title')
-      })
+      expect(articles).toHaveLength(1)
+      expect(articles[0].author).toBeUndefined()
     })
   })
 
@@ -352,111 +270,82 @@ describe('HTML Content Extraction', () => {
   })
 
   describe('Error Handling', () => {
-    it('should handle HTTP 403 errors gracefully', async () => {
-      const error = new Error('Request failed with status code 403')
-      ;(error as any).response = { status: 403 }
-      mockedAxios.isAxiosError.mockReturnValue(true)
-      mockedAxios.get.mockRejectedValue(error)
+    it('should handle newspaper4k-ts extraction errors gracefully', async () => {
+      mockArticleInstance.build = mock(async () => {
+        throw new Error('Failed to download article')
+      })
 
       await expect(fetcherService.fetchHTML('https://example.com/article', mockSource))
-        .rejects.toThrow('Access forbidden - site may be blocking scrapers')
+        .rejects.toThrow('HTML extraction failed: Failed to download article')
     })
 
-    it('should handle HTTP 404 errors gracefully', async () => {
-      const error = new Error('Request failed with status code 404')
-      ;(error as any).response = { status: 404 }
-      mockedAxios.isAxiosError.mockReturnValue(true)
-      mockedAxios.get.mockRejectedValue(error)
+    it('should handle invalid URLs gracefully', async () => {
+      mockArticleInstance.build = mock(async () => {
+        throw new Error('Invalid URL: not-a-valid-url')
+      })
+
+      await expect(fetcherService.fetchHTML('not-a-valid-url', mockSource))
+        .rejects.toThrow('HTML extraction failed: Invalid URL: not-a-valid-url')
+    })
+
+    it('should handle network timeouts gracefully', async () => {
+      mockArticleInstance.build = mock(async () => {
+        throw new Error('Request timeout')
+      })
 
       await expect(fetcherService.fetchHTML('https://example.com/article', mockSource))
-        .rejects.toThrow('Page not found')
+        .rejects.toThrow('HTML extraction failed: Request timeout')
     })
 
-    it('should handle timeout errors gracefully', async () => {
-      const error = new Error('timeout of 30000ms exceeded')
-      ;(error as any).code = 'ECONNABORTED'
-      mockedAxios.isAxiosError.mockReturnValue(true)
-      mockedAxios.get.mockRejectedValue(error)
+    it('should handle parsing errors gracefully', async () => {
+      mockArticleInstance.build = mock(async () => {
+        throw new Error('Failed to parse HTML content')
+      })
 
       await expect(fetcherService.fetchHTML('https://example.com/article', mockSource))
-        .rejects.toThrow('Request timeout')
-    })
-
-    it('should handle invalid HTML responses', async () => {
-      mockedAxios.get.mockResolvedValue({ data: null })
-
-      await expect(fetcherService.fetchHTML('https://example.com/article', mockSource))
-        .rejects.toThrow('Invalid HTML response')
-    })
-
-    it('should handle malformed HTML gracefully', async () => {
-      const malformedHtml = '<html><body><h1>Title</h1><time>invalid-date</time></body></html>'
-      mockedAxios.get.mockResolvedValue({ data: malformedHtml })
-
-      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
-      expect(articles).toHaveLength(0) // Should reject due to invalid date
+        .rejects.toThrow('HTML extraction failed: Failed to parse HTML content')
     })
   })
 
-  describe('Content Validation', () => {
-    it('should validate date range (not too old)', async () => {
-      const mockHtml = `
-        <html>
-          <head>
-            <title>Old Article</title>
-            <meta property="article:published_time" content="2020-01-01T00:00:00Z">
-          </head>
-          <body>
-            <h1>Old Article</h1>
-          </body>
-        </html>
-      `
+  describe('Content Quality Validation', () => {
+    it('should validate minimum content requirements', async () => {
+      mockArticleInstance.title = 'Quality Article'
+      mockArticleInstance.text = 'This is a comprehensive article with sufficient content length and quality to meet all validation requirements and provide value to readers.'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.language = 'en'
+      
+      // Mock quality validation to pass
+      mockArticleInstance.isValidArticle = mock(() => true)
+      mockArticleInstance.build = mock(async () => {})
 
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
+      expect(articles).toHaveLength(1)
+      expect(articles[0].title).toBe('Quality Article')
+    })
+
+    it('should reject articles that fail quality validation', async () => {
+      mockArticleInstance.title = 'Poor Quality Article'
+      mockArticleInstance.text = 'Short'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      
+      // Mock quality validation to fail
+      mockArticleInstance.isValidArticle = mock(() => false)
+      mockArticleInstance.build = mock(async () => {})
 
       const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
       expect(articles).toHaveLength(0)
     })
 
-    it('should validate date range (not too far in future)', async () => {
-      const futureDate = new Date()
-      futureDate.setMonth(futureDate.getMonth() + 2)
-
-      const mockHtml = `
-        <html>
-          <head>
-            <title>Future Article</title>
-            <meta property="article:published_time" content="${futureDate.toISOString()}">
-          </head>
-          <body>
-            <h1>Future Article</h1>
-          </body>
-        </html>
-      `
-
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
-
-      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
-      expect(articles).toHaveLength(0)
-    })
-
-    it('should accept recent dates within valid range', async () => {
+    it('should accept articles with recent publication dates', async () => {
       const recentDate = new Date()
       recentDate.setDate(recentDate.getDate() - 1) // Yesterday
 
-      const mockHtml = `
-        <html>
-          <head>
-            <title>Recent Article</title>
-            <meta property="article:published_time" content="${recentDate.toISOString()}">
-          </head>
-          <body>
-            <h1>Recent Article</h1>
-          </body>
-        </html>
-      `
-
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+      mockArticleInstance.title = 'Recent Article'
+      mockArticleInstance.text = 'This is a recent article with current and relevant content.'
+      mockArticleInstance.publishDate = recentDate
+      mockArticleInstance.language = 'en'
+      
+      mockArticleInstance.build = mock(async () => {})
 
       const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
       expect(articles).toHaveLength(1)
@@ -464,35 +353,72 @@ describe('HTML Content Extraction', () => {
     })
   })
 
-  describe('HTTP Request Configuration', () => {
-    it('should use proper headers for web scraping', async () => {
-      const mockHtml = '<html><head><title>Test</title><meta property="article:published_time" content="2024-01-15T10:00:00Z"></head></html>'
-      mockedAxios.get.mockResolvedValue({ data: mockHtml })
+  describe('Language and Metadata Handling', () => {
+    it('should use source language preference in configuration', async () => {
+      mockSource.language = 'zh-CN'
+      
+      mockArticleInstance.title = 'Chinese Article'
+      mockArticleInstance.text = 'This is an article in Chinese language.'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.language = 'zh-CN'
+      
+      mockArticleInstance.build = mock(async () => {})
 
-      await fetcherService.fetchHTML('https://example.com/article', mockSource)
-
-      expect(mockedAxios.get).toHaveBeenCalledWith('https://example.com/article', {
-        headers: {
-          'User-Agent': 'BabelFeed-NewsAggregator/1.0',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate',
-          'DNT': '1',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-        },
-        timeout: 30000,
-        maxContentLength: 10 * 1024 * 1024,
-        validateStatus: expect.any(Function),
-      })
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
+      expect(articles).toHaveLength(1)
+      expect(articles[0].sourceLanguage).toBe('zh-CN')
     })
 
-    it('should reject responses larger than limit', async () => {
-      const error = new Error('maxContentLength size of 10485760 exceeded')
-      mockedAxios.get.mockRejectedValue(error)
+    it('should include comprehensive metadata in results', async () => {
+      mockArticleInstance.title = 'Metadata Test Article'
+      mockArticleInstance.text = 'This article tests metadata extraction and inclusion.'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.language = 'en'
+      mockArticleInstance.metaKeywords = ['test', 'metadata', 'extraction']
+      
+      mockArticleInstance.build = mock(async () => {})
 
-      await expect(fetcherService.fetchHTML('https://example.com/huge-page', mockSource))
-        .rejects.toThrow('HTML extraction failed')
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
+      expect(articles).toHaveLength(1)
+      expect(articles[0].metadata).toMatchObject({
+        extractor: 'newspaper4k-ts',
+        wordCount: expect.any(Number),
+        readingTime: expect.any(Number),
+        complexity: expect.any(Number),
+        keywords: 'test,metadata,extraction',
+        siteName: 'Mock Site',
+        canonicalUrl: 'https://example.com/article'
+      })
+    })
+  })
+
+  describe('Image Handling', () => {
+    it('should extract and use first image as main image', async () => {
+      mockArticleInstance.title = 'Article with Images'
+      mockArticleInstance.text = 'This article contains multiple images.'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.images = ['https://example.com/image1.jpg', 'https://example.com/image2.jpg']
+      mockArticleInstance.language = 'en'
+      
+      mockArticleInstance.build = mock(async () => {})
+
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
+      expect(articles).toHaveLength(1)
+      expect(articles[0].imageUrl).toBe('https://example.com/image1.jpg')
+    })
+
+    it('should handle articles with no images', async () => {
+      mockArticleInstance.title = 'Article without Images'
+      mockArticleInstance.text = 'This article has no images.'
+      mockArticleInstance.publishDate = new Date('2024-01-15T10:00:00Z')
+      mockArticleInstance.images = []
+      mockArticleInstance.language = 'en'
+      
+      mockArticleInstance.build = mock(async () => {})
+
+      const articles = await fetcherService.fetchHTML('https://example.com/article', mockSource)
+      expect(articles).toHaveLength(1)
+      expect(articles[0].imageUrl).toBeUndefined()
     })
   })
 })
