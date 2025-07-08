@@ -1,0 +1,62 @@
+{
+  "name": "news-extractor",
+  "root": "packages/news-extractor",
+  "sourceRoot": "packages/news-extractor/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/news-extractor",
+        "main": "packages/news-extractor/src/index.ts",
+        "tsConfig": "packages/news-extractor/tsconfig.json",
+        "assets": [
+          "packages/news-extractor/src/languages/**/*",
+          "packages/news-extractor/src/data/**/*"
+        ],
+        "bundle": false,
+        "format": ["esm"],
+        "platform": "node",
+        "target": "node18",
+        "declaration": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/news-extractor/**/*.ts"]
+      }
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "packages/news-extractor"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test",
+        "cwd": "packages/news-extractor"
+      }
+    },
+    "test:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test --watch",
+        "cwd": "packages/news-extractor"
+      }
+    },
+    "test:coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test --coverage",
+        "cwd": "packages/news-extractor"
+      }
+    }
+  },
+  "tags": ["scope:news-extractor", "type:library"]
+}
