@@ -27,6 +27,14 @@ export class ArticleBodyExtractor {
   }
 
   /**
+   * Parse HTML document with language-aware processing
+   */
+  public parseWithLanguage(doc: CheerioAPI, $: CheerioAPI, language: string): void {
+    this.topNode = this.calculateBestNodeWithLanguage(doc, $, language)
+    this.topNodeComplemented = this.complementWithSiblings(this.topNode, $)
+  }
+
+  /**
    * Parse HTML with existing Cheerio instance
    */
   public parseHtml(html: string): CheerioAPI {
@@ -42,6 +50,37 @@ export class ArticleBodyExtractor {
 
     let parentNodes: Cheerio<Element>[] = []
     const nodesWithText = this.computeFeatures(doc, $)
+
+    // Process the tree from bottom up, farthest nodes first
+    nodesWithText.sort((a, b) => {
+      const aLevel = this.getAttribute(a, 'node_level', 0)
+      const bLevel = this.getAttribute(b, 'node_level', 0)
+      return bLevel - aLevel // Reverse order (highest level first)
+    })
+
+    parentNodes = this.computeGravityScores(nodesWithText, $)
+
+    if (parentNodes.length > 0) {
+      parentNodes.sort((a, b) => {
+        const aScore = this.getNodeGravityScore(a)
+        const bScore = this.getNodeGravityScore(b)
+        return bScore - aScore // Reverse order (highest score first)
+      })
+      topNode = parentNodes[0]
+    }
+
+    return topNode
+  }
+
+  /**
+   * Calculate best node with language-aware processing
+   */
+  public calculateBestNodeWithLanguage(doc: CheerioAPI, $: CheerioAPI, language: string): Cheerio<Element> | null {
+    let topNode: Cheerio<Element> | null = null
+    this.boostHighlyLikelyNodes(doc, $)
+
+    let parentNodes: Cheerio<Element>[] = []
+    const nodesWithText = this.computeFeaturesWithLanguage(doc, $, language)
 
     // Process the tree from bottom up, farthest nodes first
     nodesWithText.sort((a, b) => {
@@ -144,6 +183,54 @@ export class ArticleBodyExtractor {
       if (!textContent) continue
 
       const wordStats = getStopWords(textContent, this.config.language)
+      const isHighLinkDensity = this.isHighLinkDensity(nodeElement, $)
+
+      // Calculate children word stats to avoid double counting
+      const children = nodeElement.find('*[data-stop-words]').toArray()
+      let childStopWords = 0
+      let childWordCount = 0
+
+      for (const child of children) {
+        childStopWords += this.getStopWords(doc(child))
+        childWordCount += this.getWordCount(doc(child))
+      }
+
+      const finalStopWords = Math.max(0, wordStats.stopWordCount - childStopWords)
+      const finalWordCount = Math.max(0, wordStats.wordCount - childWordCount)
+
+      this.setAttribute(nodeElement, 'stop_words', finalStopWords)
+      this.setAttribute(nodeElement, 'word_count', finalWordCount)
+      this.setAttribute(nodeElement, 'is_highlink_density', isHighLinkDensity ? 1 : 0)
+      this.setAttribute(nodeElement, 'node_level', this.getLevel(nodeElement))
+
+      if (finalStopWords > 2 && !isHighLinkDensity) {
+        candidates.push(nodeElement)
+      }
+    }
+
+    return candidates
+  }
+
+  /**
+   * Compute features with language-aware processing
+   */
+  private computeFeaturesWithLanguage(doc: CheerioAPI, $: CheerioAPI, language: string): Cheerio<Element>[] {
+    const candidates: Cheerio<Element>[] = []
+    const nodesToCheck = this.nodesToCheck(doc)
+
+    // Sort by level (deepest first)
+    nodesToCheck.sort((a, b) => {
+      const aLevel = this.getLevel(doc(a))
+      const bLevel = this.getLevel(doc(b))
+      return bLevel - aLevel
+    })
+
+    for (const node of nodesToCheck) {
+      const nodeElement = doc(node)
+      const textContent = this.getText(nodeElement)
+      if (!textContent) continue
+
+      const wordStats = getStopWords(textContent, language)
       const isHighLinkDensity = this.isHighLinkDensity(nodeElement, $)
 
       // Calculate children word stats to avoid double counting

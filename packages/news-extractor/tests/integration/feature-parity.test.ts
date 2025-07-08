@@ -30,6 +30,7 @@ interface TestCase {
   htmlFile: string
   metadataFile: string
   expectedTextFile: string
+  url: string
 }
 
 // Test cases from Python package
@@ -38,31 +39,36 @@ const TEST_CASES: TestCase[] = [
     name: 'CNN Article',
     htmlFile: 'cnn_001.html',
     metadataFile: 'cnn_001.json', 
-    expectedTextFile: 'cnn_001.txt'
+    expectedTextFile: 'cnn_001.txt',
+    url: 'https://www.cnn.com/2024/04/02/politics/alito-prelogar-supreme-court/index.html'
   },
   {
     name: 'Time Article',
     htmlFile: 'time_001.html',
     metadataFile: 'time_001.json',
-    expectedTextFile: 'time_001.txt'
+    expectedTextFile: 'time_001.txt',
+    url: 'https://time.com/6962948/james-hansen-climate-geoengineering/'
   },
   {
     name: 'Wired Article',
     htmlFile: 'wired_001.html',
     metadataFile: 'wired_001.json',
-    expectedTextFile: 'wired_001.txt'
+    expectedTextFile: 'wired_001.txt',
+    url: 'https://www.wired.com/story/israel-palestine-surveillance-west-bank/'
   },
   {
     name: 'Chinese Article',
     htmlFile: 'chinese_article_001.html',
     metadataFile: 'chinese_article_001.json',
-    expectedTextFile: 'chinese_article_001.txt'
+    expectedTextFile: 'chinese_article_001.txt',
+    url: 'https://china.chinadaily.com.cn/a/202311/17/WS65571297a310d5acd876f404.html'
   },
   {
     name: 'Japanese Article',
     htmlFile: 'japanese_article.html',
     metadataFile: 'japanese_article.json',
-    expectedTextFile: 'japanese_article.txt'
+    expectedTextFile: 'japanese_article.txt',
+    url: 'https://www.nikkei.com/article/DGXMZO31897660Y8A610C1000000/'
   }
 ]
 
@@ -91,8 +97,8 @@ describe('Feature Parity with Python newspaper4k', () => {
       it(`should extract correct title from ${testCase.name}`, async () => {
         const { html, expectedMetadata } = await loadTestFiles(testCase)
         
-        const config = new Configuration()
-        const article = new Article('http://example.com', config)
+        const config = expectedMetadata.language ? Configuration.forLanguage(expectedMetadata.language) : new Configuration()
+        const article = new Article(testCase.url, config)
         
         // Set HTML directly to bypass download
         ;(article as any).html = html
@@ -111,8 +117,8 @@ describe('Feature Parity with Python newspaper4k', () => {
       it(`should extract correct authors from ${testCase.name}`, async () => {
         const { html, expectedMetadata } = await loadTestFiles(testCase)
         
-        const config = new Configuration()
-        const article = new Article('http://example.com', config)
+        const config = expectedMetadata.language ? Configuration.forLanguage(expectedMetadata.language) : new Configuration()
+        const article = new Article(testCase.url, config)
         
         ;(article as any).html = html
         ;(article as any)._isDownloaded = true
@@ -130,8 +136,8 @@ describe('Feature Parity with Python newspaper4k', () => {
       it(`should extract correct publish date from ${testCase.name}`, async () => {
         const { html, expectedMetadata } = await loadTestFiles(testCase)
         
-        const config = new Configuration()
-        const article = new Article('http://example.com', config)
+        const config = expectedMetadata.language ? Configuration.forLanguage(expectedMetadata.language) : new Configuration()
+        const article = new Article(testCase.url, config)
         
         ;(article as any).html = html
         ;(article as any)._isDownloaded = true
@@ -150,8 +156,8 @@ describe('Feature Parity with Python newspaper4k', () => {
       it(`should extract correct images from ${testCase.name}`, async () => {
         const { html, expectedMetadata } = await loadTestFiles(testCase)
         
-        const config = new Configuration()
-        const article = new Article('http://example.com', config)
+        const config = expectedMetadata.language ? Configuration.forLanguage(expectedMetadata.language) : new Configuration()
+        const article = new Article(testCase.url, config)
         
         ;(article as any).html = html
         ;(article as any)._isDownloaded = true
@@ -172,10 +178,10 @@ describe('Feature Parity with Python newspaper4k', () => {
   describe('Content Extraction', () => {
     TEST_CASES.forEach(testCase => {
       it(`should extract similar content from ${testCase.name}`, async () => {
-        const { html, expectedText } = await loadTestFiles(testCase)
+        const { html, expectedText, expectedMetadata } = await loadTestFiles(testCase)
         
-        const config = new Configuration()
-        const article = new Article('http://example.com', config)
+        const config = expectedMetadata.language ? Configuration.forLanguage(expectedMetadata.language) : new Configuration()
+        const article = new Article(testCase.url, config)
         
         ;(article as any).html = html
         ;(article as any)._isDownloaded = true
@@ -207,8 +213,8 @@ describe('Feature Parity with Python newspaper4k', () => {
       it(`should extract correct metadata from ${testCase.name}`, async () => {
         const { html, expectedMetadata } = await loadTestFiles(testCase)
         
-        const config = new Configuration()
-        const article = new Article('http://example.com', config)
+        const config = expectedMetadata.language ? Configuration.forLanguage(expectedMetadata.language) : new Configuration()
+        const article = new Article(testCase.url, config)
         
         ;(article as any).html = html
         ;(article as any)._isDownloaded = true

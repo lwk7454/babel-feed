@@ -5,6 +5,7 @@
 
 import type { CheerioAPI } from 'cheerio'
 import { normalizeLanguageCode, isValidLanguage } from './index.js'
+import { getMostLikelyLanguage } from './unicode-ranges.js'
 
 interface MetaLanguageTag {
   selector: string
@@ -91,6 +92,46 @@ export class LanguageDetector {
       }
     }
     
+    // Try unicode detection as fallback before using configured language
+    const contentText = this.extractContentForLanguageDetection($)
+    if (contentText) {
+      const unicodeDetected = getMostLikelyLanguage(contentText, 0.05) // Lower threshold for fallback
+      if (unicodeDetected) {
+        return unicodeDetected
+      }
+    }
+    
     return configuredLanguage || 'en'
+  }
+  
+  /**
+   * Extract content text for language detection
+   * Prioritizes article content over navigation/ads
+   */
+  private static extractContentForLanguageDetection($: CheerioAPI): string {
+    // Try to find main content areas first
+    const contentSelectors = [
+      'article',
+      '[id*="content"]',
+      '[class*="content"]',
+      '[class*="article"]',
+      '[id*="article"]',
+      'main',
+      '[role="main"]'
+    ]
+    
+    for (const selector of contentSelectors) {
+      const elements = $(selector)
+      if (elements.length > 0) {
+        const text = elements.first().text().trim()
+        if (text.length > 100) { // Minimum content length
+          return text
+        }
+      }
+    }
+    
+    // Fallback to body text if no content areas found
+    const bodyText = $('body').text().trim()
+    return bodyText.length > 100 ? bodyText : ''
   }
 }

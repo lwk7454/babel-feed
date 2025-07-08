@@ -51,6 +51,7 @@ export class TitleExtractor {
     const filterTitleText = this.filterText(titleText)
     const filterTitleTextH1 = this.filterText(titleTextH1)
     const filterTitleTextFb = this.filterText(titleTextFb)
+    
 
     let finalTitle = titleText
     let usedDelimiter = false
@@ -93,6 +94,9 @@ export class TitleExtractor {
 
     // Final cleanup
     finalTitle = finalTitle.trim()
+    
+    // Normalize full-width spaces to regular spaces (Japanese text normalization)
+    finalTitle = finalTitle.replace(/　/g, ' ')
 
     // If final title is similar to h1, prefer h1
     const filterFinalTitle = this.filterText(finalTitle)
@@ -129,12 +133,38 @@ export class TitleExtractor {
   }
 
   /**
-   * Filter text for comparison (remove punctuation and whitespace, preserve Unicode characters)
+   * Filter text for comparison using language-specific character ranges
+   * Based on Python newspaper4k's language_regex function
    */
   private filterText(text: string): string {
     if (!text) return ''
-    // Preserve Unicode letters and numbers, remove only punctuation and whitespace
-    return text.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase()
+    
+    // Get language-specific regex pattern
+    const language = this.config.language
+    const latinRegex = '\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\u0100-\u024fa-zA-Z0-9 '
+    
+    let languageRegex = ''
+    if (language === 'ja') {
+      languageRegex = '\u3040-\u309f\u30a0-\u30ff\u3190-\u319f\u3200-\u32ff\u3300-\u33ff\u3400-\u4db5\u4e00-\u9fff\uf900-\ufaff\ufe30-\ufe4f'
+    } else if (language === 'zh') {
+      languageRegex = '\u3100-\u312f\u31a0-\u31bf\u3200-\u32ff\u3300-\u33ff\u3400-\u4db5\u4e00-\u9fff\ua000-\ua48f\ua490-\ua4cf\uf900-\ufaff\ufe30-\ufe4f'
+    } else if (language === 'ko') {
+      languageRegex = '\u1100-\u11ff\u3130-\u318f\u3200-\u32ff\u3300-\u33ff\u3400-\u4db5\u4e00-\u9fff\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f'
+    } else if (language === 'ar') {
+      languageRegex = '\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufefe'
+    } else if (language === 'ru') {
+      languageRegex = '\u0400-\u04ff'
+    } else if (language === 'hi') {
+      languageRegex = '\u0900-\u097f'
+    } else if (language === 'he') {
+      languageRegex = '\u0590-\u05ff'
+    } else if (language === 'th') {
+      languageRegex = '\u0e00-\u0e7f'
+    }
+    
+    // Create regex pattern to keep only language-specific characters
+    const fullRegex = `[^${languageRegex}${latinRegex}]`
+    return text.replace(new RegExp(fullRegex, 'g'), '').toLowerCase()
   }
 
   /**

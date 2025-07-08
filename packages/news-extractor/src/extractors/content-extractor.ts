@@ -52,8 +52,8 @@ export class ContentExtractor {
       this.config.useMetaLanguage
     )
 
-    // Parse the document and extract content
-    this.articleBodyExtractor.parse($, $)
+    // Parse the document and extract content with detected language
+    this.articleBodyExtractor.parseWithLanguage($, $, detectedLanguage)
     const topNode = this.articleBodyExtractor.topNode
     
     // Extract all components
@@ -67,9 +67,21 @@ export class ContentExtractor {
     // Extract article text from top node with language-aware processing
     const text = topNode ? this.extractText(topNode, detectedLanguage) : ''
     
+    // Get top image and meta image
+    const topImage = this.imageExtractor.topImageUrl
+    const metaImage = this.imageExtractor.metaImageUrl
+    
     // Add language information to metadata
     if (metadata && detectedLanguage) {
       metadata.language = detectedLanguage
+    }
+    
+    // Add image information to metadata
+    if (topImage) {
+      metadata.topImage = topImage
+    }
+    if (metaImage) {
+      metadata.metaImage = metaImage
     }
     
     return {
@@ -171,16 +183,16 @@ export class ContentExtractor {
    */
   private cleanTextForLanguage(text: string, language: string): string {
     if (language === 'zh') {
-      // Chinese text processing
+      // Chinese text processing - preserve structure but clean spacing
       return text
-        .replace(/\s+/g, '') // Remove most whitespace for Chinese
-        .replace(/[。！？；]+/g, '。') // Normalize punctuation
+        .replace(/\s+/g, ' ') // Normalize whitespace to single spaces
+        .replace(/\n+/g, '\n') // Normalize line breaks
         .trim()
     } else if (language === 'ja') {
-      // Japanese text processing
+      // Japanese text processing - preserve structure but clean spacing
       return text
-        .replace(/\s+/g, '') // Remove most whitespace for Japanese
-        .replace(/[。！？]+/g, '。') // Normalize punctuation
+        .replace(/\s+/g, ' ') // Normalize whitespace to single spaces
+        .replace(/\n+/g, '\n') // Normalize line breaks
         .trim()
     } else {
       // Default processing for space-separated languages
