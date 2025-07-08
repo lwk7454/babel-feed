@@ -287,4 +287,13 @@ export class Configuration {
     config.update(data)
     return config
   }
+
+  /**
+   * Create configuration for specific language
+   */
+  public static forLanguage(languageCode: string): Configuration {
+    const config = new Configuration()
+    config.language = languageCode
+    return config
+  }
 }
