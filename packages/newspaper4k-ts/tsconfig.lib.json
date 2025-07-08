@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "../../dist/packages/newspaper4k-ts",
-    "types": ["node"]
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["**/*.test.ts"]
-}

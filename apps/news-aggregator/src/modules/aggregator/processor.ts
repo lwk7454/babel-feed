@@ -1,3 +1,4 @@
+import { fulltext } from '@babel-feed/news-extractor'
 import { logger } from '../common/logger'
 import { RawArticle } from '../common/types'
 
@@ -46,9 +47,6 @@ export class ProcessorService {
     keywords: string[];
   }> {
     try {
-      // Use newspaper4k-ts for content extraction
-      const { fulltext } = await import('../../../../../packages/newspaper4k-ts/src/index')
-      
       // Extract text content first
       const extractedText = await fulltext(rawContent, 'en')
       

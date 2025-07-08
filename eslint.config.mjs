@@ -50,10 +50,18 @@ export default [
       '**/*.mjs',
     ],
     rules: {
+      
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       'no-control-regex': 'off',
       'semi': ['error', 'never'],
+      'no-unused-vars': 'off',
+      'no-unused-expressions': 'off',
+      'no-unused-labels': 'off',
+      'no-unused-private-class-members': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-labels': 'off',
+      '@typescript-eslint/no-unused-private-class-members': 'off',
     },
   },
 ]

@@ -1,4 +1,4 @@
-import { Article } from '../../../../../packages/newspaper4k-ts/src/article'
+import { Article } from '@babel-feed/news-extractor'
 import { logger } from '../common/logger'
 import { NewsSource, RawArticle, AggregatorError } from '../common/types'
 
@@ -96,7 +96,7 @@ class HtmlContentExtractor {
 
   async extractFromUrl(url: string, source: NewsSource): Promise<RawArticle[]> {
     try {
-      logger.info(`Extracting content from ${url} using newspaper4k-ts`)
+      logger.info(`Extracting content from ${url} using news-extractor`)
       
       // Create article instance with source language preference
       const article = new Article(url, {
@@ -127,15 +127,14 @@ class HtmlContentExtractor {
         title: result.title,
         description: this.generateDescription(result.text, result.meta.description),
         imageUrl: result.images.length > 0 ? result.images[0] : undefined,
-        publishedAt: result.publishDate,
+        publishedAt: result.publishDate || new Date(),
         author: result.authors.length > 0 ? result.authors.join(', ') : undefined,
         source: source.name,
         sourceLanguage: result.language || source.language,
         metadata: {
-          extractor: 'newspaper4k-ts',
+          extractor: 'news-extractor',
           wordCount: article.getStats().wordCount,
           readingTime: article.getStats().readingTime,
-          complexity: article.getStats().complexity,
           keywords: result.meta.keywords?.join(', '),
           siteName: result.meta.siteName,
           canonicalUrl: result.meta.canonicalUrl

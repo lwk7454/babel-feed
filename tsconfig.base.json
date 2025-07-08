@@ -25,7 +25,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@babel-feed/pgdb": ["packages/pgdb/src/index.ts"]
+      "@babel-feed/pgdb": ["packages/pgdb/src/index.ts"],
+      "@babel-feed/news-extractor": ["packages/news-extractor/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
