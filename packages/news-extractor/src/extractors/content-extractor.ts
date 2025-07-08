@@ -1,70 +1,142 @@
 /**
- * Content Extractor - Main orchestrator for all extraction types
- * Port of newspaper4k content_extractor.py
+ * ContentExtractor - Main content extraction coordinator
+ * Ported from Python newspaper4k content_extractor.py
  */
 
-import { CheerioAPI } from 'cheerio'
-import { ArticleMetadata } from '../types'
+import * as cheerio from 'cheerio'
+import { Configuration } from '../configuration.js'
+import { ArticleBodyExtractor } from './article-body-extractor.js'
+import { TitleExtractor } from './title-extractor.js'
+import { AuthorExtractor } from './author-extractor.js'
+import { DateExtractor } from './date-extractor.js'
+import { ImageExtractor } from './image-extractor.js'
+import { MetadataExtractor } from './metadata-extractor.js'
+import { VideoExtractor } from './video-extractor.js'
+import { ExtractionResult, ArticleMetadata } from '../types.js'
 
 export class ContentExtractor {
-  private _$: CheerioAPI
-  private _url: string
+  private config: Configuration
+  private articleBodyExtractor: ArticleBodyExtractor
+  private titleExtractor: TitleExtractor
+  private authorExtractor: AuthorExtractor
+  private dateExtractor: DateExtractor
+  private imageExtractor: ImageExtractor
+  private metadataExtractor: MetadataExtractor
+  private videoExtractor: VideoExtractor
 
-  constructor($: CheerioAPI, url: string) {
-    this._$ = $
-    this._url = url
+  constructor(config: Configuration) {
+    this.config = config
+    this.articleBodyExtractor = new ArticleBodyExtractor(config)
+    this.titleExtractor = new TitleExtractor(config)
+    this.authorExtractor = new AuthorExtractor(config)
+    this.dateExtractor = new DateExtractor(config)
+    this.imageExtractor = new ImageExtractor(config)
+    this.metadataExtractor = new MetadataExtractor(config)
+    this.videoExtractor = new VideoExtractor(config)
   }
 
   /**
-   * Extract all content from the document
+   * Extract all content from article HTML
    */
-  async extractAll(): Promise<{
-    text: string;
-    metadata: ArticleMetadata;
-    cleanedHtml: string;
-  }> {
-    // Implementation will be added in Phase 2.2
-    // This is the main orchestrator that will call all other extractors
+  public extractContent(url: string, html: string): ExtractionResult {
+    const $ = this.articleBodyExtractor.parseHtml(html)
+
+    // Parse the document and extract content
+    this.articleBodyExtractor.parse($)
+    const topNode = this.articleBodyExtractor.topNode
     
-    // TODO: Use this._$ and this._url in actual implementation
+    // Extract all components
+    const title = this.getTitle($)
+    const authors = this.getAuthors($)
+    const publishDate = this.getPublishingDate(url, $)
+    const metadata = this.getMetadata(url, $)
+    const images = this.getImages(url, $, topNode)
+    const videos = this.getVideos($, topNode)
+    
+    // Extract article text from top node
+    const text = topNode ? this.extractText(topNode) : ''
+    
     return {
-      text: '',
-      metadata: {},
-      cleanedHtml: ''
+      title,
+      text,
+      authors,
+      publishDate,
+      metadata,
+      images,
+      videos,
+      topNode: topNode?.get(0) || null
     }
   }
 
   /**
-   * Calculate gravity score for content nodes
-   * Port of newspaper4k gravity scoring algorithm
+   * Get article title using multiple extraction methods
    */
-  private _calculateGravityScore(_element: any): number {
-    // Implementation will be added in Phase 2.2
-    // This is the core algorithm for identifying main content
-    return 0
+  public getTitle($: cheerio.CheerioAPI): string {
+    return this.titleExtractor.parse($)
   }
 
   /**
-   * Find the best content node using gravity scoring
+   * Get article authors
    */
-  private _findBestContentNode(): any {
-    // Implementation will be added in Phase 2.2
-    return null
+  public getAuthors($: cheerio.CheerioAPI): string[] {
+    return this.authorExtractor.parse($)
   }
 
   /**
-   * Extract text from the best content node
+   * Get article publishing date
    */
-  private _extractTextFromNode(_node: any): string {
-    // Implementation will be added in Phase 2.2
-    return ''
+  public getPublishingDate(url: string, $: cheerio.CheerioAPI): Date | null {
+    return this.dateExtractor.parse(url, $)
   }
 
   /**
-   * Clean and format extracted text
+   * Get article metadata
    */
-  private _cleanText(text: string): string {
-    // Implementation will be added in Phase 2.2
-    return text
+  public getMetadata(url: string, $: cheerio.CheerioAPI): ArticleMetadata {
+    return this.metadataExtractor.parse(url, $)
+  }
+
+  /**
+   * Get article images
+   */
+  public getImages(url: string, $: cheerio.CheerioAPI, topNode: cheerio.Cheerio<cheerio.Element> | null): string[] {
+    return this.imageExtractor.parse($, topNode, url)
+  }
+
+  /**
+   * Get article videos
+   */
+  public getVideos($: cheerio.CheerioAPI, topNode: cheerio.Cheerio<cheerio.Element> | null): string[] {
+    return this.videoExtractor.parse($, topNode)
+  }
+
+  /**
+   * Get the top node from the article body extractor
+   */
+  public get topNode(): cheerio.Cheerio<cheerio.Element> | null {
+    return this.articleBodyExtractor.topNode
+  }
+
+  /**
+   * Get the complemented top node (with siblings)
+   */
+  public get topNodeComplemented(): cheerio.Cheerio<cheerio.Element> | null {
+    return this.articleBodyExtractor.topNodeComplemented
+  }
+
+  /**
+   * Extract clean text from a node
+   */
+  private extractText(node: cheerio.Cheerio<cheerio.Element>): string {
+    if (!node || node.length === 0) return ''
+    
+    // Remove script and style tags
+    node.find('script, style').remove()
+    
+    // Get text content and clean it
+    return node.text()
+      .replace(/\s+/g, ' ')
+      .replace(/\n+/g, '\n')
+      .trim()
   }
 }

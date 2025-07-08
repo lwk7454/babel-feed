@@ -4,13 +4,25 @@
 
 export interface ArticleMetadata {
   title?: string;
+  description?: string;
+  author?: string;
+  publisher?: string;
+  image?: string;
+  url?: string;
+  canonical?: string;
+  type?: string;
+  siteName?: string;
+  language?: string;
+  keywords?: string[];
+  openGraph?: Record<string, string>;
+  twitter?: Record<string, string>;
+  // Legacy fields for compatibility
   authors?: string[];
   publishDate?: Date;
   topImage?: string;
   images?: string[];
   videos?: string[];
   tags?: string[];
-  // NOTE: keywords and summary are NOT included - handled by LLM elsewhere
   canonicalUrl?: string;
   metaDescription?: string;
   metaKeywords?: string;
@@ -22,12 +34,18 @@ export interface ArticleMetadata {
 }
 
 export interface ExtractionResult {
+  title: string;
   text: string;
+  authors: string[];
+  publishDate: Date | null;
   metadata: ArticleMetadata;
+  images: string[];
+  videos: string[];
+  topNode: any;
   html?: string;
   cleanedHtml?: string;
-  downloadState: DownloadState;
-  parseState: ParseState;
+  downloadState?: DownloadState;
+  parseState?: ParseState;
 }
 
 export enum DownloadState {

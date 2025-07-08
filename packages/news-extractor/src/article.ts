@@ -5,6 +5,8 @@
 
 import { Configuration } from './configuration'
 import { ArticleMetadata, ExtractionResult, DownloadState, ParseState } from './types'
+import { getHtml } from './network.js'
+import { ContentExtractor } from './extractors/content-extractor.js'
 
 export class Article {
   private _url: string
@@ -29,8 +31,7 @@ export class Article {
   async download(): Promise<void> {
     this._downloadState = DownloadState.STARTED
     try {
-      // Network implementation will be added in Phase 1.2
-      // For now, mark as placeholder
+      this._html = await getHtml(this._url, this._config)
       this._downloadState = DownloadState.SUCCESS
       this._isDownloaded = true
     } catch (error) {
@@ -49,8 +50,13 @@ export class Article {
 
     this._parseState = ParseState.STARTED
     try {
-      // Parser implementation will be added in Phase 2
-      // For now, mark as placeholder
+      const extractor = new ContentExtractor(this._config)
+      const result = extractor.extractContent(this._url, this._html)
+      
+      this._text = result.text
+      this._metadata = result.metadata
+      this._cleanedHtml = result.cleanedHtml || this._html
+      
       this._parseState = ParseState.SUCCESS
       this._isParsed = true
     } catch (error) {
@@ -73,8 +79,14 @@ export class Article {
    */
   getResult(): ExtractionResult {
     return {
+      title: this._metadata.title || '',
       text: this._text,
+      authors: this._metadata.authors || [],
+      publishDate: this._metadata.publishDate || null,
       metadata: this._metadata,
+      images: this._metadata.images || [],
+      videos: this._metadata.videos || [],
+      topNode: null,
       html: this._html,
       cleanedHtml: this._cleanedHtml,
       downloadState: this._downloadState,
