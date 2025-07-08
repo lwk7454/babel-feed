@@ -1,9 +1,10 @@
 /**
  * Configuration class for news extraction
  * Ported from Python newspaper4k configuration.py
+ * Enhanced with multi-language support
  */
 
-// Note: LanguageConfig interface removed from import as it's not used in this implementation
+import { LanguageManager } from './languages/language-config.js'
 
 export interface RequestsParams {
   timeout?: number;
@@ -49,9 +50,8 @@ export class Configuration {
   public allowBinaryContent = false
   public useCachedCategories = true
 
-  // Language settings
-  private _language = 'en'
-  private _useMetaLanguage = true
+  // Language settings - enhanced with LanguageManager
+  private languageManager: LanguageManager
 
   // Network settings
   public requestsParams: RequestsParams = {
@@ -73,7 +73,8 @@ export class Configuration {
   public ignoredContentTypesDefaults: Record<string, string> = {}
 
   constructor() {
-    // Initialize with default values
+    // Initialize language manager with defaults
+    this.languageManager = new LanguageManager('en', true)
   }
 
   /**
@@ -149,50 +150,42 @@ export class Configuration {
    * Get the configured language
    */
   public get language(): string {
-    return this._language
+    return this.languageManager.getLanguage()
   }
 
   /**
    * Set the language (2-char ISO code)
    */
   public set language(value: string | null) {
-    if (value === null) {
-      // Default to English with auto-detection enabled
-      this._useMetaLanguage = true
-      this._language = 'en'
-      return
-    }
-
-    if (!value || value.length !== 2) {
-      throw new Error(
-        'Language must be a 2-character language code (e.g., "en" for English, "de" for German)'
-      )
-    }
-
-    const supportedLanguages = this.getAvailableLanguages()
-    if (!supportedLanguages.includes(value)) {
-      throw new Error(
-        `Language '${value}' is not supported. Supported languages: ${supportedLanguages.join(', ')}`
-      )
-    }
-
-    // If explicitly set, don't use meta language detection
-    this._useMetaLanguage = false
-    this._language = value
+    this.languageManager.setLanguage(value)
   }
 
   /**
    * Check if meta language detection is enabled
    */
   public get useMetaLanguage(): boolean {
-    return this._useMetaLanguage
+    return this.languageManager.getUseMetaLanguage()
+  }
+
+  /**
+   * Set meta language detection
+   */
+  public set useMetaLanguage(value: boolean) {
+    this.languageManager.setUseMetaLanguage(value)
   }
 
   /**
    * Get list of available languages
    */
   public getAvailableLanguages(): string[] {
-    return ['en', 'zh', 'ja', 'ko', 'ar', 'ru', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'sv', 'no', 'da', 'fi']
+    return this.languageManager.getAvailableLanguages()
+  }
+
+  /**
+   * Get language manager instance
+   */
+  public getLanguageManager(): LanguageManager {
+    return this.languageManager
   }
 
   /**
@@ -269,8 +262,7 @@ export class Configuration {
       httpSuccessOnly: this.httpSuccessOnly,
       allowBinaryContent: this.allowBinaryContent,
       useCachedCategories: this.useCachedCategories,
-      language: this._language,
-      useMetaLanguage: this._useMetaLanguage,
+      languageSettings: this.languageManager.toJSON(),
       requestsParams: this.requestsParams,
       numberThreads: this.numberThreads,
       threadTimeoutSeconds: this.threadTimeoutSeconds,
@@ -284,6 +276,21 @@ export class Configuration {
    */
   public static fromJSON(data: Record<string, any>): Configuration {
     const config = new Configuration()
+    
+    // Handle language settings separately
+    if (data.languageSettings) {
+      config.languageManager = LanguageManager.fromJSON(data.languageSettings)
+      delete data.languageSettings
+    } else if (data.language || data.useMetaLanguage !== undefined) {
+      // Handle legacy format
+      config.languageManager = new LanguageManager(
+        data.language || 'en',
+        data.useMetaLanguage ?? true
+      )
+      delete data.language
+      delete data.useMetaLanguage
+    }
+    
     config.update(data)
     return config
   }

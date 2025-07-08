@@ -96,6 +96,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         
         // Set HTML directly to bypass download
         ;(article as any).html = html
+        ;(article as any)._isDownloaded = true
         await article.parse()
         
         if (expectedMetadata.title) {
@@ -114,6 +115,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         const article = new Article('http://example.com', config)
         
         ;(article as any).html = html
+        ;(article as any)._isDownloaded = true
         await article.parse()
         
         if (expectedMetadata.authors) {
@@ -132,6 +134,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         const article = new Article('http://example.com', config)
         
         ;(article as any).html = html
+        ;(article as any)._isDownloaded = true
         await article.parse()
         
         if (expectedMetadata.publish_date) {
@@ -151,6 +154,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         const article = new Article('http://example.com', config)
         
         ;(article as any).html = html
+        ;(article as any)._isDownloaded = true
         await article.parse()
         
         if (expectedMetadata.top_image) {
@@ -159,7 +163,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         
         if (expectedMetadata.images) {
           // Check that we extracted similar images (order may differ)
-          expect(article.images.length).toBeGreaterThan(0)
+          expect(article.images?.length).toBeGreaterThan(0)
         }
       })
     })
@@ -174,6 +178,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         const article = new Article('http://example.com', config)
         
         ;(article as any).html = html
+        ;(article as any)._isDownloaded = true
         await article.parse()
         
         // Check that we extracted significant content
@@ -206,6 +211,7 @@ describe('Feature Parity with Python newspaper4k', () => {
         const article = new Article('http://example.com', config)
         
         ;(article as any).html = html
+        ;(article as any)._isDownloaded = true
         await article.parse()
         
         if (expectedMetadata.meta_description) {
@@ -237,6 +243,7 @@ describe('Algorithm Verification', () => {
       const article = new Article('http://example.com', config)
       
       ;(article as any).html = htmlContent
+      ;(article as any)._isDownloaded = true
       
       // Should not throw errors
       await expect(article.parse()).resolves.not.toThrow()

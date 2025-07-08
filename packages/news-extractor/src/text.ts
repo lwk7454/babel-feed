@@ -1,7 +1,11 @@
 /**
  * Text processing utilities
  * Ported from Python newspaper4k text.py
+ * Enhanced with multi-language support
  */
+
+import { TokenizerFactory } from './languages/tokenizers/tokenizer-factory.js'
+import { getMostLikelyLanguage } from './languages/unicode-ranges.js'
 
 /**
  * Clean up whitespace in text
@@ -72,9 +76,23 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 /**
- * Extract word tokens from text
+ * Extract word tokens from text using language-specific tokenization
  */
-export function getWords(text: string): string[] {
+export function getWords(text: string, language?: string): string[] {
+  if (!text) return []
+  
+  // Detect language if not provided
+  const detectedLanguage = language || getMostLikelyLanguage(text) || 'en'
+  
+  // Use appropriate tokenizer
+  const tokenizer = TokenizerFactory.getTokenizer(detectedLanguage)
+  return tokenizer.tokenize(text)
+}
+
+/**
+ * Extract word tokens from text (legacy method for backward compatibility)
+ */
+export function getWordsLegacy(text: string): string[] {
   if (!text) return []
   
   return text
@@ -93,37 +111,74 @@ export interface TextStats {
   sentenceCount: number;
   charCount: number;
   avgWordsPerSentence: number;
+  language?: string;
 }
 
-export function getTextStats(text: string): TextStats {
+export function getTextStats(text: string, language?: string): TextStats {
   if (!text) {
     return {
       wordCount: 0,
       sentenceCount: 0,
       charCount: 0,
-      avgWordsPerSentence: 0
+      avgWordsPerSentence: 0,
+      language
     }
   }
   
-  const words = getWords(text)
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0)
+  // Detect language if not provided
+  const detectedLanguage = language || getMostLikelyLanguage(text) || 'en'
+  
+  const words = getWords(text, detectedLanguage)
+  const sentences = getSentences(text, detectedLanguage)
   
   return {
     wordCount: words.length,
     sentenceCount: sentences.length,
     charCount: text.length,
-    avgWordsPerSentence: sentences.length > 0 ? words.length / sentences.length : 0
+    avgWordsPerSentence: sentences.length > 0 ? words.length / sentences.length : 0,
+    language: detectedLanguage
   }
 }
 
 /**
- * Simple content quality check
+ * Split text into sentences based on language
  */
-export function isQualityContent(text: string, minWords = 300, minSentences = 7): boolean {
-  const stats = getTextStats(text)
+export function getSentences(text: string, language?: string): string[] {
+  if (!text) return []
   
-  return stats.wordCount >= minWords && 
-         stats.sentenceCount >= minSentences &&
+  const detectedLanguage = language || getMostLikelyLanguage(text) || 'en'
+  
+  // Language-specific sentence splitting
+  if (detectedLanguage === 'zh') {
+    // Chinese uses different punctuation for sentence endings
+    return text.split(/[。！？；]+/).filter(s => s.trim().length > 0)
+  } else if (detectedLanguage === 'ja') {
+    // Japanese sentence endings
+    return text.split(/[。！？]+/).filter(s => s.trim().length > 0)
+  } else {
+    // Default for most languages
+    return text.split(/[.!?]+/).filter(s => s.trim().length > 0)
+  }
+}
+
+/**
+ * Simple content quality check with language-aware criteria
+ */
+export function isQualityContent(text: string, minWords = 300, minSentences = 7, language?: string): boolean {
+  const stats = getTextStats(text, language)
+  
+  // Adjust criteria based on language
+  let adjustedMinWords = minWords
+  let adjustedMinSentences = minSentences
+  
+  if (stats.language === 'zh' || stats.language === 'ja') {
+    // CJK languages are more dense, adjust thresholds
+    adjustedMinWords = Math.floor(minWords * 0.7) // 70% of original threshold
+    adjustedMinSentences = Math.floor(minSentences * 0.8) // 80% of original threshold
+  }
+  
+  return stats.wordCount >= adjustedMinWords && 
+         stats.sentenceCount >= adjustedMinSentences &&
          stats.avgWordsPerSentence > 2 && 
          stats.avgWordsPerSentence < 50 // Avoid very long sentences
 }

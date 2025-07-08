@@ -6,6 +6,7 @@
 import * as cheerio from 'cheerio'
 import { Configuration } from '../configuration.js'
 import { TITLE_META_INFO } from './defines.js'
+import { getWords } from '../text.js'
 
 export class TitleExtractor {
   private config: Configuration
@@ -33,13 +34,14 @@ export class TitleExtractor {
       h1Texts.sort((a, b) => b.length - a.length)
       titleTextH1 = h1Texts[0] || ''
       
-      // Discard too short texts (fewer than 2 words)
-      if (titleTextH1.split(' ').length <= 2) {
+      // Discard too short texts (fewer than 2 words for space-separated languages, or < 4 chars for others)
+      const wordCount = this.getWordCount(titleTextH1)
+      if (wordCount <= 2) {
         titleTextH1 = ''
       }
       
-      // Clean double spaces
-      titleTextH1 = titleTextH1.split(' ').filter(x => x).join(' ')
+      // Clean double spaces for space-separated languages
+      titleTextH1 = titleTextH1.replace(/\s+/g, ' ').trim()
     }
 
     // Get og:title and other meta titles
@@ -127,11 +129,12 @@ export class TitleExtractor {
   }
 
   /**
-   * Filter text for comparison (remove non-alphanumeric chars and lowercase)
+   * Filter text for comparison (remove punctuation and whitespace, preserve Unicode characters)
    */
   private filterText(text: string): string {
     if (!text) return ''
-    return text.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+    // Preserve Unicode letters and numbers, remove only punctuation and whitespace
+    return text.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase()
   }
 
   /**
@@ -162,5 +165,25 @@ export class TitleExtractor {
     }
 
     return titlePieces[largeTextIndex].trim()
+  }
+
+  /**
+   * Get word count for a text, handling different languages appropriately
+   */
+  private getWordCount(text: string): number {
+    if (!text) return 0
+    
+    // For space-separated languages, use space-based counting
+    const spaceWords = text.split(/\s+/).filter(w => w.trim().length > 0)
+    
+    // For non-space-separated languages like Chinese/Japanese, use character-based approach
+    // If text has few spaces but many characters, it's likely CJK
+    if (spaceWords.length <= 2 && text.length >= 4) {
+      // Use language-aware tokenization
+      const words = getWords(text)
+      return words.length
+    }
+    
+    return spaceWords.length
   }
 }

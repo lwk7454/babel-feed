@@ -8,6 +8,7 @@ import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 import { ArticleMetadata } from '../types.js'
 import { META_LANGUAGE_TAGS } from './defines.js'
+import { LanguageDetector } from '../languages/language-detector.js'
 
 export class MetadataExtractor {
   private config: Configuration
@@ -203,24 +204,15 @@ export class MetadataExtractor {
   }
 
   /**
-   * Extract language from meta tags or HTML lang attribute
+   * Extract language using enhanced language detection
+   * Integrates with Configuration language settings
    */
   private extractLanguage($: CheerioAPI): string | undefined {
-    // Try HTML lang attribute first
-    const htmlLang = $('html').attr('lang')
-    if (htmlLang) {
-      return htmlLang.split('-')[0] // Get just the language code
-    }
-
-    // Try meta language tags
-    for (const tag of META_LANGUAGE_TAGS) {
-      const content = $(`${tag.tag}[${tag.attr}="${tag.value}"]`).attr('content')
-      if (content) {
-        return content.split('-')[0] // Get just the language code
-      }
-    }
-
-    return undefined
+    return LanguageDetector.detectWithFallback(
+      $, 
+      this.config.language, 
+      this.config.useMetaLanguage
+    )
   }
 
   /**

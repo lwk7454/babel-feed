@@ -3,10 +3,38 @@
  * Port of newspaper4k article tests
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach, mock } from 'bun:test'
 import { Article } from '../../src/article'
 import { Configuration } from '../../src/configuration'
 import { DownloadState, ParseState } from '../../src/types'
+
+// Mock the network module
+const mockGetHtml = mock(async (url: string, config: Configuration) => {
+  if (url.includes('test-article')) {
+    return `
+      <html>
+        <head>
+          <title>Test Article Title</title>
+          <meta name="author" content="Test Author">
+          <meta name="description" content="Test description">
+        </head>
+        <body>
+          <h1>Test Article Title</h1>
+          <div class="content">
+            <p>This is the first paragraph of the test article.</p>
+            <p>This is the second paragraph with more content.</p>
+            <p>This is the third paragraph to ensure sufficient content.</p>
+          </div>
+        </body>
+      </html>
+    `
+  }
+  throw new Error('Mock URL not found')
+})
+
+mock.module('../../src/network.js', () => ({
+  getHtml: mockGetHtml
+}))
 
 describe('Article', () => {
   let article: Article
@@ -14,6 +42,7 @@ describe('Article', () => {
 
   beforeEach(() => {
     article = new Article(testUrl)
+    mockGetHtml.mockClear()
   })
 
   describe('initialization', () => {
@@ -37,15 +66,18 @@ describe('Article', () => {
 
   describe('download', () => {
     it('should update download state on download', async () => {
-      // Note: This test will be updated when network implementation is added
       await article.download()
       expect(article.downloadState).toBe(DownloadState.SUCCESS)
       expect(article.isDownloaded).toBe(true)
+      expect(article.html).toContain('Test Article Title')
+      expect(mockGetHtml).toHaveBeenCalledWith(testUrl, expect.any(Configuration))
     })
 
     it('should handle download failures', async () => {
-      // Test will be implemented when network error handling is added
-      expect(true).toBe(true) // Placeholder
+      const failingArticle = new Article('https://example.com/nonexistent')
+      await expect(failingArticle.download()).rejects.toThrow('Mock URL not found')
+      expect(failingArticle.downloadState).toBe(DownloadState.FAILED)
+      expect(failingArticle.isDownloaded).toBe(false)
     })
   })
 
@@ -61,6 +93,9 @@ describe('Article', () => {
       await article.parse()
       expect(article.parseState).toBe(ParseState.SUCCESS)
       expect(article.isParsed).toBe(true)
+      expect(article.title).toBe('Test Article Title')
+      expect(article.text).toContain('first paragraph')
+      expect(article.authors).toContain('Test Author')
     })
   })
 
@@ -71,6 +106,9 @@ describe('Article', () => {
       expect(article.isParsed).toBe(true)
       expect(result.downloadState).toBe(DownloadState.SUCCESS)
       expect(result.parseState).toBe(ParseState.SUCCESS)
+      expect(result.title).toBe('Test Article Title')
+      expect(result.text).toContain('first paragraph')
+      expect(result.authors).toContain('Test Author')
     })
   })
 

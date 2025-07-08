@@ -13,6 +13,8 @@ import { ImageExtractor } from './image-extractor.js'
 import { MetadataExtractor } from './metadata-extractor.js'
 import { VideoExtractor } from './video-extractor.js'
 import { ExtractionResult, ArticleMetadata } from '../types.js'
+import { LanguageDetector } from '../languages/language-detector.js'
+import { getTextStats } from '../text.js'
 import type { Cheerio, CheerioAPI } from 'cheerio'
 import type { Element } from 'domhandler'
 
@@ -38,10 +40,17 @@ export class ContentExtractor {
   }
 
   /**
-   * Extract all content from article HTML
+   * Extract all content from article HTML with language detection
    */
   public extractContent(url: string, html: string): ExtractionResult {
     const $ = this.articleBodyExtractor.parseHtml(html)
+
+    // Detect article language early
+    const detectedLanguage = LanguageDetector.detectWithFallback(
+      $, 
+      this.config.language, 
+      this.config.useMetaLanguage
+    )
 
     // Parse the document and extract content
     this.articleBodyExtractor.parse($, $)
@@ -55,8 +64,13 @@ export class ContentExtractor {
     const images = this.getImages(url, $, topNode)
     const videos = this.getVideos($, topNode)
     
-    // Extract article text from top node
-    const text = topNode ? this.extractText(topNode) : ''
+    // Extract article text from top node with language-aware processing
+    const text = topNode ? this.extractText(topNode, detectedLanguage) : ''
+    
+    // Add language information to metadata
+    if (metadata && detectedLanguage) {
+      metadata.language = detectedLanguage
+    }
     
     return {
       title,
@@ -127,18 +141,53 @@ export class ContentExtractor {
   }
 
   /**
-   * Extract clean text from a node
+   * Extract clean text from a node with language-aware processing
    */
-  private extractText(node: Cheerio<Element>): string {
+  private extractText(node: Cheerio<Element>, language?: string): string {
     if (!node || node.length === 0) return ''
     
     // Remove script and style tags
     node.find('script, style').remove()
     
-    // Get text content and clean it
-    return node.text()
-      .replace(/\s+/g, ' ')
-      .replace(/\n+/g, '\n')
-      .trim()
+    // Get text content
+    let text = node.text()
+    
+    // Language-specific text cleaning
+    if (language) {
+      text = this.cleanTextForLanguage(text, language)
+    } else {
+      // Default cleaning
+      text = text
+        .replace(/\s+/g, ' ')
+        .replace(/\n+/g, '\n')
+        .trim()
+    }
+    
+    return text
+  }
+
+  /**
+   * Clean text based on language-specific rules
+   */
+  private cleanTextForLanguage(text: string, language: string): string {
+    if (language === 'zh') {
+      // Chinese text processing
+      return text
+        .replace(/\s+/g, '') // Remove most whitespace for Chinese
+        .replace(/[。！？；]+/g, '。') // Normalize punctuation
+        .trim()
+    } else if (language === 'ja') {
+      // Japanese text processing
+      return text
+        .replace(/\s+/g, '') // Remove most whitespace for Japanese
+        .replace(/[。！？]+/g, '。') // Normalize punctuation
+        .trim()
+    } else {
+      // Default processing for space-separated languages
+      return text
+        .replace(/\s+/g, ' ')
+        .replace(/\n+/g, '\n')
+        .trim()
+    }
   }
 }

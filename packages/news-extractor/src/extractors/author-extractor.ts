@@ -57,6 +57,11 @@ export class AuthorExtractor {
         .map(s => s.trim())
         .filter(s => !containsDigits(s))
         .filter(s => {
+          // For Unicode text (CJK), check character length instead of word count
+          if (this.isUnicodeText(s)) {
+            return s.length >= 2 && s.length <= 10
+          }
+          // For space-separated languages, use word count
           const wordCount = (s.match(/\w+/g) || []).length
           return wordCount > 1 && wordCount < 5
         })
@@ -206,5 +211,30 @@ export class AuthorExtractor {
     }
     
     return '/' + path.join('/')
+  }
+
+  /**
+   * Check if text contains primarily Unicode characters (CJK)
+   */
+  private isUnicodeText(text: string): boolean {
+    if (!text) return false
+    
+    // Count CJK characters
+    let cjkChars = 0
+    for (const char of text) {
+      const code = char.charCodeAt(0)
+      if (
+        (code >= 0x4e00 && code <= 0x9fff) ||  // CJK Unified Ideographs
+        (code >= 0x3040 && code <= 0x309f) ||  // Hiragana
+        (code >= 0x30a0 && code <= 0x30ff) ||  // Katakana
+        (code >= 0x3400 && code <= 0x4dbf) ||  // CJK Extension A
+        (code >= 0xac00 && code <= 0xd7af)     // Hangul
+      ) {
+        cjkChars++
+      }
+    }
+    
+    // If more than 50% of characters are CJK, consider it Unicode text
+    return cjkChars / text.length > 0.5
   }
 }
