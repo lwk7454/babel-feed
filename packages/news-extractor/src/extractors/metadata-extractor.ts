@@ -3,7 +3,8 @@
  * Ported from Python newspaper4k metadata_extractor.py
  */
 
-import { cheerio.CheerioAPI } from 'cheerio'
+import type { CheerioAPI } from 'cheerio'
+import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 import { ArticleMetadata } from '../types.js'
 import { META_LANGUAGE_TAGS } from './defines.js'
@@ -18,7 +19,7 @@ export class MetadataExtractor {
   /**
    * Parse metadata from document
    */
-  public parse(url: string, $: cheerio.CheerioAPI): ArticleMetadata {
+  public parse(url: string, $: CheerioAPI): ArticleMetadata {
     const metadata: ArticleMetadata = {}
 
     // Extract Open Graph metadata
@@ -50,10 +51,10 @@ export class MetadataExtractor {
   /**
    * Extract Open Graph metadata
    */
-  private extractOpenGraphMeta($: cheerio.CheerioAPI, metadata: ArticleMetadata): void {
+  private extractOpenGraphMeta($: CheerioAPI, metadata: ArticleMetadata): void {
     const ogMeta: Record<string, string> = {}
 
-    $('meta[property^="og:"]').each((_, el) => {
+    $('meta[property^="og:"]').each((_: number, el: Element) => {
       const property = $(el).attr('property')
       const content = $(el).attr('content')
       if (property && content) {
@@ -76,10 +77,10 @@ export class MetadataExtractor {
   /**
    * Extract Twitter Card metadata
    */
-  private extractTwitterMeta($: cheerio.CheerioAPI, metadata: ArticleMetadata): void {
+  private extractTwitterMeta($: CheerioAPI, metadata: ArticleMetadata): void {
     const twitterMeta: Record<string, string> = {}
 
-    $('meta[name^="twitter:"]').each((_, el) => {
+    $('meta[name^="twitter:"]').each((_: number, el: Element) => {
       const name = $(el).attr('name')
       const content = $(el).attr('content')
       if (name && content) {
@@ -99,7 +100,7 @@ export class MetadataExtractor {
   /**
    * Extract basic meta tags
    */
-  private extractBasicMeta($: cheerio.CheerioAPI, metadata: ArticleMetadata): void {
+  private extractBasicMeta($: CheerioAPI, metadata: ArticleMetadata): void {
     // Description
     if (!metadata.description) {
       const description = $('meta[name="description"]').attr('content')
@@ -109,7 +110,7 @@ export class MetadataExtractor {
     // Keywords
     const keywords = $('meta[name="keywords"]').attr('content')
     if (keywords) {
-      metadata.keywords = keywords.split(',').map(k => k.trim())
+      metadata.keywords = keywords.split(',').map((k: string) => k.trim())
     }
 
     // Author
@@ -124,7 +125,7 @@ export class MetadataExtractor {
   /**
    * Extract language from meta tags or HTML lang attribute
    */
-  private extractLanguage($: cheerio.CheerioAPI): string | undefined {
+  private extractLanguage($: CheerioAPI): string | undefined {
     // Try HTML lang attribute first
     const htmlLang = $('html').attr('lang')
     if (htmlLang) {
@@ -145,7 +146,7 @@ export class MetadataExtractor {
   /**
    * Extract canonical URL
    */
-  private extractCanonicalUrl($: cheerio.CheerioAPI, fallbackUrl: string): string {
+  private extractCanonicalUrl($: CheerioAPI, fallbackUrl: string): string {
     const canonical = $('link[rel="canonical"]').attr('href')
     return canonical || fallbackUrl
   }
@@ -153,7 +154,7 @@ export class MetadataExtractor {
   /**
    * Extract description from multiple sources
    */
-  private extractDescription($: cheerio.CheerioAPI): string | undefined {
+  private extractDescription($: CheerioAPI): string | undefined {
     // Try meta description
     const metaDesc = $('meta[name="description"]').attr('content')
     if (metaDesc) return metaDesc
@@ -170,13 +171,13 @@ export class MetadataExtractor {
   /**
    * Extract keywords from meta tags
    */
-  private extractKeywords($: cheerio.CheerioAPI): string[] | undefined {
+  private extractKeywords($: CheerioAPI): string[] | undefined {
     const keywords = $('meta[name="keywords"]').attr('content')
     if (keywords) {
       return keywords
         .split(',')
-        .map(k => k.trim())
-        .filter(k => k.length > 0)
+        .map((k: string) => k.trim())
+        .filter((k: string) => k.length > 0)
         .slice(0, 20) // Limit to 20 keywords
     }
 

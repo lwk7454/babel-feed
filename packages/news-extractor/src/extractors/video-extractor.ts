@@ -3,7 +3,8 @@
  * Ported from Python newspaper4k videos_extractor.py
  */
 
-import { cheerio.CheerioAPI, Cheerio, Element } from 'cheerio'
+import type { Cheerio, CheerioAPI } from 'cheerio'
+import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 
 export class VideoExtractor {
@@ -16,7 +17,7 @@ export class VideoExtractor {
   /**
    * Parse videos from document
    */
-  public parse($: cheerio.CheerioAPI, topNode: Cheerio<Element> | null): string[] {
+  public parse($: CheerioAPI, topNode: Cheerio<Element> | null): string[] {
     const videos: Set<string> = new Set()
 
     // Try videos in top node first
@@ -36,7 +37,7 @@ export class VideoExtractor {
   /**
    * Extract videos from a specific node
    */
-  private extractVideosFromNode(node: Cheerio<Element>, $: cheerio.CheerioAPI): string[] {
+  private extractVideosFromNode(node: Cheerio<Element>, $: CheerioAPI): string[] {
     const videos: string[] = []
 
     // Check for video tags
@@ -69,7 +70,7 @@ export class VideoExtractor {
   /**
    * Extract videos from JSON-LD structured data
    */
-  private extractVideosFromStructuredData($: cheerio.CheerioAPI): string[] {
+  private extractVideosFromStructuredData($: CheerioAPI): string[] {
     const videos: string[] = []
 
     $('script[type="application/ld+json"]').each((_, el) => {
@@ -88,7 +89,7 @@ export class VideoExtractor {
   /**
    * Extract embedded videos (YouTube, Vimeo, etc.)
    */
-  private extractEmbeddedVideos($: cheerio.CheerioAPI): string[] {
+  private extractEmbeddedVideos($: CheerioAPI): string[] {
     const videos: string[] = []
 
     // YouTube embeds
@@ -121,20 +122,24 @@ export class VideoExtractor {
   /**
    * Find videos in JSON-LD data recursively
    */
-  private findVideosInJsonData(data: any): string[] {
+  private findVideosInJsonData(data: unknown): string[] {
     const videos: string[] = []
 
     if (!data || typeof data !== 'object') return videos
+
+    // Type assertion for object access
+    const obj = data as Record<string, unknown>
 
     // Check for video-specific fields
     const videoFields = ['contentUrl', 'embedUrl', 'url', 'video']
     
     for (const field of videoFields) {
-      if (data[field]) {
-        if (typeof data[field] === 'string' && this.isValidVideoUrl(data[field])) {
-          videos.push(data[field])
-        } else if (Array.isArray(data[field])) {
-          data[field].forEach((item: any) => {
+      if (Object.prototype.hasOwnProperty.call(obj, field)) {
+        const value = obj[field]
+        if (typeof value === 'string' && this.isValidVideoUrl(value)) {
+          videos.push(value)
+        } else if (Array.isArray(value)) {
+          value.forEach((item) => {
             if (typeof item === 'string' && this.isValidVideoUrl(item)) {
               videos.push(item)
             }
@@ -144,16 +149,16 @@ export class VideoExtractor {
     }
 
     // Check for VideoObject schema
-    if (data['@type'] === 'VideoObject') {
-      if (data.contentUrl) videos.push(data.contentUrl)
-      if (data.embedUrl) videos.push(data.embedUrl)
-      if (data.url) videos.push(data.url)
+    if (obj['@type'] === 'VideoObject') {
+      if (typeof obj.contentUrl === 'string') videos.push(obj.contentUrl)
+      if (typeof obj.embedUrl === 'string') videos.push(obj.embedUrl)
+      if (typeof obj.url === 'string') videos.push(obj.url)
     }
 
     // Recursive search in nested objects
-    for (const key in data) {
-      if (typeof data[key] === 'object') {
-        const nestedVideos = this.findVideosInJsonData(data[key])
+    for (const key in obj) {
+      if (typeof obj[key] === 'object' && obj[key] !== null) {
+        const nestedVideos = this.findVideosInJsonData(obj[key])
         videos.push(...nestedVideos)
       }
     }

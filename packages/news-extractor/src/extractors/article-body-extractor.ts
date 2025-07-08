@@ -4,14 +4,16 @@
  */
 
 import * as cheerio from 'cheerio'
+import type { Cheerio, CheerioAPI } from 'cheerio'
+import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
-import { SCORE_WEIGHTS, ARTICLE_BODY_TAGS } from './defines.js'
+import { SCORE_WEIGHTS, ARTICLE_BODY_TAGS, ArticleBodyTag } from './defines.js'
 import { getStopWords } from '../text.js'
 
 export class ArticleBodyExtractor {
   private config: Configuration
-  public topNode: cheerio.Cheerio<cheerio.Element> | null = null
-  public topNodeComplemented: cheerio.Cheerio<cheerio.Element> | null = null
+  public topNode: Cheerio<Element> | null = null
+  public topNodeComplemented: Cheerio<Element> | null = null
 
   constructor(config: Configuration) {
     this.config = config
@@ -20,7 +22,7 @@ export class ArticleBodyExtractor {
   /**
    * Parse HTML document - exact port of Python parse method
    */
-  public parse(doc: cheerio.CheerioAPI): void {
+  public parse(doc: CheerioAPI): void {
     this.topNode = this.calculateBestNode(doc)
     this.topNodeComplemented = this.complementWithSiblings(this.topNode)
   }
@@ -28,18 +30,18 @@ export class ArticleBodyExtractor {
   /**
    * Parse HTML with existing Cheerio instance
    */
-  public parseHtml(html: string): cheerio.CheerioAPI {
+  public parseHtml(html: string): CheerioAPI {
     return cheerio.load(html)
   }
 
   /**
    * Calculate best node - exact port of Python calculate_best_node
    */
-  public calculateBestNode(doc: cheerio.CheerioAPI): cheerio.Cheerio<cheerio.Element> | null {
-    let topNode: cheerio.Cheerio<cheerio.Element> | null = null
+  public calculateBestNode(doc: CheerioAPI): Cheerio<Element> | null {
+    let topNode: Cheerio<Element> | null = null
     this.boostHighlyLikelyNodes(doc)
 
-    let parentNodes: cheerio.Cheerio<cheerio.Element>[] = []
+    let parentNodes: Cheerio<Element>[] = []
     const nodesWithText = this.computeFeatures(doc)
 
     // Process the tree from bottom up, farthest nodes first
@@ -66,11 +68,11 @@ export class ArticleBodyExtractor {
   /**
    * Compute gravity scores - exact port of Python compute_gravity_scores
    */
-  private computeGravityScores(nodesWithText: cheerio.Cheerio<cheerio.Element>[]): cheerio.Cheerio<cheerio.Element>[] {
-    const parentNodes: cheerio.Cheerio<cheerio.Element>[] = []
+  private computeGravityScores(nodesWithText: Cheerio<Element>[]): Cheerio<Element>[] {
+    const parentNodes: Cheerio<Element>[] = []
     let boostDiscount = 1
     const nodesCount = nodesWithText.length
-    let negativeScoring = 0
+    const negativeScoring = 0
 
     const bottomNegativeScoreNodes = nodesCount * SCORE_WEIGHTS.bottom_negativescore_nodes
 
@@ -118,7 +120,7 @@ export class ArticleBodyExtractor {
     // Remove duplicates and nulls
     const uniqueParents = Array.from(new Set(parentNodes.map(n => n.get(0))))
       .filter(n => n != null)
-      .map(n => cheerio(n))
+      .map(n => nodesWithText.length > 0 ? nodesWithText[0].constructor(n as Element) : (cheerio.load('<html></html>')('html')))
 
     return uniqueParents
   }
@@ -126,8 +128,8 @@ export class ArticleBodyExtractor {
   /**
    * Compute features - exact port of Python compute_features
    */
-  private computeFeatures(doc: cheerio.CheerioAPI): cheerio.Cheerio<cheerio.Element>[] {
-    const candidates: cheerio.Cheerio<cheerio.Element>[] = []
+  private computeFeatures(doc: CheerioAPI): Cheerio<Element>[] {
+    const candidates: Cheerio<Element>[] = []
     const nodesToCheck = this.nodesToCheck(doc)
 
     // Sort by level (deepest first)
@@ -174,38 +176,38 @@ export class ArticleBodyExtractor {
   /**
    * Nodes to check - exact port of Python nodes_to_check
    */
-  private nodesToCheck(doc: cheerio.CheerioAPI): cheerio.Element[] {
-    const nodesToCheck: cheerio.Element[] = []
+  private nodesToCheck(doc: CheerioAPI): Element[] {
+    const nodesToCheck: Element[] = []
     const tags = ['p', 'pre', 'td', 'article', 'div']
 
     for (const tag of tags) {
       if (tag === 'div') {
-        let items: cheerio.Element[] = []
+        let items: Element[] = []
         const attrs = ['articlebody', 'article', 'story']
         
         for (const attr of attrs) {
           // Match by ID with word matching
           doc(`div[id*="${attr}"]`).each((_, el) => {
-            if (this.matchesWord(doc(el).attr('id') || '', attr)) {
-              items.push(el)
+            if (el.type === 'tag' && this.matchesWord(doc(el).attr('id') || '', attr)) {
+              items.push(el as Element)
             }
           })
           // Match by class with word matching
           doc(`div[class*="${attr}"]`).each((_, el) => {
-            if (this.matchesWord(doc(el).attr('class') || '', attr)) {
-              items.push(el)
+            if (el.type === 'tag' && this.matchesWord(doc(el).attr('class') || '', attr)) {
+              items.push(el as Element)
             }
           })
         }
 
         // Paragraph class match
         doc('div[class*="paragraph"]').each((_, el) => {
-          items.push(el)
+          if (el.type === 'tag') items.push(el as Element)
         })
 
         if (items.length === 0 && nodesToCheck.length < 5) {
           doc('div').each((_, el) => {
-            items.push(el)
+            if (el.type === 'tag') items.push(el as Element)
           })
         }
 
@@ -213,7 +215,7 @@ export class ArticleBodyExtractor {
         nodesToCheck.push(...items)
       } else {
         doc(tag).each((_, el) => {
-          nodesToCheck.push(el)
+          if (el.type === 'tag') nodesToCheck.push(el as Element)
         })
       }
     }
@@ -224,7 +226,7 @@ export class ArticleBodyExtractor {
   /**
    * Check if boostable - exact port of Python is_boostable
    */
-  private isBoostable(node: cheerio.Cheerio<cheerio.Element>): boolean {
+  private isBoostable(node: Cheerio<Element>): boolean {
     const maxStepsAwayFromNode = SCORE_WEIGHTS.boost_max_steps_from_node
     const siblings = this.walkSiblings(node)
 
@@ -243,7 +245,7 @@ export class ArticleBodyExtractor {
   /**
    * Boost highly likely nodes - exact port of Python boost_highly_likely_nodes
    */
-  private boostHighlyLikelyNodes(doc: cheerio.CheerioAPI): void {
+  private boostHighlyLikelyNodes(doc: CheerioAPI): void {
     const candidates = doc('p, pre, td, article, div').toArray()
 
     for (const el of candidates) {
@@ -257,7 +259,7 @@ export class ArticleBodyExtractor {
   /**
    * Is highly likely - exact port of Python is_highly_likely
    */
-  private isHighlyLikely(node: cheerio.Cheerio<cheerio.Element>): number {
+  private isHighlyLikely(node: Cheerio<Element>): number {
     const scores: number[] = []
 
     for (const tag of ARTICLE_BODY_TAGS) {
@@ -272,7 +274,7 @@ export class ArticleBodyExtractor {
   /**
    * Check tag match - exact port of Python tag matching logic
    */
-  private isTagMatch(node: cheerio.Cheerio<cheerio.Element>, tagDict: any): boolean {
+  private isTagMatch(node: Cheerio<Element>, tagDict: ArticleBodyTag): boolean {
     if (tagDict.tag && node.get(0)?.tagName?.toLowerCase() !== tagDict.tag) {
       return false
     }
@@ -299,7 +301,7 @@ export class ArticleBodyExtractor {
   /**
    * Complement with siblings - exact port of Python complement_with_siblings
    */
-  private complementWithSiblings(node: cheerio.Cheerio<cheerio.Element> | null): cheerio.Cheerio<cheerio.Element> | null {
+  private complementWithSiblings(node: Cheerio<Element> | null): Cheerio<Element> | null {
     if (!node) return null
     return this.addSameLevelCandidates(node)
   }
@@ -307,12 +309,12 @@ export class ArticleBodyExtractor {
   /**
    * Add same level candidates - exact port of Python add_same_level_candidates
    */
-  private addSameLevelCandidates(node: cheerio.Cheerio<cheerio.Element>): cheerio.Cheerio<cheerio.Element> {
+  private addSameLevelCandidates(node: Cheerio<Element>): Cheerio<Element> {
     const nodeLevel = this.getLevel(node)
     const baseScore = this.getNodeGravityScore(node)
     
     // Create new container
-    const newNode = cheerio('<html><body></body></html>').find('body')
+    const newNode = cheerio.load('<html><body></body></html>')('body')
     const candidates = this.getNodesAtLevel(node, nodeLevel)
 
     for (const n of candidates) {
@@ -337,43 +339,43 @@ export class ArticleBodyExtractor {
 
   // Helper methods - exact ports of Python parser functions
 
-  private getAttribute(node: cheerio.Cheerio<cheerio.Element>, attr: string, defaultValue: number): number {
+  private getAttribute(node: Cheerio<Element>, attr: string, defaultValue: number): number {
     return parseInt(node.attr(`data-${attr}`) || defaultValue.toString(), 10)
   }
 
-  private setAttribute(node: cheerio.Cheerio<cheerio.Element>, attr: string, value: number | string): void {
+  private setAttribute(node: Cheerio<Element>, attr: string, value: number | string): void {
     node.attr(`data-${attr}`, value.toString())
   }
 
-  private getStopWords(node: cheerio.Cheerio<cheerio.Element>): number {
+  private getStopWords(node: Cheerio<Element>): number {
     return this.getAttribute(node, 'stop_words', 0)
   }
 
-  private getWordCount(node: cheerio.Cheerio<cheerio.Element>): number {
+  private getWordCount(node: Cheerio<Element>): number {
     return this.getAttribute(node, 'word_count', 0)
   }
 
-  private getNodeGravityScore(node: cheerio.Cheerio<cheerio.Element>): number {
+  private getNodeGravityScore(node: Cheerio<Element>): number {
     return parseFloat(node.attr('data-gravity-score') || '0')
   }
 
-  private updateScore(node: cheerio.Cheerio<cheerio.Element>, addToScore: number): void {
+  private updateScore(node: Cheerio<Element>, addToScore: number): void {
     if (node.length === 0) return
     const newScore = this.getNodeGravityScore(node) + addToScore
     node.attr('data-gravity-score', newScore.toString())
   }
 
-  private updateNodeCount(node: cheerio.Cheerio<cheerio.Element>, addToCount: number): void {
+  private updateNodeCount(node: Cheerio<Element>, addToCount: number): void {
     if (node.length === 0) return
     const currentCount = parseFloat(node.attr('data-gravity-nodes') || '0')
     node.attr('data-gravity-nodes', (currentCount + addToCount).toString())
   }
 
-  private getText(node: cheerio.Cheerio<cheerio.Element>): string {
+  private getText(node: Cheerio<Element>): string {
     return node.text().trim()
   }
 
-  private getLevel(node: cheerio.Cheerio<cheerio.Element>): number {
+  private getLevel(node: Cheerio<Element>): number {
     let level = 0
     let current = node.parent()
     
@@ -385,7 +387,7 @@ export class ArticleBodyExtractor {
     return level
   }
 
-  private isHighLinkDensity(node: cheerio.Cheerio<cheerio.Element>): boolean {
+  private isHighLinkDensity(node: Cheerio<Element>): boolean {
     const text = this.getText(node)
     const links = node.find('a')
     
@@ -394,7 +396,7 @@ export class ArticleBodyExtractor {
 
     let linkTextLength = 0
     links.each((_, link) => {
-      linkTextLength += cheerio(link).text().length
+      linkTextLength += node.constructor(link).text().length
     })
 
     const linkDensity = linkTextLength / text.length
@@ -404,8 +406,8 @@ export class ArticleBodyExtractor {
     return linkDensity > threshold
   }
 
-  private walkSiblings(node: cheerio.Cheerio<cheerio.Element>): cheerio.Cheerio<cheerio.Element>[] {
-    const siblings: cheerio.Cheerio<cheerio.Element>[] = []
+  private walkSiblings(node: Cheerio<Element>): Cheerio<Element>[] {
+    const siblings: Cheerio<Element>[] = []
     let current = node.prev()
 
     while (current.length > 0) {
@@ -416,12 +418,12 @@ export class ArticleBodyExtractor {
     return siblings
   }
 
-  private getNodesAtLevel(node: cheerio.Cheerio<cheerio.Element>, level: number): cheerio.Cheerio<cheerio.Element>[] {
-    const nodes: cheerio.Cheerio<cheerio.Element>[] = []
+  private getNodesAtLevel(node: Cheerio<Element>, level: number): Cheerio<Element>[] {
+    const nodes: Cheerio<Element>[] = []
     const root = node.closest('html')
     
     root.find('*').each((_, el) => {
-      const elNode = cheerio(el)
+      const elNode = node.constructor(el)
       if (this.getLevel(elNode) === level) {
         nodes.push(elNode)
       }

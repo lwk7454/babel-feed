@@ -3,7 +3,8 @@
  * Ported from Python newspaper4k image_extractor.py
  */
 
-import { cheerio.CheerioAPI, Cheerio, Element } from 'cheerio'
+import type { Cheerio, CheerioAPI } from 'cheerio'
+import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 import { META_IMAGE_TAGS } from './defines.js'
 
@@ -17,7 +18,7 @@ export class ImageExtractor {
   /**
    * Parse images from document
    */
-  public parse($: cheerio.CheerioAPI, topNode: Cheerio<Element> | null, baseUrl: string): string[] {
+  public parse($: CheerioAPI, topNode: Cheerio<Element> | null, baseUrl: string): string[] {
     const images: Set<string> = new Set()
 
     // Try meta tags first (highest priority)
@@ -39,7 +40,7 @@ export class ImageExtractor {
   /**
    * Extract images from meta tags
    */
-  private extractImagesFromMeta($: cheerio.CheerioAPI, baseUrl: string): string[] {
+  private extractImagesFromMeta($: CheerioAPI, baseUrl: string): string[] {
     const images: string[] = []
 
     META_IMAGE_TAGS.forEach(tag => {
@@ -47,11 +48,13 @@ export class ImageExtractor {
       const elements = $(selector)
 
       elements.each((_, el) => {
-        const url = $(el).attr(tag.content)
-        if (url) {
-          const absoluteUrl = this.resolveUrl(url, baseUrl)
-          if (absoluteUrl && this.isValidImageUrl(absoluteUrl)) {
-            images.push(absoluteUrl)
+        if (el.type === 'tag') {
+          const url = $(el as Element).attr(tag.content)
+          if (url) {
+            const absoluteUrl = this.resolveUrl(url, baseUrl)
+            if (absoluteUrl && this.isValidImageUrl(absoluteUrl)) {
+              images.push(absoluteUrl)
+            }
           }
         }
       })
@@ -67,11 +70,13 @@ export class ImageExtractor {
     const images: string[] = []
 
     node.find('img').each((_, img) => {
-      const src = node.constructor(img).attr('src')
-      if (src) {
-        const absoluteUrl = this.resolveUrl(src, baseUrl)
-        if (absoluteUrl && this.isValidImageUrl(absoluteUrl)) {
-          images.push(absoluteUrl)
+      if (img.type === 'tag') {
+        const src = node.constructor(img as Element).attr('src')
+        if (src) {
+          const absoluteUrl = this.resolveUrl(src, baseUrl)
+          if (absoluteUrl && this.isValidImageUrl(absoluteUrl)) {
+            images.push(absoluteUrl)
+          }
         }
       }
     })
@@ -82,15 +87,17 @@ export class ImageExtractor {
   /**
    * Extract all images from document
    */
-  private extractImagesFromDocument($: cheerio.CheerioAPI, baseUrl: string): string[] {
+  private extractImagesFromDocument($: CheerioAPI, baseUrl: string): string[] {
     const images: string[] = []
 
     $('img').each((_, img) => {
-      const src = $(img).attr('src')
-      if (src) {
-        const absoluteUrl = this.resolveUrl(src, baseUrl)
-        if (absoluteUrl && this.isValidImageUrl(absoluteUrl)) {
-          images.push(absoluteUrl)
+      if (img.type === 'tag') {
+        const src = $(img as Element).attr('src')
+        if (src) {
+          const absoluteUrl = this.resolveUrl(src, baseUrl)
+          if (absoluteUrl && this.isValidImageUrl(absoluteUrl)) {
+            images.push(absoluteUrl)
+          }
         }
       }
     })

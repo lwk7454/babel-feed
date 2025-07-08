@@ -13,6 +13,8 @@ import { ImageExtractor } from './image-extractor.js'
 import { MetadataExtractor } from './metadata-extractor.js'
 import { VideoExtractor } from './video-extractor.js'
 import { ExtractionResult, ArticleMetadata } from '../types.js'
+import type { Cheerio, CheerioAPI } from 'cheerio'
+import type { Element } from 'domhandler'
 
 export class ContentExtractor {
   private config: Configuration
@@ -71,63 +73,63 @@ export class ContentExtractor {
   /**
    * Get article title using multiple extraction methods
    */
-  public getTitle($: cheerio.CheerioAPI): string {
+  public getTitle($: CheerioAPI): string {
     return this.titleExtractor.parse($)
   }
 
   /**
    * Get article authors
    */
-  public getAuthors($: cheerio.CheerioAPI): string[] {
+  public getAuthors($: CheerioAPI): string[] {
     return this.authorExtractor.parse($)
   }
 
   /**
    * Get article publishing date
    */
-  public getPublishingDate(url: string, $: cheerio.CheerioAPI): Date | null {
+  public getPublishingDate(url: string, $: CheerioAPI): Date | null {
     return this.dateExtractor.parse(url, $)
   }
 
   /**
    * Get article metadata
    */
-  public getMetadata(url: string, $: cheerio.CheerioAPI): ArticleMetadata {
+  public getMetadata(url: string, $: CheerioAPI): ArticleMetadata {
     return this.metadataExtractor.parse(url, $)
   }
 
   /**
    * Get article images
    */
-  public getImages(url: string, $: cheerio.CheerioAPI, topNode: cheerio.Cheerio<cheerio.Element> | null): string[] {
+  public getImages(url: string, $: CheerioAPI, topNode: Cheerio<Element> | null): string[] {
     return this.imageExtractor.parse($, topNode, url)
   }
 
   /**
    * Get article videos
    */
-  public getVideos($: cheerio.CheerioAPI, topNode: cheerio.Cheerio<cheerio.Element> | null): string[] {
+  public getVideos($: CheerioAPI, topNode: Cheerio<Element> | null): string[] {
     return this.videoExtractor.parse($, topNode)
   }
 
   /**
    * Get the top node from the article body extractor
    */
-  public get topNode(): cheerio.Cheerio<cheerio.Element> | null {
+  public get topNode(): Cheerio<Element> | null {
     return this.articleBodyExtractor.topNode
   }
 
   /**
    * Get the complemented top node (with siblings)
    */
-  public get topNodeComplemented(): cheerio.Cheerio<cheerio.Element> | null {
+  public get topNodeComplemented(): Cheerio<Element> | null {
     return this.articleBodyExtractor.topNodeComplemented
   }
 
   /**
    * Extract clean text from a node
    */
-  private extractText(node: cheerio.Cheerio<cheerio.Element>): string {
+  private extractText(node: Cheerio<Element>): string {
     if (!node || node.length === 0) return ''
     
     // Remove script and style tags
