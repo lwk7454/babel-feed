@@ -4,8 +4,7 @@
  */
 
 import { URL } from 'url'
-// Using require for tldjs to avoid type issues
-const tldjs = require('tldjs')
+import tldjs from 'tldjs'
 
 const log = console // TODO: Replace with proper logging
 
@@ -97,7 +96,7 @@ export function getTldInfo(url: string): { domain: string; tld: string; subdomai
     const result = tldjs.parse(url)
     return {
       domain: result.domain || '',
-      tld: result.tld || '',
+      tld: result.publicSuffix || '',
       subdomain: result.subdomain || ''
     }
   } catch {

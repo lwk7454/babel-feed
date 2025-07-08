@@ -3,83 +3,208 @@
  * Ported from Python newspaper4k authors_extractor.py
  */
 
-import * as cheerio from 'cheerio'
+import type { CheerioAPI, Cheerio } from 'cheerio'
+import type { AnyNode, Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 import { AUTHOR_ATTRS, AUTHOR_VALS, AUTHOR_STOP_WORDS } from './defines.js'
 
 export class AuthorExtractor {
   private config: Configuration
+  private authors: string[] = []
 
   constructor(config: Configuration) {
     this.config = config
   }
 
   /**
-   * Parse authors from document
+   * Parse authors from document - exact port from Python
    */
-  public parse($: cheerio.CheerioAPI): string[] {
-    const authors: Set<string> = new Set()
+  public parse($: CheerioAPI): string[] {
+    const digitsRegex = /\d/
+    const authorStopwordsPattern = AUTHOR_STOP_WORDS.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    const authorStopwords = new RegExp(`\\b(${authorStopwordsPattern.join('|')})\\b`, 'i')
 
-    // Try meta tags for authors
-    AUTHOR_VALS.forEach(authorVal => {
-      AUTHOR_ATTRS.forEach(attr => {
-        const selector = `meta[${attr}="${authorVal}"]`
-        const content = $(selector).attr('content')
-        if (content) {
-          this.extractAuthorsFromText(content).forEach(author => authors.add(author))
+    const containsDigits = (text: string): boolean => {
+      return digitsRegex.test(text)
+    }
+
+    const uniqifyList = (list: string[]): string[] => {
+      const seen = new Map<string, string>()
+      for (const item of list) {
+        const key = item.toLowerCase().trim()
+        if (key) {
+          seen.set(key, item.trim())
         }
-      })
+      }
+      return Array.from(seen.values())
+    }
+
+    const parseByline = (searchStr: string): string[] => {
+      // Remove HTML boilerplate
+      let cleaned = searchStr.replace(/<[^<]+?>/g, '')
+      cleaned = cleaned.replace(/[\n\t\r\u00A0]/g, ' ')
+
+      // Remove original By statement
+      const byMatch = cleaned.match(/\b(by|from)[:\s](.*)/i)
+      if (byMatch) {
+        cleaned = byMatch[2]
+      }
+
+      cleaned = cleaned.trim()
+
+      // Split by common separators
+      const nameTokens = cleaned.split(/[·,|]|\sand\s|\set\s|\sund\s|\//)
+        .map(s => s.trim())
+        .filter(s => !containsDigits(s))
+        .filter(s => {
+          const wordCount = (s.match(/\w+/g) || []).length
+          return wordCount > 1 && wordCount < 5
+        })
+
+      return nameTokens
+    }
+
+    const getTextFromElement = (node: Cheerio<Element>): string => {
+      if (!node || node.length === 0) return ''
+      
+      // Clone and remove unwanted tags
+      const cloned = node.clone()
+      cloned.find('script, style, time').remove()
+      return cloned.text() || ''
+    }
+
+    const authors: string[] = []
+    const matches: Array<[Cheerio<Element>, string]> = []
+
+    // Extract from JSON-LD structured data
+    const jsonLdScripts = $('script[type="application/ld+json"]')
+    jsonLdScripts.each((_, scriptEl) => {
+      try {
+        const jsonData = JSON.parse($(scriptEl).text())
+        this.extractAuthorsFromJsonLd(jsonData, authors)
+      } catch {
+        // Invalid JSON, continue
+      }
     })
 
-    // Try class and id selectors
-    const authorSelectors = [
-      '.author', '.byline', '.writer', '.article-author',
-      '#author', '#byline', '#writer',
-      '[rel="author"]', '[itemprop="author"]'
-    ]
+    // Search for author attributes and values
+    for (const attr of AUTHOR_ATTRS) {
+      for (const val of AUTHOR_VALS) {
+        const elements = $(`[${attr}="${val}"]`)
+        elements.each((_, el) => {
+          // Only process if node is an Element
+          if (el.type === 'tag') {
+            const element = $(el) as Cheerio<Element>
+            const path = this.getElementPath(element)
+            matches.push([element, path])
+          }
+        })
+      }
+    }
 
-    authorSelectors.forEach(selector => {
-      $(selector).each((_, el) => {
-        const text = $(el).text().trim()
-        if (text) {
-          this.extractAuthorsFromText(text).forEach(author => authors.add(author))
-        }
-      })
-    })
+    // Sort by XPath specificity (longer paths first)
+    matches.sort((a, b) => b[1].localeCompare(a[1]))
 
-    const result = Array.from(authors)
-      .filter(author => !this.isStopWord(author))
-      .slice(0, this.config.maxAuthors)
+    // Remove parent nodes (keep most specific)
+    const matchesReduced: Array<[Cheerio<Element>, string]> = []
+    for (const match of matches) {
+      if (matchesReduced.length === 0) {
+        matchesReduced.push(match)
+      } else if (!matchesReduced[matchesReduced.length - 1][1].startsWith(match[1])) {
+        matchesReduced.push(match)
+      }
+    }
 
-    return result
-  }
+    // Sort back to preserve some order
+    matchesReduced.sort((a, b) => a[1].localeCompare(b[1]))
 
-  /**
-   * Extract individual authors from text
-   */
-  private extractAuthorsFromText(text: string): string[] {
-    if (!text) return []
+    // Extract content from matched elements
+    for (const [match] of matchesReduced) {
+      let content = ''
+      
+      if (match.prop('tagName') === 'META') {
+        content = match.attr('content') || ''
+      } else {
+        content = getTextFromElement(match)
+      }
+      
+      if (content.length > 0) {
+        authors.push(...parseByline(content))
+      }
+    }
 
-    // Remove common prefixes
-    let cleaned = text.replace(/^By\s+/i, '')
-    cleaned = cleaned.replace(/^Author:\s*/i, '')
-    cleaned = cleaned.replace(/^Written by\s+/i, '')
-
-    // Split by common separators
-    const authors = cleaned
-      .split(/[,;&|]|\sand\s/)
-      .map(author => author.trim())
-      .filter(author => author.length > 0 && author.length < 100)
-
-    return authors
-  }
-
-  /**
-   * Check if text is a stop word
-   */
-  private isStopWord(text: string): boolean {
-    return AUTHOR_STOP_WORDS.some(stopWord => 
-      text.toLowerCase().includes(stopWord.toLowerCase())
+    // Clean up authors of stopwords
+    const cleanedAuthors = authors.map(author => 
+      author.replace(authorStopwords, '').replace(/^[\s.,-/]+|[\s.,-/]+$/g, '')
     )
+
+    this.authors = uniqifyList(cleanedAuthors)
+    return this.authors
+  }
+
+  /**
+   * Extract authors from JSON-LD structured data
+   */
+  private extractAuthorsFromJsonLd(data: Record<string, unknown> | unknown[] | string, authors: string[]): void {
+    const getAuthors = (vals: Record<string, unknown> | unknown[] | string): void => {
+      if (typeof vals === 'object' && vals !== null && !Array.isArray(vals)) {
+        const obj = vals as Record<string, unknown>
+        if (typeof obj.name === 'string') {
+          authors.push(obj.name)
+        } else if (Array.isArray(obj.name)) {
+          obj.name.forEach(name => {
+            if (typeof name === 'string') authors.push(name)
+          })
+        }
+      } else if (Array.isArray(vals)) {
+        for (const val of vals) {
+          if (typeof val === 'object' && val !== null) {
+            const obj = val as Record<string, unknown>
+            if (typeof obj.name === 'string') authors.push(obj.name)
+          } else if (typeof val === 'string') {
+            authors.push(val)
+          }
+        }
+      } else if (typeof vals === 'string') {
+        authors.push(vals)
+      }
+    }
+
+    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>
+      if ('@graph' in obj && Array.isArray(obj['@graph'])) {
+        const graph = obj['@graph'] as unknown[]
+        for (const item of graph) {
+          if (typeof item === 'object' && item !== null) {
+            const itemObj = item as Record<string, unknown>
+            if (itemObj['@type'] === 'Person' && typeof itemObj.name === 'string') {
+              authors.push(itemObj.name)
+            }
+            if ('author' in itemObj) {
+              getAuthors(itemObj.author as Record<string, unknown> | unknown[] | string)
+            }
+          }
+        }
+      } else if ('author' in obj) {
+        getAuthors(obj.author as Record<string, unknown> | unknown[] | string)
+      }
+    }
+  }
+
+  /**
+   * Get element path for sorting
+   */
+  private getElementPath(element: Cheerio<Element>): string {
+    const path: string[] = []
+    let current = element
+    
+    while (current.length > 0 && current.prop('tagName') !== 'HTML') {
+      const tagName = current.prop('tagName')?.toLowerCase() || ''
+      const index = current.index()
+      path.unshift(`${tagName}[${index}]`)
+      current = current.parent()
+    }
+    
+    return '/' + path.join('/')
   }
 }

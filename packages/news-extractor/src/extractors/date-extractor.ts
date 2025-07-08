@@ -3,203 +3,168 @@
  * Ported from Python newspaper4k pubdate_extractor.py
  */
 
-import * as cheerio from 'cheerio'
+import type { CheerioAPI, Cheerio } from 'cheerio'
+import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 import { PUBLISH_DATE_META_INFO, PUBLISH_DATE_TAGS } from './defines.js'
 
+interface DateMatch {
+  date: Date
+  score: number
+}
+
 export class DateExtractor {
   private config: Configuration
+  private pubdate: Date | null = null
 
   constructor(config: Configuration) {
     this.config = config
   }
 
   /**
-   * Parse publication date from URL and document
+   * Parse publication date from URL and document - exact port from Python
+   * 3 strategies for publishing date extraction in descending accuracy:
+   * 1. Pubdate from URL
+   * 2. Pubdate from metadata
+   * 3. Raw regex searches in the HTML + added heuristics
    */
-  public parse(url: string, $: cheerio.CheerioAPI): Date | null {
-    // Try URL date extraction first
-    const urlDate = this.extractDateFromUrl(url)
-    if (urlDate) return urlDate
-
-    // Try meta tags
-    const metaDate = this.extractDateFromMeta($)
-    if (metaDate) return metaDate
-
-    // Try structured data
-    const structuredDate = this.extractDateFromStructuredData($)
-    if (structuredDate) return structuredDate
-
-    // Try time tags
-    const timeDate = this.extractDateFromTimeTags($)
-    if (timeDate) return timeDate
-
-    return null
-  }
-
-  /**
-   * Extract date from URL patterns
-   */
-  private extractDateFromUrl(url: string): Date | null {
-    // Common URL date patterns: /2023/12/31/, /2023-12-31/, etc.
-    const datePatterns = [
-      /\/(\d{4})\/(\d{1,2})\/(\d{1,2})\//,
-      /\/(\d{4})-(\d{1,2})-(\d{1,2})\//,
-      /\/(\d{4})(\d{2})(\d{2})\//,
-      /[\/_](\d{4})-(\d{1,2})-(\d{1,2})[\/_]/
-    ]
-
-    for (const pattern of datePatterns) {
-      const match = url.match(pattern)
-      if (match) {
-        const year = parseInt(match[1], 10)
-        const month = parseInt(match[2], 10)
-        const day = parseInt(match[3], 10)
-        
-        if (this.isValidDate(year, month, day)) {
-          return new Date(year, month - 1, day)
-        }
-      }
-    }
-
-    return null
-  }
-
-  /**
-   * Extract date from meta tags
-   */
-  private extractDateFromMeta($: cheerio.CheerioAPI): Date | null {
-    for (const metaName of PUBLISH_DATE_META_INFO) {
-      // Try name attribute
-      let content = $(`meta[name="${metaName}"]`).attr('content')
-      if (content) {
-        const date = this.parseDate(content)
-        if (date) return date
-      }
-
-      // Try property attribute
-      content = $(`meta[property="${metaName}"]`).attr('content')
-      if (content) {
-        const date = this.parseDate(content)
-        if (date) return date
-      }
-    }
-
-    return null
-  }
-
-  /**
-   * Extract date from structured data (JSON-LD)
-   */
-  private extractDateFromStructuredData($: cheerio.CheerioAPI): Date | null {
-    let foundDate: Date | null = null
-    
-    $('script[type="application/ld+json"]').each((_, el) => {
+  public parse(articleUrl: string, $: CheerioAPI): Date | null {
+    const parseDateStr = (dateStr: string): Date | null => {
+      if (!dateStr) return null
+      
       try {
-        const jsonData = JSON.parse($(el).text())
-        const date = this.findDateInJsonData(jsonData)
-        if (date) {
-          foundDate = date
-          return false // Break out of each loop
-        }
+        const date = new Date(dateStr)
+        if (isNaN(date.getTime())) return null
+        return date
+      } catch {
+        return null
+      }
+    }
+
+    const dateMatches: DateMatch[] = []
+
+    // Strategy 1: Extract from URL using strict date regex
+    const strictDateRegex = /(19|20)\d{2}[\/\-\._]\d{1,2}[\/\-\._]\d{1,2}/
+    const dateMatch = articleUrl.match(strictDateRegex)
+    if (dateMatch) {
+      const dateMatchStr = dateMatch[0]
+      const dateObj = parseDateStr(dateMatchStr)
+      if (dateObj) {
+        dateMatches.push({ date: dateObj, score: 10 })
+      }
+    }
+
+    // Strategy 2: Extract from JSON-LD structured data
+    $('script[type="application/ld+json"]').each((_, scriptEl) => {
+      try {
+        const jsonData = JSON.parse($(scriptEl).text())
+        this.extractDatesFromJsonLd(jsonData, dateMatches, parseDateStr)
       } catch {
         // Invalid JSON, continue
       }
     })
 
-    return foundDate
-  }
-
-  /**
-   * Extract date from time tags
-   */
-  private extractDateFromTimeTags($: cheerio.CheerioAPI): Date | null {
-    const timeElements = $('time')
-    
-    for (let i = 0; i < timeElements.length; i++) {
-      const timeEl = timeElements.eq(i)
-      
-      // Try datetime attribute
-      const datetime = timeEl.attr('datetime')
+    // Strategy 3: Extract from <time> tags
+    $('time').each((_, timeEl) => {
+      const $timeEl = $(timeEl)
+      const datetime = $timeEl.attr('datetime')
       if (datetime) {
-        const date = this.parseDate(datetime)
-        if (date) return date
+        const dateObj = parseDateStr(datetime)
+        if (dateObj) {
+          const text = $timeEl.text()
+          // Boost if it has the word "published" or "on"
+          if (text && /published|\bon:/i.test(text)) {
+            dateMatches.push({ date: dateObj, score: 8 })
+          } else {
+            dateMatches.push({ date: dateObj, score: 5 })
+          }
+        }
       }
+    })
 
-      // Try text content
-      const text = timeEl.text().trim()
-      if (text) {
-        const date = this.parseDate(text)
-        if (date) return date
+    // Strategy 4: Extract from meta tags and known date elements
+    const candidates: Array<[Cheerio<Element>, string]> = []
+
+    // Get meta tags with known date properties
+    for (const metaInfo of PUBLISH_DATE_META_INFO) {
+      $(`meta[name="${metaInfo}"], meta[property="${metaInfo}"]`).each((_, el) => {
+        candidates.push([$(el), 'content'])
+      })
+    }
+
+    // Get elements with known date attributes
+    for (const dateTag of PUBLISH_DATE_TAGS) {
+      $(`[${dateTag.attribute}="${dateTag.value}"]`).each((_, el) => {
+        candidates.push([$(el) as Cheerio<Element>, dateTag.content])
+      })
+    }
+
+    // Process all candidates
+    for (const [element, contentAttr] of candidates) {
+      const dateStr = element.attr(contentAttr)
+      const dateObj = parseDateStr(dateStr || '')
+      if (dateObj) {
+        let score = 6
+        
+        // Boost meta tags
+        if (element.prop('tagName')?.toLowerCase() === 'meta') {
+          score += 1
+        }
+        
+        // Penalize future dates and very old articles
+        const now = new Date()
+        const daysDiff = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24))
+        
+        if (daysDiff < 0) { // articles from the future
+          score -= 2
+        } else if (daysDiff > 25 * 365) { // very old articles (25+ years)
+          score -= 1
+        }
+        
+        dateMatches.push({ date: dateObj, score })
       }
     }
 
-    return null
+    // Sort by score (highest first) and return the best match
+    dateMatches.sort((a, b) => b.score - a.score)
+    this.pubdate = dateMatches.length > 0 ? dateMatches[0].date : null
+    return this.pubdate
   }
 
   /**
-   * Find date in JSON-LD data recursively
+   * Extract dates from JSON-LD structured data
    */
-  private findDateInJsonData(data: any): Date | null {
-    if (!data || typeof data !== 'object') return null
-
-    const dateFields = ['datePublished', 'publishedTime', 'dateCreated', 'publishDate']
-    
-    for (const field of dateFields) {
-      if (data[field]) {
-        const date = this.parseDate(data[field])
-        if (date) return date
+  private extractDatesFromJsonLd(data: Record<string, unknown> | unknown[] | string, dateMatches: DateMatch[], parseDateStr: (str: string) => Date | null): void {
+    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>
+      if ('@graph' in obj && Array.isArray(obj['@graph'])) {
+        const graph = obj['@graph'] as unknown[]
+        for (const item of graph) {
+          if (typeof item === 'object' && item !== null) {
+            const itemObj = item as Record<string, unknown>
+            const dateStr = itemObj.datePublished as string | undefined
+            if (dateStr) {
+              const dateObj = parseDateStr(dateStr)
+              if (dateObj) {
+                dateMatches.push({ date: dateObj, score: 10 })
+              }
+            }
+          }
+        }
+      } else {
+        // Check top-level date fields
+        const dateFields = ['datePublished', 'dateCreated']
+        for (const field of dateFields) {
+          if (field in obj && typeof obj[field] === 'string') {
+            const dateObj = parseDateStr(obj[field] as string)
+            if (dateObj) {
+              const score = field === 'datePublished' ? 9 : 8
+              dateMatches.push({ date: dateObj, score })
+            }
+          }
+        }
       }
     }
-
-    // Recursive search in nested objects
-    for (const key in data) {
-      if (typeof data[key] === 'object') {
-        const date = this.findDateInJsonData(data[key])
-        if (date) return date
-      }
-    }
-
-    return null
   }
 
-  /**
-   * Parse date string into Date object
-   */
-  private parseDate(dateString: string): Date | null {
-    if (!dateString) return null
-
-    try {
-      // Remove timezone info for simpler parsing
-      let cleaned = dateString.replace(/[TZ].*$/, '')
-      cleaned = cleaned.replace(/\+\d{2}:\d{2}$/, '')
-      
-      const date = new Date(cleaned)
-      
-      // Check if date is valid and reasonable
-      if (isNaN(date.getTime())) return null
-      
-      const year = date.getFullYear()
-      if (year < 1990 || year > new Date().getFullYear() + 1) return null
-      
-      return date
-    } catch {
-      return null
-    }
-  }
-
-  /**
-   * Validate date components
-   */
-  private isValidDate(year: number, month: number, day: number): boolean {
-    if (year < 1990 || year > new Date().getFullYear() + 1) return false
-    if (month < 1 || month > 12) return false
-    if (day < 1 || day > 31) return false
-    
-    // Check if date actually exists
-    const date = new Date(year, month - 1, day)
-    return date.getFullYear() === year && 
-           date.getMonth() === month - 1 && 
-           date.getDate() === day
-  }
 }

@@ -44,7 +44,7 @@ export class ContentExtractor {
     const $ = this.articleBodyExtractor.parseHtml(html)
 
     // Parse the document and extract content
-    this.articleBodyExtractor.parse($)
+    this.articleBodyExtractor.parse($, $)
     const topNode = this.articleBodyExtractor.topNode
     
     // Extract all components

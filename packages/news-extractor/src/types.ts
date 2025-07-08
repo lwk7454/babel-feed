@@ -13,6 +13,8 @@ export interface ArticleMetadata {
   type?: string;
   siteName?: string;
   language?: string;
+  locale?: string;
+  section?: string;
   keywords?: string[];
   openGraph?: Record<string, string>;
   twitter?: Record<string, string>;

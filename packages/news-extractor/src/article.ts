@@ -54,7 +54,14 @@ export class Article {
       const result = extractor.extractContent(this._url, this._html)
       
       this._text = result.text
-      this._metadata = result.metadata
+      this._metadata = { 
+        ...result.metadata,
+        title: result.title,
+        authors: result.authors,
+        publishDate: result.publishDate || undefined,
+        images: result.images,
+        videos: result.videos
+      }
       this._cleanedHtml = result.cleanedHtml || this._html
       
       this._parseState = ParseState.SUCCESS
@@ -87,8 +94,8 @@ export class Article {
       images: this._metadata.images || [],
       videos: this._metadata.videos || [],
       topNode: null,
-      html: this._html,
-      cleanedHtml: this._cleanedHtml,
+      // html: this._html,
+      // cleanedHtml: this._cleanedHtml,
       downloadState: this._downloadState,
       parseState: this._parseState
     }

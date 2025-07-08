@@ -3,15 +3,15 @@
  * Ported from Python newspaper4k parsers.py
  */
 
-import * as cheerio from 'cheerio'
+import { load, CheerioAPI, Cheerio } from 'cheerio'
+import type { Element } from 'domhandler'
 import iconv from 'iconv-lite'
-// Using require for he to avoid type issues
-const he = require('he')
+import { decodeHTML } from 'entities'
 
 const log = console // TODO: Replace with proper logging
 
-export type CheerioElement = any; // Using any for now due to cheerio type complexity
-export type CheerioRoot = cheerio.CheerioAPI;
+export type CheerioElement = Cheerio<Element>; // Using any for now due to cheerio type complexity
+export type CheerioRoot = CheerioAPI;
 
 /**
  * Convert HTML string to Unicode if needed
@@ -58,17 +58,13 @@ export function getUnicodeHtml(html: string | Buffer): string {
  */
 export function fromString(html: string | Buffer): CheerioRoot | null {
   const unicodeHtml = getUnicodeHtml(html)
-  
   try {
     // Remove XML encoding declarations that Cheerio doesn't handle well
     let cleanHtml = unicodeHtml
     if (cleanHtml.startsWith('<?')) {
       cleanHtml = cleanHtml.replace(/^<\?.*?\?>/g, '')
     }
-    
-    return cheerio.load(cleanHtml, {
-      xml: false
-    })
+    return load(cleanHtml, { xml: false })
   } catch (error) {
     log.warn?.(`fromString() failed to parse HTML: ${unicodeHtml.substring(0, 20)}...`)
     return null
@@ -78,14 +74,14 @@ export function fromString(html: string | Buffer): CheerioRoot | null {
 /**
  * Convert Cheerio element to HTML string
  */
-export function nodeToString(element: cheerio.Cheerio<any>): string {
+export function nodeToString(element: Cheerio<Element>): string {
   return element.html() || ''
 }
 
 /**
  * Get outer HTML of element
  */
-export function outerHtml(element: cheerio.Cheerio<any>): string {
+export function outerHtml(element: Cheerio<Element>): string {
   return element.prop('outerHTML') || element.toString()
 }
 
@@ -97,7 +93,7 @@ export function getTags(
   selector = '*',
   attribs?: Record<string, string>,
   attribsMatch: 'exact' | 'substring' | 'word' = 'exact'
-): cheerio.Cheerio<any> {
+): Cheerio<Element> {
   let baseSelector = selector
   
   if (attribs) {
@@ -122,7 +118,7 @@ export function getTags(
     baseSelector += attrSelectors.join('')
   }
   
-  return $(baseSelector)
+  return $(baseSelector) as Cheerio<Element>
 }
 
 /**
@@ -132,9 +128,9 @@ export function getTagsRegex(
   $: CheerioRoot,
   selector = '*',
   attribs?: Record<string, string>
-): cheerio.Cheerio<any> {
+): Cheerio<Element> {
   if (!attribs) {
-    return $(selector)
+    return $(selector) as Cheerio<Element>
   }
   
   // For regex matching, we need to filter manually
@@ -152,7 +148,7 @@ export function getTagsRegex(
         return false
       }
     })
-  })
+  }) as Cheerio<Element>
 }
 
 /**
@@ -161,12 +157,12 @@ export function getTagsRegex(
 export function getMetaTags(
   $: CheerioRoot,
   value?: string
-): cheerio.Cheerio<any> {
+): Cheerio<Element> {
   if (!value) {
-    return $('meta')
+    return $('meta') as Cheerio<Element>
   }
   
-  return $(`meta[name="${value}" i], meta[property="${value}" i], meta[itemprop="${value}" i]`)
+  return $(`meta[name="${value}" i], meta[property="${value}" i], meta[itemprop="${value}" i]`) as Cheerio<Element>
 }
 
 /**
@@ -175,15 +171,15 @@ export function getMetaTags(
 export function getElementsByTagsList(
   $: CheerioRoot,
   tagList: string[]
-): cheerio.Cheerio<any> {
+): Cheerio<Element> {
   const selector = tagList.join(', ')
-  return $(selector)
+  return $(selector) as Cheerio<Element>
 }
 
 /**
  * Get text content from element, stripping unwanted tags
  */
-export function getText(element: cheerio.Cheerio<any>): string {
+export function getText(element: Cheerio<Element>): string {
   // Clone the element to avoid modifying original
   const clone = element.clone()
   
@@ -199,7 +195,7 @@ export function getText(element: cheerio.Cheerio<any>): string {
  * Get attribute value from element with HTML entity decoding
  */
 export function getAttribute(
-  element: cheerio.Cheerio<any>,
+  element: Cheerio<Element>,
   attr: string,
   defaultValue?: string
 ): string | undefined {
@@ -208,14 +204,14 @@ export function getAttribute(
     return defaultValue
   }
   
-  return he.decode(value)
+  return decodeHTML(value)
 }
 
 /**
  * Set attribute on element
  */
 export function setAttribute(
-  element: cheerio.Cheerio<any>,
+  element: Cheerio<Element>,
   attr: string,
   value: string | number
 ): void {
@@ -226,18 +222,18 @@ export function setAttribute(
  * Remove elements from DOM
  */
 export function remove(
-  elements: cheerio.Cheerio<any>,
+  root$: CheerioAPI,
+  elements: Cheerio<Element>,
   keepTags?: string[]
 ): void {
   if (keepTags && keepTags.length > 0) {
-    // Move children with specified tags to parent before removing
     elements.each((index, element) => {
-      const $elem = cheerio.load(element)
-      const $parent = $elem(element).parent()
+      const $elem = root$(element)
+      const $parent = $elem.parent()
       
-      keepTags.forEach(tag => {
-        const $keepElements = $elem(tag)
-        $keepElements.each((i, keepElem) => {
+      keepTags.forEach((tag: string) => {
+        const $keepElements = $elem.find(tag)
+        $keepElements.each((i: number, keepElem: Element) => {
           $parent.append(keepElem)
         })
       })
@@ -250,10 +246,13 @@ export function remove(
 /**
  * Drop tag but keep content
  */
-export function dropTags(elements: cheerio.Cheerio<any>): void {
+export function dropTags(
+  root$: CheerioAPI,
+  elements: Cheerio<Element>
+): void {
   elements.each((index, element) => {
-    const $elem = cheerio.load(element)
-    const $element = $elem(element)
+    const $elem = root$(element)
+    const $element = $elem
     const content = $element.html() || ''
     $element.replaceWith(content)
   })
@@ -262,8 +261,8 @@ export function dropTags(elements: cheerio.Cheerio<any>): void {
 /**
  * Get JSON-LD structured data from page
  */
-export function getLdJsonObject($: CheerioRoot): any[] {
-  const results: any[] = []
+export function getLdJsonObject($: CheerioRoot): unknown[] {
+  const results: unknown[] = []
   const jsonLdScripts = $('script[type="application/ld+json"]')
   
   jsonLdScripts.each((index, script) => {
@@ -288,14 +287,14 @@ export function getLdJsonObject($: CheerioRoot): any[] {
 /**
  * Get the depth of an element's child tree
  */
-export function getNodeDepth($: CheerioRoot, element: cheerio.Cheerio<any>): number {
+export function getNodeDepth($: CheerioRoot, element: Cheerio<Element>): number {
   let maxDepth = 1
   
-  function traverse(elem: cheerio.Cheerio<any>, depth: number): void {
+  function traverse(elem: Cheerio<Element>, depth: number): void {
     maxDepth = Math.max(maxDepth, depth)
     
     elem.children().each((index, child) => {
-      traverse($(child), depth + 1)
+      traverse($(child) as Cheerio<Element>, depth + 1)
     })
   }
   
@@ -306,13 +305,13 @@ export function getNodeDepth($: CheerioRoot, element: cheerio.Cheerio<any>): num
 /**
  * Get the level of an element in the document tree
  */
-export function getLevel($: CheerioRoot, element: cheerio.Cheerio<any>): number {
+export function getLevel($: CheerioRoot, element: Cheerio<Element>): number {
   let level = 0
   let current = element
   
   while (current.parent().length > 0) {
     level++
-    current = current.parent()
+    current = current.parent() as Cheerio<Element>
   }
   
   return level
@@ -323,7 +322,7 @@ export function getLevel($: CheerioRoot, element: cheerio.Cheerio<any>): number 
  */
 export function isHighLinkDensity(
   $: CheerioRoot,
-  element: cheerio.Cheerio<any>,
+  element: Cheerio<Element>,
   language?: string
 ): boolean {
   const links = element.find('a, button')
@@ -376,13 +375,13 @@ function getWordCount(text: string, language?: string): number {
 /**
  * Get or set gravity score for content extraction
  */
-export function getNodeGravityScore(element: cheerio.Cheerio<any>): number {
+export function getNodeGravityScore(element: Cheerio<Element>): number {
   const score = element.attr('gravityScore')
   return score ? parseFloat(score) : 0.0
 }
 
 export function setNodeGravityScore(
-  element: cheerio.Cheerio<any>,
+  element: Cheerio<Element>,
   score: number
 ): void {
   element.attr('gravityScore', score.toString())
@@ -391,8 +390,8 @@ export function setNodeGravityScore(
 /**
  * Create a new element
  */
-export function createElement($: CheerioRoot, tag: string, text?: string): cheerio.Cheerio<any> {
-  const element = $(`<${tag}></${tag}>`)
+export function createElement($: CheerioRoot, tag: string, text?: string): Cheerio<Element> {
+  const element = $(`<${tag}></${tag}>`) as Cheerio<Element>
   if (text) {
     element.text(text)
   }
