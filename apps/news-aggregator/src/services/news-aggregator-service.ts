@@ -19,6 +19,7 @@ import { AiProviderManager } from './ai-provider-manager'
 import { CacheManager } from './cache-manager'
 import { HealthChecker } from './health-checker'
 import { RssProcessor } from './rss-processor'
+import { ArticleStorage } from './article-storage'
 
 export class NewsAggregatorService {
   // Future modules (placeholder implementations)
@@ -37,6 +38,7 @@ export class NewsAggregatorService {
   private translationCache: CacheManager<string>
   private healthChecker: HealthChecker
   private rssProcessor: RssProcessor
+  private articleStorage: ArticleStorage
   
   // Legacy service instances (lazy-loaded when needed)
   private legacySourceManager?: LegacyService
@@ -66,6 +68,7 @@ export class NewsAggregatorService {
     this.translationCache = CacheManager.createTranslationCache()
     this.healthChecker = new HealthChecker(this.sourceManager, this.aiProviderManager)
     this.rssProcessor = new RssProcessor(this.sourceManager)
+    this.articleStorage = new ArticleStorage()
   }
 
   async initialize(): Promise<void> {
@@ -84,6 +87,7 @@ export class NewsAggregatorService {
       // Initialize working services
       await this.sourceManager.initialize()
       await this.aiProviderManager.initialize()
+      // article storage requires no explicit initialization
       // Health checker and RSS processor don't need explicit initialization
 
       this.isRunning = true
@@ -323,15 +327,20 @@ export class NewsAggregatorService {
       const deduplicatedArticles = await this.deduplication.deduplicateArticles(processedArticles)
       
       // 4. AI processing (summarization, translation, tagging)
-      // TODO: Implement AI processing pipeline
-      
+      for (const article of deduplicatedArticles) {
+        if (article.description) {
+          article.metadata = article.metadata || {}
+          article.metadata.summary = await this.aiIntegration.summarizeArticle(article.description)
+          article.metadata.tags = await this.aiIntegration.tagContent(article.description)
+        }
+      }
+
       // 5. Store in database
-      // TODO: Implement database storage
+      await this.articleStorage.saveArticles(deduplicatedArticles)
       
       logger.info(`Content processing cycle complete: ${deduplicatedArticles.length} unique articles processed`)
       
     } catch (error) {
       logger.error('Content processing cycle failed:', error)
     }
-  }
-}
+  }}

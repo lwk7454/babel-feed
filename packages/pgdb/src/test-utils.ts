@@ -65,8 +65,17 @@ export async function clearTestData(): Promise<void> {
   if (!testDb) {
     throw new Error('Test database not initialized. Call setupTestDatabase() first.')
   }
-  // Truncate all tables (Postgres syntax)
-  await testDb.execute('TRUNCATE TABLE "users", "articles", "article_translations" RESTART IDENTITY CASCADE;')
+  // Dynamically fetch all user table names (excluding SQLite system tables)
+  const tablesResult = await testDb.execute(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';`
+  )
+  type TableRow = { name: string }
+  const tableNames = (tablesResult.rows as TableRow[]).map(row => row.name)
+  if (tableNames.length === 0) return
+  // Build and execute TRUNCATE statement for all tables
+  const truncateSQL =
+    'DELETE FROM ' + tableNames.map(name => `"${name}"`).join('; DELETE FROM ') + ';'
+  await testDb.execute(truncateSQL)
 }
 
 /**

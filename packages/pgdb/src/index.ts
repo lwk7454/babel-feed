@@ -4,8 +4,7 @@
  */
 
 // Export database connection
-export { 
-  db, 
+export {
   getDatabase, 
   checkDatabaseHealth, 
   closeDatabaseConnection, 
