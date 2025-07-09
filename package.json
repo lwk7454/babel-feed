@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "nx run-many --target=dev --projects=babel-api,babel-android --parallel",
-    "dev:api": "bun scripts/start-dev-db.ts && nx dev babel-api",
+    "dev:api": "nx dev babel-api",
     "dev:android": "nx dev babel-android",
     "build": "nx run-many --target=build --projects=babel-api,babel-android --parallel",
     "build:api": "nx build babel-api",

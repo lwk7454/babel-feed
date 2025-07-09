@@ -5,7 +5,9 @@
 
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import dotenv from 'dotenv'
 import postgres from 'postgres'
 import * as schema from './schema.js'
 import {
@@ -13,29 +15,20 @@ import {
   articleTranslations,
   users
 } from './schema.js'
-import { fileURLToPath } from 'url'
 
-// Test database configuration
-const TEST_DB_NAME = process.env.DB_NAME_TEST || 'babel_feed_test'
+// Always load .env from the pgdb root, regardless of where this is imported from
+const __dirname = dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: resolve(__dirname, '../.env') })
 
 export interface TestDbConfig {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-  max?: number;
-  idle_timeout?: number;
-  connect_timeout?: number;
-  prepare?: boolean;
+  max?: number
+  idle_timeout?: number
+  connect_timeout?: number
+  prepare?: boolean
+  ssl?: boolean
 }
 
 export const defaultTestDbConfig: TestDbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.DB_USER || 'babel_dev',
-  password: process.env.DB_PASSWORD || 'babel_dev_password',
-  database: TEST_DB_NAME,
   max: 1,
   idle_timeout: 1,
   connect_timeout: 10,
@@ -50,16 +43,17 @@ let sql: ReturnType<typeof postgres> | null = null
  */
 export async function setupTestDatabase(config: TestDbConfig = defaultTestDbConfig): Promise<ReturnType<typeof drizzle>> {
   try {
+    const connectionString = process.env.DATABASE_URL_TEST
+    if (!connectionString) {
+      throw new Error('DATABASE_URL is not set')
+    }
+
     // Ensure test database exists before connecting
-    await createTestDatabaseIfNotExists(config)
+    // await createTestDatabaseIfNotExists()
 
     // Skip database creation - assume it already exists
-    console.log(`🔌 Connecting to test database: ${config.database}`)
-    
-    // Create connection string for test database
-    const connectionString = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`
-    console.log(`🔗 Connection string: ${connectionString}`)
-    
+    console.log(`🔌 Connecting to test database`)
+
     // Create SQL connection
     sql = postgres(connectionString, {
       max: config.max || 1,
@@ -70,31 +64,30 @@ export async function setupTestDatabase(config: TestDbConfig = defaultTestDbConf
         // Suppress notices in tests
       }
     })
-    
+
     // Create Drizzle instance
     testDb = drizzle(sql, { schema })
-    
+
     // Run migrations to ensure schema is up to date
-    const __dirname = fileURLToPath(new URL('.', import.meta.url))
     const migrationsPath = resolve(__dirname, '../migrations')
     console.log(`🔄 Running migrations from: ${migrationsPath}`)
-    
+
     try {
       await migrate(testDb, { migrationsFolder: migrationsPath })
       console.log('✅ Migrations completed successfully')
     } catch (migrationError) {
       console.log('⚠️  Migration error:', migrationError)
     }
-    
+
     // Verify database health
     const health = await testDatabaseHealth()
     if (!health.healthy) {
       throw new Error(`Test database health check failed: ${health.error}`)
     }
-    
+
     console.log('✅ Test database setup completed successfully')
     return testDb
-    
+
   } catch (error) {
     console.error('❌ Test database setup failed:', error)
     throw error
@@ -104,10 +97,17 @@ export async function setupTestDatabase(config: TestDbConfig = defaultTestDbConf
 /**
  * Create test database if it doesn't exist
  */
-export async function createTestDatabaseIfNotExists(config: TestDbConfig = defaultTestDbConfig): Promise<void> {
+export async function createTestDatabaseIfNotExists(): Promise<void> {
   // Connect to postgres database to create test database
-  const adminConnectionString = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/postgres`
-  
+  let adminConnectionString = process.env.DATABASE_URL_TEST
+  if (!adminConnectionString) {
+    throw new Error('DATABASE_URL is not set')
+  }
+  const url = new URL(adminConnectionString)
+  const dbName = url.pathname.replace(/^\//, '')
+  url.pathname = '/'
+  adminConnectionString = url.toString()
+
   const adminSql = postgres(adminConnectionString, {
     max: 1,
     idle_timeout: 1,
@@ -117,19 +117,19 @@ export async function createTestDatabaseIfNotExists(config: TestDbConfig = defau
       // Suppress notices
     }
   })
-  
+
   try {
     // Check if database exists
     const result = await adminSql`
-      SELECT 1 FROM pg_database WHERE datname = ${config.database}
+      SELECT 1 FROM pg_database WHERE datname = ${dbName}
     `
-    
+
     if (result.length === 0) {
       // Database doesn't exist, create it
-      await adminSql.unsafe(`CREATE DATABASE "${config.database}"`)
-      console.log(`✅ Created test database: ${config.database}`)
+      await adminSql.unsafe(`CREATE DATABASE "${dbName}"`)
+      console.log(`✅ Created test database: ${dbName}`)
     } else {
-      console.log(`✅ Test database already exists: ${config.database}`)
+      console.log(`✅ Test database already exists: ${dbName}`)
     }
   } catch (error) {
     console.error('❌ Error creating test database:', error)
@@ -186,14 +186,14 @@ export function getTestDb(): ReturnType<typeof drizzle> {
  */
 export async function insertTestUser(userData: Partial<typeof users.$inferInsert> = {}) {
   const testDb = getTestDb()
-  
+
   const defaultUser = {
     email: 'test@example.com',
     emailVerified: false,
     userStatus: 'guest' as const,
     ...userData
   }
-  
+
   const [user] = await testDb.insert(users).values(defaultUser).returning()
   return user
 }
@@ -206,16 +206,16 @@ export async function insertTestArticle(
   translationData: Partial<typeof articleTranslations.$inferInsert>[] = []
 ) {
   const testDb = getTestDb()
-  
+
   const defaultArticle = {
     url: 'https://example.com/test-article',
     source: 'test-source',
     sourceLanguage: 'en' as const,
     ...articleData
   }
-  
+
   const [article] = await testDb.insert(articles).values(defaultArticle).returning()
-  
+
   // Insert default translation if none provided
   if (translationData.length === 0) {
     const defaultTranslation = {
@@ -224,7 +224,7 @@ export async function insertTestArticle(
       title: 'Test Article',
       summary: 'Test article summary'
     }
-    
+
     await testDb.insert(articleTranslations).values(defaultTranslation)
   } else {
     // Insert provided translations
@@ -235,10 +235,10 @@ export async function insertTestArticle(
       summary: 'Test article summary',
       ...translation
     }))
-    
+
     await testDb.insert(articleTranslations).values(translations)
   }
-  
+
   return article
 }
 
@@ -247,14 +247,14 @@ export async function insertTestArticle(
  */
 export async function insertTestArticleTranslation(translationData: Partial<schema.NewArticleTranslation> = {}) {
   const testDb = getTestDb()
-  
+
   const defaultTranslation = {
     language: 'en' as const,
     title: 'Test Translation Title',
     summary: 'Test translation summary',
     ...translationData
   }
-  
+
   const [translation] = await testDb.insert(articleTranslations).values(defaultTranslation as schema.NewArticleTranslation).returning()
   return translation
 }
@@ -267,7 +267,7 @@ export async function testDatabaseHealth(): Promise<{ healthy: boolean; error?: 
     if (!testDb) {
       return { healthy: false, error: 'Test database not initialized' }
     }
-    
+
     // Simple query to check connection
     console.log('🔍 Testing database connection...')
     await testDb.select().from(users).limit(1)
@@ -275,9 +275,9 @@ export async function testDatabaseHealth(): Promise<{ healthy: boolean; error?: 
     return { healthy: true }
   } catch (error) {
     console.error('❌ Database health check failed:', error)
-    return { 
-      healthy: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      healthy: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
 }

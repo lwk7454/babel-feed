@@ -1,6 +1,13 @@
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import dotenv from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema.js'
+
+// Always load .env from the pgdb root, regardless of where this is imported from
+const __dirname = dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: resolve(__dirname, '../.env') })
 
 /**
  * Database connection configuration based on environment
@@ -13,22 +20,10 @@ const isTest = process.env.NODE_ENV === 'test'
  * Database connection URL configuration
  */
 function getDatabaseUrl(): string {
-  // Production: Use DATABASE_URL environment variable
-  if (isProduction && process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL
-  }
-  
-  // Development: Use local Docker PostgreSQL
-  const host = process.env.DB_HOST || 'localhost'
-  const port = process.env.DB_PORT || '5432'
-  let database = process.env.DB_NAME || 'babel_feed_dev'
-  const username = process.env.DB_USER || 'babel_dev'
-  const password = process.env.DB_PASSWORD || 'babel_dev_password'
   if (isTest) {
-    database = process.env.DB_NAME_TEST || 'babel_feed_test'
+    return process.env.DATABASE_URL_TEST || ''
   }
-  
-  return `postgres://${username}:${password}@${host}:${port}/${database}`
+  return process.env.DATABASE_URL || ''
 }
 
 /**
@@ -36,7 +31,7 @@ function getDatabaseUrl(): string {
  */
 function createPostgresConnection() {
   const connectionString = getDatabaseUrl()
-  
+
   const sql = postgres(connectionString, {
     max: process.env.DB_POOL_SIZE ? parseInt(process.env.DB_POOL_SIZE) : 10,
     idle_timeout: 20,
@@ -46,7 +41,7 @@ function createPostgresConnection() {
     debug: isDevelopment && process.env.DB_DEBUG === 'true',
     onnotice: isDevelopment && !isTest ? console.log : undefined
   })
-  
+
   return drizzle(sql, { schema, logger: isDevelopment })
 }
 
@@ -64,13 +59,11 @@ export function getDatabase() {
         console.log(`🗄️  Database connection established (${envType})`)
       }
     } catch (error) {
-      if (!isTest) {
-        console.error('❌ Failed to connect to database:', error)
-      }
+      console.error('❌ Failed to connect to database:', error)
       throw new Error('Database connection failed')
     }
   }
-  
+
   return dbInstance
 }
 
@@ -80,17 +73,17 @@ export function getDatabase() {
 export async function checkDatabaseHealth(): Promise<{ healthy: boolean; error?: string }> {
   try {
     const db = getDatabase()
-    
+
     // Simple query to check connection
     await db.execute('SELECT 1')
-    
+
     return { healthy: true }
   } catch (error) {
     if (!isTest) {
       console.error('Database health check failed:', error)
     }
-    return { 
-      healthy: false, 
+    return {
+      healthy: false,
       error: error instanceof Error ? error.message : 'Unknown database error'
     }
   }
