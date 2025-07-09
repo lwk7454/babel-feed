@@ -66,7 +66,7 @@ export async function clearTestData(): Promise<void> {
     throw new Error('Test database not initialized. Call setupTestDatabase() first.')
   }
   // Truncate all tables (Postgres syntax)
-  await testDb.execute('TRUNCATE TABLE "users", "articles", "article_translations" RESTART IDENTITY CASCADE;')
+  await testDb.execute('TRUNCATE TABLE "users", "articles", "article_translations", "news_sources" RESTART IDENTITY CASCADE;')
 }
 
 /**
