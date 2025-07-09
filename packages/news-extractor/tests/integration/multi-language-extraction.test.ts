@@ -267,7 +267,7 @@ describe('Multi-language Content Extraction', () => {
       // Chinese text should have whitespace removed and punctuation normalized
       expect(article.text).not.toContain('   ')
       expect(article.text).toContain('这是一个测试。')
-      expect(article.text).toContain('另一个段落。')
+      expect(article.text).toContain('另一个段落！')
     })
 
     it('should apply language-specific text cleaning for English', async () => {

@@ -1,26 +1,38 @@
 /**
- * Japanese Tokenizer  
+ * Japanese Tokenizer with TinySegmenter integration
  * Ported from Python newspaper4k languages/ja.py
  * 
- * Note: This is a basic implementation. For production use,
- * integrate with TinySegmenter.js or similar Japanese tokenization library
+ * Uses TinySegmenter for proper Japanese word segmentation when available,
+ * falls back to character-level segmentation
  */
 
 import { AbstractTokenizer } from './base-tokenizer.js'
 
+// Dynamic import for TinySegmenter to handle optional dependency
+let TinySegmenter: any = null
+try {
+  TinySegmenter = require('tiny-segmenter')
+} catch (e) {
+  // TinySegmenter not available, will use fallback
+}
+
 /**
  * Japanese tokenizer for text segmentation
- * In production, this should use TinySegmenter.js or MeCab
+ * Integrates with TinySegmenter for proper Japanese word segmentation
  */
 export class JapaneseTokenizer extends AbstractTokenizer {
+  private readonly useTinySegmenter: boolean
+  private readonly segmenter: any
+
   constructor() {
     super('ja')
+    this.useTinySegmenter = TinySegmenter !== null
+    this.segmenter = this.useTinySegmenter ? new TinySegmenter() : null
   }
 
   /**
-   * Basic Japanese tokenization
-   * TODO: Integrate with TinySegmenter.js for proper Japanese word segmentation
-   * Currently provides character-level segmentation as fallback
+   * Japanese tokenization with TinySegmenter integration
+   * Falls back to character-level segmentation if TinySegmenter unavailable
    */
   tokenize(text: string): string[] {
     if (!text || text.trim().length === 0) {
@@ -28,10 +40,35 @@ export class JapaneseTokenizer extends AbstractTokenizer {
     }
 
     const cleanedText = this.cleanText(text)
+    
+    if (this.useTinySegmenter) {
+      return this.tokenizeWithTinySegmenter(cleanedText)
+    } else {
+      return this.tokenizeBasic(cleanedText)
+    }
+  }
+
+  /**
+   * Tokenize using TinySegmenter (production implementation)
+   */
+  private tokenizeWithTinySegmenter(text: string): string[] {
+    try {
+      const tokens = this.segmenter.segment(text)
+      return this.filterTokens(tokens.filter((token: string) => token.trim().length > 0))
+    } catch (error) {
+      console.warn('TinySegmenter tokenization failed, falling back to basic tokenization:', error)
+      return this.tokenizeBasic(text)
+    }
+  }
+
+  /**
+   * Basic character-level tokenization (fallback)
+   */
+  private tokenizeBasic(text: string): string[] {
     const tokens: string[] = []
     
-    for (let i = 0; i < cleanedText.length; i++) {
-      const char = cleanedText[i]
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i]
       
       if (this.isHiragana(char) || this.isKatakana(char) || this.isKanji(char)) {
         tokens.push(char)
@@ -41,9 +78,9 @@ export class JapaneseTokenizer extends AbstractTokenizer {
       } else if (/[a-zA-Z0-9]/.test(char)) {
         // Collect consecutive Latin characters/numbers
         let latinWord = char
-        while (i + 1 < cleanedText.length && /[a-zA-Z0-9]/.test(cleanedText[i + 1])) {
+        while (i + 1 < text.length && /[a-zA-Z0-9]/.test(text[i + 1])) {
           i++
-          latinWord += cleanedText[i]
+          latinWord += text[i]
         }
         if (latinWord.length > 0) {
           tokens.push(latinWord.toLowerCase())

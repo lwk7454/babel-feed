@@ -1,26 +1,36 @@
 /**
- * Chinese Tokenizer
+ * Chinese Tokenizer with nodejieba integration
  * Ported from Python newspaper4k languages/zh.py
  * 
- * Note: This is a basic implementation. For production use,
- * integrate with nodejieba or similar Chinese word segmentation library
+ * Uses nodejieba for proper Chinese word segmentation when available,
+ * falls back to character-level segmentation
  */
 
 import { AbstractTokenizer } from './base-tokenizer.js'
 
+// Dynamic import for nodejieba to handle optional dependency
+let nodejieba: any = null
+try {
+  nodejieba = require('nodejieba')
+} catch (e) {
+  // nodejieba not available, will use fallback
+}
+
 /**
  * Chinese tokenizer for word segmentation
- * In production, this should use a proper Chinese segmentation library like nodejieba
+ * Integrates with nodejieba for proper Chinese word segmentation
  */
 export class ChineseTokenizer extends AbstractTokenizer {
+  private readonly useJieba: boolean
+
   constructor() {
     super('zh')
+    this.useJieba = nodejieba !== null
   }
 
   /**
-   * Basic Chinese tokenization
-   * TODO: Integrate with nodejieba for proper Chinese word segmentation
-   * Currently provides character-level segmentation as fallback
+   * Chinese tokenization with nodejieba integration
+   * Falls back to character-level segmentation if nodejieba unavailable
    */
   tokenize(text: string): string[] {
     if (!text || text.trim().length === 0) {
@@ -29,12 +39,35 @@ export class ChineseTokenizer extends AbstractTokenizer {
 
     const cleanedText = this.cleanText(text)
     
-    // Basic implementation: character-level tokenization for Chinese
-    // This is a fallback - proper implementation should use jieba.js
+    if (this.useJieba) {
+      return this.tokenizeWithJieba(cleanedText)
+    } else {
+      return this.tokenizeBasic(cleanedText)
+    }
+  }
+
+  /**
+   * Tokenize using nodejieba (production implementation)
+   */
+  private tokenizeWithJieba(text: string): string[] {
+    try {
+      // Use cut_all=true to match Python newspaper4k behavior
+      const tokens = nodejieba.cut(text, true)
+      return this.filterTokens(tokens.filter((token: string) => token.trim().length > 0))
+    } catch (error) {
+      console.warn('Jieba tokenization failed, falling back to basic tokenization:', error)
+      return this.tokenizeBasic(text)
+    }
+  }
+
+  /**
+   * Basic character-level tokenization (fallback)
+   */
+  private tokenizeBasic(text: string): string[] {
     const tokens: string[] = []
     
-    for (let i = 0; i < cleanedText.length; i++) {
-      const char = cleanedText[i]
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i]
       
       // Check if character is Chinese (simplified/traditional)
       if (this.isChineseCharacter(char)) {
@@ -45,9 +78,9 @@ export class ChineseTokenizer extends AbstractTokenizer {
       } else if (/[a-zA-Z0-9]/.test(char)) {
         // Collect consecutive Latin characters/numbers
         let latinWord = char
-        while (i + 1 < cleanedText.length && /[a-zA-Z0-9]/.test(cleanedText[i + 1])) {
+        while (i + 1 < text.length && /[a-zA-Z0-9]/.test(text[i + 1])) {
           i++
-          latinWord += cleanedText[i]
+          latinWord += text[i]
         }
         if (latinWord.length > 0) {
           tokens.push(latinWord.toLowerCase())

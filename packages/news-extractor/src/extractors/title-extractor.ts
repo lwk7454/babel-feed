@@ -5,7 +5,7 @@
 
 import * as cheerio from 'cheerio'
 import { Configuration } from '../configuration.js'
-import { TITLE_META_INFO } from './defines.js'
+import { TITLE_META_INFO, MOTLEY_REPLACEMENT, TITLE_REPLACEMENTS } from './defines.js'
 import { getWords } from '../text.js'
 
 export class TitleExtractor {
@@ -40,8 +40,8 @@ export class TitleExtractor {
         titleTextH1 = ''
       }
       
-      // Clean double spaces for space-separated languages
-      titleTextH1 = titleTextH1.replace(/\s+/g, ' ').trim()
+      // Clean double spaces (Python logic: " ".join([x for x in title_text_h1.split() if x]))
+      titleTextH1 = titleTextH1.split(/\s+/).filter(x => x).join(' ')
     }
 
     // Get og:title and other meta titles
@@ -92,13 +92,13 @@ export class TitleExtractor {
       }
     }
 
+    // Apply MOTLEY_REPLACEMENT (Python line 114)
+    finalTitle = finalTitle.replace(MOTLEY_REPLACEMENT[0], MOTLEY_REPLACEMENT[1])
+    
     // Final cleanup
     finalTitle = finalTitle.trim()
-    
-    // Normalize full-width spaces to regular spaces (Japanese text normalization)
-    finalTitle = finalTitle.replace(/　/g, ' ')
 
-    // If final title is similar to h1, prefer h1
+    // If final title is similar to h1, prefer h1 (Python lines 119-121)
     const filterFinalTitle = this.filterText(finalTitle)
     if (filterTitleTextH1 === filterFinalTitle) {
       finalTitle = titleTextH1
@@ -141,25 +141,25 @@ export class TitleExtractor {
     
     // Get language-specific regex pattern
     const language = this.config.language
-    const latinRegex = '\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff\u0100-\u024fa-zA-Z0-9 '
+    const latinRegex = '\\u00c0-\\u00d6\\u00d8-\\u00f6\\u00f8-\\u00ff\\u0100-\\u024fa-zA-Z0-9\\ '
     
     let languageRegex = ''
     if (language === 'ja') {
-      languageRegex = '\u3040-\u309f\u30a0-\u30ff\u3190-\u319f\u3200-\u32ff\u3300-\u33ff\u3400-\u4db5\u4e00-\u9fff\uf900-\ufaff\ufe30-\ufe4f'
+      languageRegex = '\\u3040-\\u309f\\u30a0-\\u30ff\\u3190-\\u319f\\u3200-\\u32ff\\u3300-\\u33ff\\u3400-\\u4db5\\u4e00-\\u9fff\\uf900-\\ufaff\\ufe30-\\ufe4f'
     } else if (language === 'zh') {
-      languageRegex = '\u3100-\u312f\u31a0-\u31bf\u3200-\u32ff\u3300-\u33ff\u3400-\u4db5\u4e00-\u9fff\ua000-\ua48f\ua490-\ua4cf\uf900-\ufaff\ufe30-\ufe4f'
+      languageRegex = '\\u3100-\\u312f\\u31a0-\\u31bf\\u3200-\\u32ff\\u3300-\\u33ff\\u3400-\\u4db5\\u4e00-\\u9fff\\ua000-\\ua48f\\ua490-\\ua4cf\\uf900-\\ufaff\\ufe30-\\ufe4f'
     } else if (language === 'ko') {
-      languageRegex = '\u1100-\u11ff\u3130-\u318f\u3200-\u32ff\u3300-\u33ff\u3400-\u4db5\u4e00-\u9fff\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f'
+      languageRegex = '\\u1100-\\u11ff\\u3130-\\u318f\\u3200-\\u32ff\\u3300-\\u33ff\\u3400-\\u4db5\\u4e00-\\u9fff\\uac00-\\ud7a3\\uf900-\\ufaff\\ufe30-\\ufe4f'
     } else if (language === 'ar') {
-      languageRegex = '\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufefe'
+      languageRegex = '\\u0600-\\u06ff\\ufb50-\\ufdff\\ufe70-\\ufefe'
     } else if (language === 'ru') {
-      languageRegex = '\u0400-\u04ff'
+      languageRegex = '\\u0400-\\u04ff'
     } else if (language === 'hi') {
-      languageRegex = '\u0900-\u097f'
+      languageRegex = '\\u0900-\\u097f'
     } else if (language === 'he') {
-      languageRegex = '\u0590-\u05ff'
+      languageRegex = '\\u0590-\\u05ff'
     } else if (language === 'th') {
-      languageRegex = '\u0e00-\u0e7f'
+      languageRegex = '\\u0e00-\\u0e7f'
     }
     
     // Create regex pattern to keep only language-specific characters
@@ -194,7 +194,8 @@ export class TitleExtractor {
       }
     }
 
-    return titlePieces[largeTextIndex].trim()
+    // Apply TITLE_REPLACEMENTS (Python line 149)
+    return titlePieces[largeTextIndex].replace(TITLE_REPLACEMENTS[0], TITLE_REPLACEMENTS[1]).trim()
   }
 
   /**
