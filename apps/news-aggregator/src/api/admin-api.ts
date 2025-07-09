@@ -1,7 +1,11 @@
+import { articles, articleTranslations, getDatabase } from '@babel-feed/pgdb'
+import { and, desc, eq, like, or, sql } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { logger } from '../modules/common/logger'
-import { NewsSourceManager } from '../services/news-source-manager'
+import { ArticleStorage } from '../services/article-storage'
 import { HealthChecker } from '../services/health-checker'
+import { MetricsService } from '../services/metrics-service'
+import { NewsSourceManager } from '../services/news-source-manager'
 
 function adminAuth() {
   return new Elysia()
@@ -26,13 +30,217 @@ export class AdminAPIServer {
   private server?: any
   private sourceManager = new NewsSourceManager()
   private healthChecker = new HealthChecker(this.sourceManager)
+  private articleStorage = new ArticleStorage()
+  private metricsService = new MetricsService()
 
   async initialize(): Promise<void> {
     await this.sourceManager.initialize()
+    await this.metricsService.initialize()
     this.app.use(adminAuth())
 
     this.app.get('/health', async () => {
       return await this.healthChecker.getHealthStatus()
+    })
+
+    // Content Delivery API Endpoints
+    this.app.get('/articles', async ({ query }) => {
+      const { page = '1', limit = '20', language, source, category, search } = query as {
+        page?: string
+        limit?: string
+        language?: string
+        source?: string
+        category?: string
+        search?: string
+      }
+      
+      const pageNum = parseInt(page) || 1
+      const limitNum = Math.min(parseInt(limit) || 20, 100)
+      const offset = (pageNum - 1) * limitNum
+      
+      const db = await getDatabase()
+      
+      let whereConditions: any[] = []
+      
+      if (language) {
+        whereConditions.push(eq(articleTranslations.language, language))
+      }
+      
+      if (search) {
+        whereConditions.push(
+          or(
+            like(articleTranslations.title, `%${search}%`),
+            like(articleTranslations.summary, `%${search}%`)
+          )
+        )
+      }
+      
+      const query_builder = db
+        .select({
+          id: articles.id,
+          url: articles.url,
+          source: articles.source,
+          sourceLanguage: articles.sourceLanguage,
+          imageUrl: articles.imageUrl,
+          publishedAt: articles.publishedAt,
+          title: articleTranslations.title,
+          summary: articleTranslations.summary,
+          language: articleTranslations.language
+        })
+        .from(articles)
+        .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(articles.publishedAt))
+        .limit(limitNum)
+        .offset(offset)
+      
+      const results = await query_builder
+      
+      // Get total count for pagination
+      const countQuery = db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+        .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+      
+      const [{ count }] = await countQuery
+      
+      return {
+        articles: results,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: count,
+          totalPages: Math.ceil(count / limitNum)
+        }
+      }
+    })
+
+    this.app.get('/articles/:id', async ({ params }) => {
+      const db = await getDatabase()
+      
+      const article = await db
+        .select()
+        .from(articles)
+        .where(eq(articles.id, params.id))
+        .limit(1)
+      
+      if (!article.length) {
+        return new Response('Article not found', { status: 404 })
+      }
+      
+      const translations = await db
+        .select()
+        .from(articleTranslations)
+        .where(eq(articleTranslations.articleId, params.id))
+      
+      return {
+        ...article[0],
+        translations
+      }
+    })
+
+    this.app.get('/articles/search', async ({ query }) => {
+      const { q, language = 'en', page = '1', limit = '20' } = query as {
+        q?: string
+        language?: string
+        page?: string
+        limit?: string
+      }
+      
+      if (!q) {
+        return new Response('Search query required', { status: 400 })
+      }
+      
+      const pageNum = parseInt(page) || 1
+      const limitNum = Math.min(parseInt(limit) || 20, 100)
+      const offset = (pageNum - 1) * limitNum
+      
+      const db = await getDatabase()
+      
+      const results = await db
+        .select({
+          id: articles.id,
+          url: articles.url,
+          source: articles.source,
+          sourceLanguage: articles.sourceLanguage,
+          imageUrl: articles.imageUrl,
+          publishedAt: articles.publishedAt,
+          title: articleTranslations.title,
+          summary: articleTranslations.summary,
+          language: articleTranslations.language,
+          relevance: sql<number>`
+            ts_rank(
+              to_tsvector('simple', ${articleTranslations.title} || ' ' || ${articleTranslations.summary}),
+              plainto_tsquery('simple', ${q})
+            )
+          `.as('relevance')
+        })
+        .from(articles)
+        .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
+        .where(
+          and(
+            eq(articleTranslations.language, language),
+            sql`to_tsvector('simple', ${articleTranslations.title} || ' ' || ${articleTranslations.summary}) @@ plainto_tsquery('simple', ${q})`
+          )
+        )
+        .orderBy(desc(sql`ts_rank(
+          to_tsvector('simple', ${articleTranslations.title} || ' ' || ${articleTranslations.summary}),
+          plainto_tsquery('simple', ${q})
+        )`))
+        .limit(limitNum)
+        .offset(offset)
+      
+      return {
+        articles: results,
+        query: q,
+        pagination: {
+          page: pageNum,
+          limit: limitNum
+        }
+      }
+    })
+
+    this.app.get('/feed', async ({ query }) => {
+      const { language = 'en', categories, limit = '20' } = query as {
+        language?: string
+        categories?: string
+        limit?: string
+      }
+      
+      const limitNum = Math.min(parseInt(limit) || 20, 50)
+      const db = await getDatabase()
+      
+      let whereConditions: any[] = [eq(articleTranslations.language, language)]
+      
+      if (categories) {
+        const categoryList = categories.split(',').map(c => c.trim())
+        // Note: This would need to be extended with actual category filtering
+        // For now, we'll use a simple approach
+      }
+      
+      const results = await db
+        .select({
+          id: articles.id,
+          url: articles.url,
+          source: articles.source,
+          sourceLanguage: articles.sourceLanguage,
+          imageUrl: articles.imageUrl,
+          publishedAt: articles.publishedAt,
+          title: articleTranslations.title,
+          summary: articleTranslations.summary,
+          language: articleTranslations.language
+        })
+        .from(articles)
+        .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
+        .where(and(...whereConditions))
+        .orderBy(desc(articles.publishedAt))
+        .limit(limitNum)
+      
+      return {
+        feed: results,
+        language,
+        timestamp: new Date().toISOString()
+      }
     })
 
     this.app.get('/sources', async () => {
@@ -74,6 +282,58 @@ export class AdminAPIServer {
       return { success: true }
     })
 
+    // Monitoring & Observability Endpoints
+    this.app.get('/metrics', async () => {
+      const metrics = await this.metricsService.getMetrics()
+      if (!metrics) {
+        return new Response('Metrics not available', { status: 503 })
+      }
+      return metrics
+    })
+
+    this.app.get('/health/detailed', async () => {
+      return await this.metricsService.getHealthStatus()
+    })
+
+    this.app.get('/status', async () => {
+      const metrics = await this.metricsService.getMetrics()
+      const healthStatus = await this.metricsService.getHealthStatus()
+      
+      return {
+        status: healthStatus.status,
+        uptime: metrics?.uptime || 0,
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        services: {
+          database: healthStatus.checks.find(c => c.name === 'Database Connection')?.status || 'unknown',
+          sources: healthStatus.checks.find(c => c.name === 'Source Health')?.status || 'unknown',
+          metrics: 'pass'
+        }
+      }
+    })
+
+    this.app.put('/alerts/config', async ({ body }) => {
+      await this.metricsService.updateAlertConfig(body as any)
+      return { success: true }
+    })
+
+    this.app.get('/logs', async ({ query }) => {
+      const { level = 'info', limit = '100', offset = '0' } = query as {
+        level?: string
+        limit?: string
+        offset?: string
+      }
+      
+      // This would need to be implemented with a proper log aggregation system
+      // For now, return a placeholder
+      return {
+        logs: [],
+        message: 'Log aggregation not implemented yet',
+        params: { level, limit, offset }
+      }
+    })
+
     logger.info('Admin API server initialized')
   }
 
@@ -96,6 +356,7 @@ export class AdminAPIServer {
     }
 
     this.isRunning = false
+    await this.metricsService.stop()
     await this.server?.stop()
     logger.info('Admin API server stopped')
   }

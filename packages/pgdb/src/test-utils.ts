@@ -65,16 +65,16 @@ export async function clearTestData(): Promise<void> {
   if (!testDb) {
     throw new Error('Test database not initialized. Call setupTestDatabase() first.')
   }
-  // Dynamically fetch all user table names (excluding SQLite system tables)
+  // Dynamically fetch all user table names (excluding system tables)
   const tablesResult = await testDb.execute(
-    `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';`
+    `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';`
   )
-  type TableRow = { name: string }
-  const tableNames = (tablesResult.rows as TableRow[]).map(row => row.name)
+  type TableRow = { table_name: string }
+  const tableNames = (tablesResult.rows as TableRow[]).map(row => row.table_name)
   if (tableNames.length === 0) return
   // Build and execute TRUNCATE statement for all tables
   const truncateSQL =
-    'DELETE FROM ' + tableNames.map(name => `"${name}"`).join('; DELETE FROM ') + ';'
+    'TRUNCATE TABLE ' + tableNames.map(name => `"${name}"`).join(', ') + ' RESTART IDENTITY CASCADE;'
   await testDb.execute(truncateSQL)
 }
 

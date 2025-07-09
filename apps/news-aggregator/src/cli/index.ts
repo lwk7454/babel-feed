@@ -14,6 +14,9 @@ const COMMANDS = {
   'remove-source': 'Remove a source by ID',
   'discover-sources': 'Run source discovery',
   'health-check': 'Check system health',
+  'metrics': 'Show system metrics',
+  'articles': 'Show recent articles',
+  'articles:count': 'Show article count statistics',
   'help': 'Show this help message',
 }
 
@@ -68,6 +71,15 @@ export class NewsAggregatorCLI {
           break
         case 'health-check':
           await this.healthCheck(commandArgs)
+          break
+        case 'metrics':
+          await this.showMetrics(commandArgs)
+          break
+        case 'articles':
+          await this.showRecentArticles(commandArgs)
+          break
+        case 'articles:count':
+          await this.showArticleCount(commandArgs)
           break
         case 'help':
           this.showHelp()
@@ -244,13 +256,72 @@ export class NewsAggregatorCLI {
   }
 
   private async addSource(args: string[]): Promise<void> {
-    // TODO: Implement when database CRUD is ready
-    console.log('Adding source (not implemented yet - needs database CRUD):', args)
+    if (args.length === 0) {
+      console.log('Usage: bun run cli add-source <url> [name] [language] [category]')
+      console.log('Example: bun run cli add-source https://example.com/rss "Example News" en tech')
+      return
+    }
+    
+    const url = args[0]
+    const name = args[1] || `Source for ${url}`
+    const language = args[2] || 'en'
+    const category = args[3] || 'general'
+    
+    if (!this.service) throw new Error('Service not initialized')
+    
+    try {
+      const sourceCRUD = this.service.getSourceCRUD()
+      
+      const newSource = {
+        name,
+        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        url,
+        sourceType: 'rss',
+        language,
+        category,
+        tags: [],
+        enabled: true,
+        pollingInterval: 300000, // 5 minutes
+        reliability: 100,
+        priority: 5,
+        metadata: {}
+      }
+      
+      const source = await sourceCRUD.createSource(newSource)
+      console.log(`✅ Added source: ${source.name} (${source.id})`)
+      console.log(`   URL: ${source.url}`)
+      console.log(`   Language: ${source.language}`)
+      console.log(`   Category: ${source.category}`)
+    } catch (error) {
+      console.log(`❌ Error adding source: ${error}`)
+    }
   }
 
   private async removeSource(args: string[]): Promise<void> {
-    // TODO: Implement when database CRUD is ready
-    console.log('Removing source (not implemented yet - needs database CRUD):', args)
+    if (args.length === 0) {
+      console.log('Usage: bun run cli remove-source <id>')
+      console.log('Example: bun run cli remove-source 123e4567-e89b-12d3-a456-426614174000')
+      return
+    }
+    
+    const id = args[0]
+    
+    if (!this.service) throw new Error('Service not initialized')
+    
+    try {
+      const sourceCRUD = this.service.getSourceCRUD()
+      const source = await sourceCRUD.getSourceById(id)
+      
+      if (!source) {
+        console.log(`❌ Source not found: ${id}`)
+        return
+      }
+      
+      await sourceCRUD.deleteSource(id)
+      console.log(`✅ Removed source: ${source.name} (${id})`)
+    } catch (error) {
+      console.log(`❌ Error removing source: ${error}`)
+    }
   }
 
   private async discoverSources(_args: string[]): Promise<void> {
@@ -292,6 +363,146 @@ export class NewsAggregatorCLI {
       }
     } catch (error) {
       console.log('Error during health check:', error)
+    }
+  }
+
+  private async showMetrics(_args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    try {
+      const sourceManager = this.service.getSourceManager()
+      const sources = await sourceManager.getAllSources()
+      
+      const enabledSources = sources.filter(s => s.enabled)
+      const healthySources = sources.filter(s => s.reliability > 80)
+      const totalSuccesses = sources.reduce((sum, s) => sum + s.successCount, 0)
+      const totalErrors = sources.reduce((sum, s) => sum + s.errorCount, 0)
+      const totalRequests = totalSuccesses + totalErrors
+      const successRate = totalRequests > 0 ? (totalSuccesses / totalRequests * 100).toFixed(1) : '0.0'
+      
+      console.log('\n=== System Metrics ===')
+      console.log(`Total Sources: ${sources.length}`)
+      console.log(`Enabled Sources: ${enabledSources.length}`)
+      console.log(`Healthy Sources: ${healthySources.length}`)
+      console.log(`Success Rate: ${successRate}%`)
+      console.log(`Total Requests: ${totalRequests}`)
+      console.log(`Total Successes: ${totalSuccesses}`)
+      console.log(`Total Errors: ${totalErrors}`)
+      
+      // Show top performing sources
+      const topSources = sources
+        .filter(s => s.successCount > 0)
+        .sort((a, b) => b.successCount - a.successCount)
+        .slice(0, 5)
+      
+      if (topSources.length > 0) {
+        console.log('\n=== Top Performing Sources ===')
+        topSources.forEach(source => {
+          console.log(`${source.name}: ${source.successCount} successes, ${source.errorCount} errors`)
+        })
+      }
+    } catch (error) {
+      console.log('Error getting metrics:', error)
+    }
+  }
+
+  private async showRecentArticles(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const limit = parseInt(args[0]) || 10
+    
+    try {
+      const { getDatabase } = await import('@babel-feed/pgdb')
+      const { articles, articleTranslations } = await import('@babel-feed/pgdb')
+      const { eq, desc } = await import('drizzle-orm')
+      
+      const db = await getDatabase()
+      
+      const recentArticles = await db
+        .select({
+          id: articles.id,
+          url: articles.url,
+          source: articles.source,
+          publishedAt: articles.publishedAt,
+          title: articleTranslations.title,
+          language: articleTranslations.language
+        })
+        .from(articles)
+        .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
+        .orderBy(desc(articles.publishedAt))
+        .limit(limit)
+      
+      console.log(`\n=== ${limit} Most Recent Articles ===`)
+      if (recentArticles.length === 0) {
+        console.log('No articles found')
+        return
+      }
+      
+      recentArticles.forEach(article => {
+        console.log(`\n${article.title || 'Untitled'} (${article.language || 'unknown'})`)
+        console.log(`  Source: ${article.source}`)
+        console.log(`  Published: ${article.publishedAt ? article.publishedAt.toISOString() : 'Unknown'}`)
+        console.log(`  URL: ${article.url}`)
+      })
+    } catch (error) {
+      console.log('Error getting recent articles:', error)
+    }
+  }
+
+  private async showArticleCount(_args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    try {
+      const { getDatabase } = await import('@babel-feed/pgdb')
+      const { articles, articleTranslations } = await import('@babel-feed/pgdb')
+      const { sql, eq } = await import('drizzle-orm')
+      
+      const db = await getDatabase()
+      
+      // Total articles
+      const [{ count: totalArticles }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(articles)
+      
+      // Articles by language
+      const articlesByLanguage = await db
+        .select({
+          language: articleTranslations.language,
+          count: sql<number>`count(*)`
+        })
+        .from(articleTranslations)
+        .groupBy(articleTranslations.language)
+        .orderBy(sql`count(*) desc`)
+      
+      // Articles by source
+      const articlesBySource = await db
+        .select({
+          source: articles.source,
+          count: sql<number>`count(*)`
+        })
+        .from(articles)
+        .groupBy(articles.source)
+        .orderBy(sql`count(*) desc`)
+        .limit(10)
+      
+      console.log('\n=== Article Statistics ===')
+      console.log(`Total Articles: ${totalArticles}`)
+      
+      if (articlesByLanguage.length > 0) {
+        console.log('\n=== Articles by Language ===')
+        articlesByLanguage.forEach(item => {
+          console.log(`${item.language}: ${item.count}`)
+        })
+      }
+      
+      if (articlesBySource.length > 0) {
+        console.log('\n=== Top 10 Sources by Article Count ===')
+        articlesBySource.forEach(item => {
+          console.log(`${item.source}: ${item.count}`)
+        })
+      }
+    } catch (error) {
+      console.log('Error getting article count:', error)
     }
   }
 
