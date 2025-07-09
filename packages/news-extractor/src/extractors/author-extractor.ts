@@ -31,18 +31,37 @@ export class AuthorExtractor {
     const uniqifyList = (list: string[]): string[] => {
       const seen = new Map<string, string>()
       for (const item of list) {
-        const key = item.toLowerCase().trim()
-        if (key) {
-          seen.set(key, item.trim())
-        }
+        // Normalize whitespace - replace non-breaking spaces and other whitespace with regular spaces
+        const normalizedItem = item.replace(/\s+/g, ' ').trim()
+        const key = normalizedItem.toLowerCase().trim()
+        seen.set(key, normalizedItem)
       }
-      return Array.from(seen.values())
+      return Array.from(seen.entries())
+        .filter(([key]) => key) // Python: if item (checks key)
+        .map(([, value]) => value)
     }
 
     const parseByline = (searchStr: string): string[] => {
       // Remove HTML boilerplate
       let cleaned = searchStr.replace(/<[^<]+?>/g, '')
       cleaned = cleaned.replace(/[\n\t\r\u00A0]/g, ' ')
+
+      // Filter out Chinese editor patterns - these are editorial bylines, not authors
+      const editorPatterns = [
+        /（编辑[：:][^）]*）/g,  // (编辑：...)
+        /【责任编辑[：:][^】]*】/g,  // 【责任编辑：...】
+        /编辑[：:]/g,  // 编辑：
+        /责任编辑[：:]/g,  // 责任编辑：
+        /值班编辑[：:]/g,  // 值班编辑：
+        /执行编辑[：:]/g   // 执行编辑：
+      ]
+      
+      for (const pattern of editorPatterns) {
+        if (pattern.test(cleaned)) {
+          // This is an editorial byline, not an author byline
+          return []
+        }
+      }
 
       // Remove original By statement
       const byMatch = cleaned.match(/\b(by|from)[:\s](.*)/i)
@@ -129,6 +148,31 @@ export class AuthorExtractor {
       
       if (match.prop('tagName') === 'META') {
         content = match.attr('content') || ''
+        
+        // For meta tags, validate that the content isn't an editor name
+        // by checking if it appears in editorial contexts in the page
+        if (content) {
+          const editorContextPatterns = [
+            new RegExp(`（编辑[：:][^）]*${content}[^）]*）`, 'g'),
+            new RegExp(`【责任编辑[：:][^】]*${content}[^】]*】`, 'g'),
+            new RegExp(`编辑[：:].*${content}`, 'g'),
+            new RegExp(`责任编辑[：:].*${content}`, 'g')
+          ]
+          
+          const pageHTML = $.html()
+          let isEditor = false
+          for (const pattern of editorContextPatterns) {
+            if (pattern.test(pageHTML)) {
+              isEditor = true
+              break
+            }
+          }
+          
+          // If this name appears in editorial contexts, skip it
+          if (isEditor) {
+            continue
+          }
+        }
       } else {
         content = getTextFromElement(match)
       }
@@ -175,7 +219,15 @@ export class AuthorExtractor {
       }
     }
 
-    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+    // Handle array of JSON-LD objects (like Time article)
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        this.extractAuthorsFromJsonLd(item, authors)
+      }
+      return
+    }
+
+    if (typeof data === 'object' && data !== null) {
       const obj = data as Record<string, unknown>
       if ('@graph' in obj && Array.isArray(obj['@graph'])) {
         const graph = obj['@graph'] as unknown[]

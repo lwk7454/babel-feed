@@ -88,10 +88,20 @@ export const AUTHOR_STOP_WORDS = [
   'Senior Reporter',
   'Reporter',
   'Writer',
-  'Opinion Writer'
+  'Opinion Writer',
+  'Condé Nast',
+  // Chinese editor terms
+  '编辑',
+  '责任编辑',
+  '值班编辑',
+  '执行编辑'
 ]
 
 // Title extraction patterns
+// Title replacement constants from Python newspaper4k
+export const MOTLEY_REPLACEMENT = ["&#65533;", ""]
+export const TITLE_REPLACEMENTS = ["&raquo;", "»"]
+
 export const TITLE_META_INFO = [
   'dc.title',
   'og:title',

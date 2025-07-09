@@ -29,10 +29,36 @@ export class DateExtractor {
    * 3. Raw regex searches in the HTML + added heuristics
    */
   public parse(articleUrl: string, $: CheerioAPI): Date | null {
-    const parseDateStr = (dateStr: string): Date | null => {
+    const parseDateStr = (dateStr: string, isUrlDate = false): Date | null => {
       if (!dateStr) return null
       
       try {
+        // Handle URL dates specially to avoid timezone issues
+        if (isUrlDate) {
+          // Convert URL date format (2023/11/06) to ISO format to avoid timezone issues
+          const urlDateRegex = /^(\d{4})[\/\-\._](\d{1,2})[\/\-\._](\d{1,2})$/
+          const match = dateStr.match(urlDateRegex)
+          if (match) {
+            const [, year, month, day] = match
+            // Create date in UTC to avoid timezone issues
+            const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)))
+            if (isNaN(date.getTime())) return null
+            return date
+          }
+        }
+        
+        // Handle Japanese/compact ISO date format: 20180619T055000+0900
+        const compactIsoRegex = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})([+-]\d{4})$/
+        const compactMatch = dateStr.match(compactIsoRegex)
+        if (compactMatch) {
+          const [, year, month, day, hour, minute, second, timezone] = compactMatch
+          // Convert to standard ISO format
+          const standardIso = `${year}-${month}-${day}T${hour}:${minute}:${second}${timezone.slice(0, 3)}:${timezone.slice(3)}`
+          const date = new Date(standardIso)
+          if (isNaN(date.getTime())) return null
+          return date
+        }
+        
         const date = new Date(dateStr)
         if (isNaN(date.getTime())) return null
         return date
@@ -48,8 +74,9 @@ export class DateExtractor {
     const dateMatch = articleUrl.match(strictDateRegex)
     if (dateMatch) {
       const dateMatchStr = dateMatch[0]
-      const dateObj = parseDateStr(dateMatchStr)
+      const dateObj = parseDateStr(dateMatchStr, true)
       if (dateObj) {
+        // High score for URL dates to match Python priority (Python gives score 10)
         dateMatches.push({ date: dateObj, score: 10 })
       }
     }
@@ -106,9 +133,15 @@ export class DateExtractor {
       if (dateObj) {
         let score = 6
         
-        // Boost meta tags
+        // Boost meta tags, especially precise ones
         if (element.prop('tagName')?.toLowerCase() === 'meta') {
-          score += 1
+          score += 2
+          
+          // Extra boost for highly precise meta tags
+          const property = element.attr('property') || element.attr('name')
+          if (property === 'article:published_time') {
+            score += 2 // Total score becomes 10
+          }
         }
         
         // Penalize future dates and very old articles
