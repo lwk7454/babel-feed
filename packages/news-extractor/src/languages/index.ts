@@ -5,6 +5,8 @@
 
 export * from './language-detector.js'
 export * from './language-config.js'
+export * from './language-confidence.js'
+export * from './encoding-detector.js'
 export * from './tokenizers/index.js'
 export * from './unicode-ranges.js'
 
