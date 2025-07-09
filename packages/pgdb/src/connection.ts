@@ -1,8 +1,10 @@
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
-import { drizzle } from 'drizzle-orm/postgres-js'
+import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { PGlite } from '@electric-sql/pglite'
+import { drizzle as drizzlePglite } from 'drizzle-orm/pglite'
 import * as schema from './schema.js'
 
 // Always load .env from the pgdb root, regardless of where this is imported from
@@ -21,17 +23,17 @@ const isTest = process.env.NODE_ENV === 'test'
  */
 function getDatabaseUrl(): string {
   if (isTest) {
-    return process.env.DATABASE_URL_TEST || ''
+    // For SQLite, the connection string is not used
+    return ''
   }
   return process.env.DATABASE_URL || ''
 }
 
 /**
- * PostgreSQL connection configuration
+ * Create a Postgres connection (for dev/prod)
  */
 function createPostgresConnection() {
   const connectionString = getDatabaseUrl()
-
   const sql = postgres(connectionString, {
     max: process.env.DB_POOL_SIZE ? parseInt(process.env.DB_POOL_SIZE) : 10,
     idle_timeout: 20,
@@ -41,29 +43,40 @@ function createPostgresConnection() {
     debug: isDevelopment && process.env.DB_DEBUG === 'true',
     onnotice: isDevelopment && !isTest ? console.log : undefined
   })
+  return drizzlePostgres(sql, { schema, logger: isDevelopment })
+}
 
-  return drizzle(sql, { schema, logger: isDevelopment })
+/**
+ * Create an in-memory PGlite (Postgres in WASM) connection for tests
+ */
+async function createPgLiteTestConnection() {
+  const pglite = new PGlite()
+  await pglite.ready
+  return drizzlePglite({ client: pglite, schema })
 }
 
 /**
  * Database connection singleton
  */
-let dbInstance: ReturnType<typeof createPostgresConnection> | null = null
+let dbInstance: Awaited<ReturnType<typeof createPgLiteTestConnection>> | ReturnType<typeof createPostgresConnection> | null = null
 
-export function getDatabase() {
+export async function getDatabase() {
   if (!dbInstance) {
     try {
-      dbInstance = createPostgresConnection()
-      const envType = isProduction ? 'production' : isTest ? 'test' : 'development'
+      if (isTest) {
+        dbInstance = await createPgLiteTestConnection()
+      } else {
+        dbInstance = createPostgresConnection()
+      }
+      const envType = isProduction ? 'production' : isTest ? 'test (pglite)' : 'development'
       if (!isTest) {
-        console.log(`🗄️  Database connection established (${envType})`)
+        console.log(`\ud83d\uddc4\ufe0f  Database connection established (${envType})`)
       }
     } catch (error) {
-      console.error('❌ Failed to connect to database:', error)
+      console.error('\u274c Failed to connect to database:', error)
       throw new Error('Database connection failed')
     }
   }
-
   return dbInstance
 }
 
@@ -72,7 +85,7 @@ export function getDatabase() {
  */
 export async function checkDatabaseHealth(): Promise<{ healthy: boolean; error?: string }> {
   try {
-    const db = getDatabase()
+    const db = await getDatabase()
 
     // Simple query to check connection
     await db.execute('SELECT 1')

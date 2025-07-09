@@ -6,24 +6,13 @@ set -euo pipefail
 # It runs in a headless environment for code agent initialization. 
 # Script must not use admin privileges. 
 
-
-# Setup PostgreSQL (no sudo required)
-apt-get update && apt-get install -y postgresql postgresql-contrib
-
-if [ -x "/usr/lib/postgresql/$(ls /usr/lib/postgresql | sort -V | tail -n1)/bin/initdb" ]; then
-export PATH="/usr/lib/postgresql/$(ls /usr/lib/postgresql | sort -V | tail -n1)/bin:$PATH"
-else
-    echo "initdb not found after installing postgresql"
-    exit 1
-fi
-
 # Create local directories
 mkdir -p $HOME/.local/bin
 mkdir -p $HOME/.local/lib
 mkdir -p $HOME/.local/share
 
 # Add local bin to PATH
-export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 # Java, Node.js, and Bun are already provided by the system. Skipping their installation.
 
@@ -37,8 +26,9 @@ wget https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_S
 unzip commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip > /dev/null 2>&1
 rm commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip
 
-export ANDROID_SDK_ROOT="$HOME/android-sdk"
-export ANDROID_HOME="$HOME/android-sdk"
+ANDROID_SDK_ROOT="$HOME/android-sdk"
+echo "export ANDROID_SDK_ROOT=\"$HOME/android-sdk\"" >> ~/.bashrc
+echo "export ANDROID_HOME=\"$HOME/android-sdk\"" >> ~/.bashrc
 
 mkdir -p cmdline-tools/latest
 mv cmdline-tools/bin cmdline-tools/latest/
@@ -46,8 +36,8 @@ mv cmdline-tools/lib cmdline-tools/latest/
 mv cmdline-tools/NOTICE.txt cmdline-tools/latest/
 mv cmdline-tools/source.properties cmdline-tools/latest/
 chmod +x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"  # Ensure sdkmanager is executable
-export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
+echo "export PATH=\"$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH\"" >> ~/.bashrc
+echo "export PATH=\"$ANDROID_SDK_ROOT/platform-tools:$PATH\"" >> ~/.bashrc
 
 # Check Java availability
 if ! command -v java >/dev/null 2>&1; then
@@ -77,22 +67,6 @@ unzip gradle-${GRADLE_VERSION}-bin.zip > /dev/null 2>&1
 mv gradle-${GRADLE_VERSION} $HOME/.local/gradle
 ln -sf $HOME/.local/gradle/bin/gradle $HOME/.local/bin/gradle
 rm gradle-${GRADLE_VERSION}-bin.zip
-
-# Create environment setup script
-cat > $HOME/setup-babel-env.sh << 'EOF'
-#!/bin/bash
-
-# Android setup
-export ANDROID_SDK_ROOT="$HOME/android-sdk"
-export ANDROID_HOME="$HOME/android-sdk"
-
-# Path setup
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
-EOF
-
-chmod +x $HOME/setup-babel-env.sh
 
 # Setup project if in correct directory
 cd /workspace/babel-feed
@@ -127,4 +101,3 @@ fi
 # Clean up temporary files
 rm -rf $HOME/dev-tools
 
-source ~/setup-babel-env.sh

@@ -29,6 +29,7 @@
   },
   "private": true,
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.4",
     "@elysiajs/cors": "^1.3.3",
     "@elysiajs/stream": "^1.1.0",
     "@elysiajs/swagger": "^1.3.0",
