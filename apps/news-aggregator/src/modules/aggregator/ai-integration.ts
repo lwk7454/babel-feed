@@ -16,19 +16,30 @@ export class AIIntegrationService {
     const cached = await this.translationCache.get(cacheKey)
     if (cached) return cached
 
-    const url = 'https://libretranslate.de/translate'
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: content, source: 'auto', target: targetLanguage, format: 'text' })
-    })
-    if (!response.ok) {
-      throw new Error(`Translation failed: ${response.status}`)
+    const providers = await this.aiProviders.getEnabledProviders('translation')
+    for (const provider of providers) {
+      try {
+        const translated = await this.aiProviders.executeWithProvider(provider.id, async (p, key) => {
+          const { OpenAI } = await import('openai')
+          const client = new OpenAI({ apiKey: key.apiKey || key.keyValue, baseURL: p.baseUrl })
+          const res = await client.chat.completions.create({
+            model: p.metadata?.models?.[0] || 'gpt-3.5-turbo',
+            messages: [
+              { role: 'system', content: `Translate the following text to ${targetLanguage}` },
+              { role: 'user', content }
+            ]
+          })
+          return res.choices[0]?.message?.content?.trim() || ''
+        })
+        if (translated) {
+          await this.translationCache.set(cacheKey, translated)
+          return translated
+        }
+      } catch (error) {
+        logger.warn(`Provider ${provider.name} failed translation:`, error)
+      }
     }
-    const data = await response.json()
-    const translated = data.translatedText as string
-    await this.translationCache.set(cacheKey, translated)
-    return translated
+    throw new Error('All translation providers failed')
   }
 
   async summarizeArticle(content: string): Promise<string> {

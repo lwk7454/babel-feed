@@ -323,6 +323,7 @@ nx run news-aggregator:cli discover-sources
 #### 2.4 AI Integration ✅ **IMPLEMENTED**
 
 - [x] **AI Translation Pipeline**: Implement multi-provider translation with failover and caching
+  - Uses OpenAI-compatible LLM providers (OpenRouter, Hugging Face, custom OpenAI APIs) via the `AiProviderManager`
 - [x] **AI Summarization Pipeline**: Implement article summarization with quality thresholds
 - [x] **AI Content Tagging**: Implement automated tagging and categorization
 - [x] **Content Processing Pipeline**: Implement article processing, validation, and normalization
