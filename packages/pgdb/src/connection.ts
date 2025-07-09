@@ -117,8 +117,3 @@ export async function closeDatabaseConnection(): Promise<void> {
     }
   }
 }
-
-
-// Export the database instance as default
-export const db = getDatabase()
-export default db
