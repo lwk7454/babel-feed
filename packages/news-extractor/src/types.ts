@@ -30,6 +30,7 @@ export interface ArticleMetadata {
   metaKeywords?: string;
   metaFavicon?: string;
   metaLang?: string;
+  metaImage?: string;
   openGraphData?: Record<string, any>;
   twitterData?: Record<string, any>;
   jsonLdData?: Record<string, any>;

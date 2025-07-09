@@ -222,7 +222,7 @@ export class AuthorExtractor {
     // Handle array of JSON-LD objects (like Time article)
     if (Array.isArray(data)) {
       for (const item of data) {
-        this.extractAuthorsFromJsonLd(item, authors)
+        this.extractAuthorsFromJsonLd(item as string | unknown[] | Record<string, unknown>, authors)
       }
       return
     }

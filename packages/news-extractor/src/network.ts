@@ -10,8 +10,8 @@ import { URL } from 'url'
 import { Configuration } from './configuration.js'
 import { ArticleException, ArticleBinaryDataException } from './types.js'
 import { USER_AGENTS } from './data/user-agents.js'
-
-const log = console // TODO: Replace with proper logging
+import { logger } from './logger.js'
+import { ErrorRecovery } from './error-recovery.js'
 
 export const FAIL_ENCODING = 'ISO-8859-1'
 
@@ -32,11 +32,11 @@ export function createSession(): AxiosInstance {
   // Add request interceptor for logging
   session.interceptors.request.use(
     (config) => {
-      log.debug?.(`Making request to: ${config.url}`)
+      logger.debug('NetworkClient', `Making request to: ${config.url}`)
       return config
     },
     (error) => {
-      log.error?.('Request error:', error)
+      logger.error('NetworkClient', 'Request error', error)
       return Promise.reject(error)
     }
   )
@@ -44,14 +44,14 @@ export function createSession(): AxiosInstance {
   // Add response interceptor for logging
   session.interceptors.response.use(
     (response) => {
-      log.debug?.(`Response ${response.status} from: ${response.config.url}`)
+      logger.debug('NetworkClient', `Response ${response.status} from: ${response.config.url}`)
       return response
     },
     (error) => {
       if (error.response) {
-        log.warn?.(`HTTP error ${error.response.status} from: ${error.config.url}`)
+        logger.warn('NetworkClient', `HTTP error ${error.response.status} from: ${error.config.url}`)
       } else {
-        log.error?.('Network error:', error.message)
+        logger.error('NetworkClient', 'Network error', error)
       }
       return Promise.reject(error)
     }
@@ -136,7 +136,7 @@ export const hasGetRanges = doCache(async (url: string): Promise<boolean> => {
 
     return rangeResponse.status === 206
   } catch (error) {
-    log.debug?.(`hasGetRanges() error: ${error} on URL: ${url}`)
+    logger.debug('NetworkClient', `hasGetRanges() error on URL: ${url}`, { error })
     return false
   }
 })
@@ -222,7 +222,7 @@ export async function isBinaryUrl(url: string): Promise<boolean> {
     return printableRatio < 0.6 // 40% or more binary content
     
   } catch (error) {
-    log.debug?.(`isBinaryUrl() error: ${error} on URL: ${url}`)
+    logger.debug('NetworkClient', `isBinaryUrl() error on URL: ${url}`, { error })
     return false
   }
 }
@@ -316,7 +316,7 @@ export async function getHtml(
     const [html, statusCode] = await getHtmlStatus(url, cfg, response)
     
     if (statusCode >= 400) {
-      log.warn?.(`getHtml() bad status code ${statusCode} on URL: ${url}`)
+      logger.warn('NetworkClient', `getHtml() bad status code ${statusCode} on URL: ${url}`)
       if (cfg.httpSuccessOnly) {
         throw new ArticleException(`HTTP error when downloading ${url}. Status code: ${statusCode}`)
       }
@@ -325,7 +325,7 @@ export async function getHtml(
     
     return html
   } catch (error) {
-    log.debug?.(`getHtml() error: ${error} on URL: ${url}`)
+    logger.debug('NetworkClient', `getHtml() error on URL: ${url}`, { error })
     return ''
   }
 }
@@ -351,7 +351,7 @@ export async function getHtmlStatus(
   const resp = await doRequest(url, cfg)
   
   if (resp.status !== 200) {
-    log.warn?.(`getHtmlStatus(): bad status code ${resp.status} on URL: ${url}`)
+    logger.warn('NetworkClient', `getHtmlStatus(): bad status code ${resp.status} on URL: ${url}`)
   }
   
   const html = getHtmlFromResponse(resp, cfg)
@@ -371,7 +371,7 @@ export async function multithreadRequest(
   const requestTimeout = cfg.requestsParams.timeout || 7000
 
   if (timeout < requestTimeout) {
-    log.warn?.(
+    logger.warn('NetworkClient',
       `multithreadRequest(): Thread timeout ${timeout}ms < Request timeout ${requestTimeout}ms, ` +
       'could cause requests to be cancelled before completion.'
     )
@@ -385,11 +385,94 @@ export async function multithreadRequest(
     } catch (error) {
       results[index] = null
       if (error instanceof Error) {
-        log.warn?.(`multithreadRequest(): Error ${error.message} on URL: ${url}`)
+        logger.warn('NetworkClient', `multithreadRequest(): Error ${error.message} on URL: ${url}`)
       }
     }
   })
 
   await Promise.all(promises)
   return results
+}
+
+/**
+ * NetworkClient class with error recovery and structured logging
+ */
+export class NetworkClient {
+  private config: Configuration
+
+  constructor(config: Configuration) {
+    this.config = config
+  }
+
+  /**
+   * Get HTTP response with error recovery
+   */
+  async get(url: string, options?: any): Promise<AxiosResponse> {
+    return ErrorRecovery.withRetry(
+      async () => {
+        logger.debug('NetworkClient', `Fetching: ${url}`)
+        const response = await doRequest(url, this.config)
+        logger.info('NetworkClient', `Successfully fetched: ${url}`, {
+          status: response.status,
+          contentLength: response.headers['content-length']
+        })
+        return response
+      },
+      { maxAttempts: 3, backoffMs: 1000 },
+      `NetworkClient.get(${url})`
+    )
+  }
+
+  /**
+   * Get HTML content with error recovery
+   */
+  async getHtml(url: string): Promise<string> {
+    return ErrorRecovery.safeExecute(
+      async () => {
+        const html = await getHtml(url, this.config)
+        logger.debug('NetworkClient', `Retrieved HTML from: ${url}`, {
+          htmlLength: html.length
+        })
+        return html
+      },
+      '',
+      `NetworkClient.getHtml(${url})`
+    )
+  }
+
+  /**
+   * Check if URL contains binary content with error recovery
+   */
+  async isBinary(url: string): Promise<boolean> {
+    return ErrorRecovery.safeExecute(
+      async () => {
+        const result = await isBinaryUrl(url)
+        logger.debug('NetworkClient', `Binary check for: ${url}`, { isBinary: result })
+        return result
+      },
+      false,
+      `NetworkClient.isBinary(${url})`
+    )
+  }
+
+  /**
+   * Make multiple requests with error recovery
+   */
+  async multithreadRequest(urls: string[]): Promise<(AxiosResponse | null)[]> {
+    return ErrorRecovery.withRetry(
+      async () => {
+        logger.info('NetworkClient', `Starting multithread request for ${urls.length} URLs`)
+        const results = await multithreadRequest(urls, this.config)
+        const successCount = results.filter(r => r !== null).length
+        logger.info('NetworkClient', `Completed multithread request`, {
+          total: urls.length,
+          successful: successCount,
+          failed: urls.length - successCount
+        })
+        return results
+      },
+      { maxAttempts: 2, backoffMs: 500 },
+      `NetworkClient.multithreadRequest(${urls.length} URLs)`
+    )
+  }
 }

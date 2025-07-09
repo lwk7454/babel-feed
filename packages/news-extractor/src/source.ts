@@ -5,6 +5,9 @@
 
 import { Article } from './article'
 import { Configuration } from './configuration'
+import { NetworkClient } from './network'
+import { ContentExtractor } from './extractors/content-extractor'
+import RSSParser from 'rss-parser'
 
 export class Source {
   private _url: string
@@ -17,11 +20,17 @@ export class Source {
   private _domain = ''
   private _favicon = ''
   private _isBuilt = false
+  private networkClient: NetworkClient
+  private contentExtractor: ContentExtractor
+  private rssParser: RSSParser
 
   constructor(url: string, config?: Configuration) {
     this._url = url
     this._config = config || new Configuration()
     this._domain = this.extractDomain(url)
+    this.networkClient = new NetworkClient(this._config)
+    this.contentExtractor = new ContentExtractor(this._config)
+    this.rssParser = new RSSParser()
   }
 
   /**
@@ -29,8 +38,9 @@ export class Source {
    */
   async build(): Promise<void> {
     try {
-      // Source building implementation will be added in Phase 6
-      // For now, mark as placeholder
+      await this.setCategories()
+      await this.setFeeds()
+      await this.generateArticles()
       this._isBuilt = true
     } catch (error) {
       throw new Error(`Failed to build source: ${error}`)
@@ -61,10 +71,188 @@ export class Source {
   }
 
   /**
+   * Set category URLs by analyzing homepage
+   */
+  async setCategories(): Promise<void> {
+    try {
+      const response = await this.networkClient.get(this._url)
+      if (!response.data) return
+
+      const $ = this.contentExtractor.loadHtml(response.data)
+      const categoryUrls = this.extractCategoryUrls($)
+      this._categoryUrls = categoryUrls
+    } catch (error) {
+      console.warn(`Failed to set categories for ${this._url}:`, error)
+    }
+  }
+
+  /**
+   * Set feed URLs by discovering RSS feeds
+   */
+  async setFeeds(): Promise<void> {
+    try {
+      const feedUrls = await this.discoverFeedUrls()
+      this._feedUrls = feedUrls
+    } catch (error) {
+      console.warn(`Failed to set feeds for ${this._url}:`, error)
+    }
+  }
+
+  /**
+   * Extract category URLs from homepage
+   */
+  private extractCategoryUrls($: any): string[] {
+    const categoryUrls: string[] = []
+    const seenUrls = new Set<string>()
+    
+    // Common category URL patterns
+    const categoryPatterns = [
+      /\/(section|category|topic|news|world|politics|business|sports|tech|science)\/*/i,
+      /\/[a-z-]+\/$/
+    ]
+    
+    // URL stopwords to exclude
+    const stopwords = new Set([
+      'about', 'contact', 'privacy', 'terms', 'careers', 'advertise',
+      'subscribe', 'login', 'register', 'search', 'archive', 'sitemap'
+    ])
+
+    $('a[href]').each((_: number, element: any) => {
+      const href = $(element).attr('href')
+      if (!href) return
+
+      try {
+        const url = new URL(href, this._url)
+        const path = url.pathname.toLowerCase()
+        
+        // Skip if contains stopwords
+        if (stopwords.has(path.split('/')[1])) return
+        
+        // Check if matches category patterns
+        const isCategory = categoryPatterns.some(pattern => pattern.test(path))
+        if (isCategory && !seenUrls.has(url.href)) {
+          categoryUrls.push(url.href)
+          seenUrls.add(url.href)
+        }
+      } catch {
+        // Invalid URL, skip
+      }
+    })
+
+    return categoryUrls.slice(0, 20) // Limit to 20 categories
+  }
+
+  /**
+   * Discover RSS feed URLs
+   */
+  private async discoverFeedUrls(): Promise<string[]> {
+    const feedUrls: string[] = []
+    const commonSuffixes = ['/feed', '/feeds', '/rss', '/rss.xml', '/feed.xml']
+    
+    // Try common feed URLs
+    const candidateUrls = [
+      ...commonSuffixes.map(suffix => this._url + suffix)
+    ]
+
+    // Add category feed URLs
+    for (const categoryUrl of this._categoryUrls) {
+      for (const suffix of commonSuffixes) {
+        candidateUrls.push(categoryUrl + suffix)
+      }
+    }
+
+    // Get feed URLs from HTML content
+    try {
+      const response = await this.networkClient.get(this._url)
+      if (response.data) {
+        const $ = this.contentExtractor.loadHtml(response.data)
+        const htmlFeedUrls = this.contentExtractor.getFeedUrls($, this._url)
+        candidateUrls.push(...htmlFeedUrls)
+      }
+    } catch (error) {
+      console.warn(`Failed to extract feed URLs from HTML: ${error}`)
+    }
+
+    // Test URLs in parallel
+    const requests = candidateUrls.map(async (url) => {
+      try {
+        const response = await this.networkClient.get(url, { timeout: 5000 })
+        if (this.isValidFeed(response.data)) {
+          return url
+        }
+      } catch {
+        // URL failed, ignore
+      }
+      return null
+    })
+
+    const results = await Promise.all(requests)
+    return [...new Set(results.filter(url => url !== null) as string[])] // Deduplicate
+  }
+
+  /**
+   * Check if content is a valid RSS/Atom feed
+   */
+  private isValidFeed(content: string): boolean {
+    if (!content) return false
+    
+    const feedIndicators = [
+      '<rss',
+      '<feed',
+      'application/rss+xml',
+      'application/atom+xml',
+      '<channel>',
+      '<entry>'
+    ]
+    
+    const lowerContent = content.toLowerCase()
+    return feedIndicators.some(indicator => lowerContent.includes(indicator))
+  }
+
+  /**
+   * Generate articles from feeds
+   */
+  private async feedsToArticles(): Promise<Article[]> {
+    const articles: Article[] = []
+    
+    for (const feedUrl of this._feedUrls) {
+      try {
+        const response = await this.networkClient.get(feedUrl)
+        const feed = await this.rssParser.parseString(response.data)
+        
+        for (const item of feed.items) {
+          if (item.link) {
+            const article = new Article(item.link, this._config)
+            
+            // Set metadata from feed
+            const metadata = article.metadata
+            if (item.title) metadata.title = item.title
+            if (item.pubDate) metadata.publishDate = new Date(item.pubDate)
+            if (item.contentSnippet) metadata.metaDescription = item.contentSnippet
+            
+            articles.push(article)
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to parse feed ${feedUrl}:`, error)
+      }
+    }
+    
+    return articles
+  }
+
+  /**
    * Generate articles from source
    */
   async generateArticles(): Promise<Article[]> {
-    await this.build()
+    if (!this._isBuilt) {
+      await this.build()
+    }
+    
+    // Get articles from feeds
+    const feedArticles = await this.feedsToArticles()
+    this._articles = [...this._articles, ...feedArticles]
+    
     await this.downloadArticles()
     await this.parseArticles()
     return this._articles

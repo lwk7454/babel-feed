@@ -202,4 +202,56 @@ export class ContentExtractor {
         .trim()
     }
   }
+
+  /**
+   * Load HTML content into Cheerio instance
+   */
+  loadHtml(html: string): CheerioAPI {
+    return cheerio.load(html)
+  }
+
+  /**
+   * Extract RSS feed URLs from HTML content
+   * Ported from Python newspaper4k get_feed_urls()
+   */
+  getFeedUrls($: CheerioAPI, baseUrl: string): string[] {
+    const feedUrls: string[] = []
+    const seenUrls = new Set<string>()
+
+    // Look for RSS/Atom feed links in <link> tags
+    $('link[type*="rss"], link[type*="atom"], link[rel*="alternate"]').each((_, element) => {
+      const href = $(element).attr('href')
+      const type = $(element).attr('type')
+      
+      if (href && (type?.includes('rss') || type?.includes('atom'))) {
+        try {
+          const url = new URL(href, baseUrl)
+          if (!seenUrls.has(url.href)) {
+            feedUrls.push(url.href)
+            seenUrls.add(url.href)
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    })
+
+    // Look for feed URLs in anchor tags
+    $('a[href*="feed"], a[href*="rss"], a[href*="atom"]').each((_, element) => {
+      const href = $(element).attr('href')
+      if (href) {
+        try {
+          const url = new URL(href, baseUrl)
+          if (!seenUrls.has(url.href)) {
+            feedUrls.push(url.href)
+            seenUrls.add(url.href)
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    })
+
+    return feedUrls.slice(0, 50) // Limit to 50 feeds as per Python implementation
+  }
 }
