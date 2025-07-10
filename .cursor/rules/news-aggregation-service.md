@@ -366,69 +366,76 @@ nx run news-aggregator:cli discover-sources
 - [ ] **Dashboard**: Web-based admin dashboard for system monitoring
 - [ ] **Performance Monitoring**: Database performance and API response time tracking
 
-### Phase 4: Recommendation System Foundation (Weeks 7-8)
+### Phase 4: Automated Source Discovery (Weeks 7-8)
 
-#### 4.1 Content Classification
+- [ ] **Seed Lists & Search Queries**: Crawl public lists (Wikipedia, GitHub, open datasets) and issue automated search engine queries to gather candidate news sites.
+- [ ] **Homepage Crawling**: Fetch each candidate homepage to detect RSS/Atom/JSON feeds or structured metadata.
+- [ ] **Recursive Expansion**: Follow links from discovered sites and aggregators while applying caps and deduplication to avoid runaway crawling.
+- [ ] **Validation & Quality Scoring**: Verify feed reachability and content quality, scoring reliability to prioritize trustworthy sources.
+- [ ] **Diversity & Caps**: Balance sources across languages, regions, and topics to maintain diversity and enforce category limits.
+- [ ] **Periodic Execution**: Integrate with the Source Manager and CLI to run discovery on demand or via scheduled jobs, updating the database in real time.
+### Phase 5: Recommendation System Foundation (Weeks 9-10)
+
+#### 5.1 Content Classification
 - [ ] **Tagging System**: Implement hierarchical content tagging
 - [ ] **Sentiment Analysis**: Article sentiment scoring and classification
 - [ ] **Geographic Tagging**: Location-based content classification
 - [ ] **Industry Classification**: Business sector and topic categorization
 - [ ] **Content Similarity**: Vector-based similarity scoring implementation
 
-#### 4.2 User Interaction Tracking
+#### 5.2 User Interaction Tracking
 - [ ] **Reading Behavior**: Track user engagement and reading patterns
 - [ ] **Preference Management**: User preference storage and management
 - [ ] **Interaction History**: Comprehensive user interaction logging
 - [ ] **Recommendation Feedback**: User rating and feedback collection
 - [ ] **Analytics Foundation**: Basic analytics for recommendation algorithm tuning
 
-#### 4.3 Personalization Features
+#### 5.3 Personalization Features
 - [ ] **User Profiling**: Dynamic user interest profiling based on behavior
 - [ ] **Content Scoring**: Personalized relevance scoring for articles
 - [ ] **Diversity Optimization**: Ensure recommendation diversity across topics
 - [ ] **Trending Integration**: Balance trending content with personal interests
 - [ ] **Time-based Preferences**: Adjust recommendations based on reading patterns
 
-### Phase 5: Advanced Features & Optimization (Weeks 9-10)
+### Phase 6: Advanced Features & Optimization (Weeks 11-12)
 
-#### 5.1 Advanced Content Processing
-- [ ] **Source Discovery Pipeline**: Implement multi-stage automated source discovery (public lists, search engine queries, homepage crawling, recursive expansion, user/admin suggestions), with validation, deduplication, quality scoring, and diversity/cap management. Integrate with source manager for real-time updates and pruning.
+#### 6.1 Advanced Content Processing
 - [ ] **Content Quality Scoring**: Advanced filtering of low-quality articles
 - [ ] **Image Processing**: Thumbnail generation and image optimization
 - [ ] **Content Enrichment**: Additional metadata and content enhancement
 - [ ] **Trend Detection**: Identify emerging topics and trending stories
 
-#### 5.2 Performance Optimization
+#### 6.2 Performance Optimization
 - [ ] **Caching Strategy**: Multi-layer caching for optimal performance
 - [ ] **Database Optimization**: Query optimization and performance tuning
 - [ ] **CDN Integration**: Image and static content delivery optimization
 - [ ] **Load Testing**: Performance testing and bottleneck identification
 - [ ] **Scalability Testing**: Test horizontal scaling capabilities
 
-#### 5.3 Security & Compliance
+#### 6.3 Security & Compliance
 - [ ] **Security Audit**: Comprehensive security review and testing
 - [ ] **Data Privacy**: GDPR compliance and user consent management
 - [ ] **Content Security**: Malware scanning and content policy enforcement
 - [ ] **Audit Logging**: Complete audit trail implementation
 - [ ] **Backup Strategy**: Database backup and recovery procedures
 
-### Phase 6: Production Deployment & Scaling (Weeks 11-12)
+### Phase 7: Production Deployment & Scaling (Weeks 13-14)
 
-#### 6.1 Production Deployment
+#### 7.1 Production Deployment
 - [ ] **AWS Setup**: ECS/EKS deployment configuration
 - [ ] **Database Migration**: Production database setup and migration
 - [ ] **Monitoring Setup**: Production monitoring and alerting
 - [ ] **Load Balancing**: Application load balancer configuration
 - [ ] **SSL/TLS**: HTTPS configuration and certificate management
 
-#### 6.2 Operational Excellence
+#### 7.2 Operational Excellence
 - [ ] **CI/CD Pipeline**: Automated testing, building, and deployment
 - [ ] **Documentation**: Comprehensive deployment and operational documentation
 - [ ] **Troubleshooting Guides**: Error handling and troubleshooting procedures
 - [ ] **Performance Monitoring**: Production performance monitoring and optimization
 - [ ] **Maintenance Procedures**: Rolling updates and system maintenance
 
-#### 6.3 Scaling & Optimization
+#### 7.3 Scaling & Optimization
 - [ ] **Horizontal Scaling**: Multi-instance deployment and load balancing
 - [ ] **Database Scaling**: Read replicas and connection pooling
 - [ ] **Queue Integration**: RabbitMQ integration for high-volume processing
