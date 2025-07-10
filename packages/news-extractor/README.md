@@ -112,7 +112,6 @@ const config = new Configuration({
   
   // Processing settings
   minWordCount: 200,
-  maxKeywords: 50,
   enableEncodingDetection: true,
   fetchImages: true,
   

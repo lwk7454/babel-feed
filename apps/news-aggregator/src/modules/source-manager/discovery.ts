@@ -1,4 +1,5 @@
 import { logger } from '../common/logger'
+import { DiscoveredSource } from '../common/types'
 
 export class SourceDiscoveryService {
   private isRunning = false
@@ -43,7 +44,7 @@ export class SourceDiscoveryService {
     logger.info('Stopping source discovery (placeholder)')
   }
 
-  async discoverFromSeedList(seedUrls: string[]): Promise<any[]> {
+  async discoverFromSeedList(seedUrls: string[]): Promise<DiscoveredSource[]> {
     // Placeholder implementation
     logger.info('Discovering sources from seed list (placeholder):', seedUrls)
     throw new Error('Not implemented - needs automated source discovery')

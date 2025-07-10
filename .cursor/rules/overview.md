@@ -58,9 +58,10 @@ Create a mobile application that enables users to discover, consume, and underst
 - **See `babel-android-features.md` for detailed testing strategy and requirements.**
 
 # Development & Infrastructure
-- Monorepo managed by Nx (21.1.2), Bun as package manager
+- Monorepo managed by Nx (21.1.2), Bun as package manager. DO NOT use NPM. 
 - Android ARM64 primary target, macOS M4 dev environment
 - Local-first infrastructure, AWS-compatible design for future scale
+- Backend DB is PostgreSQL, with Drizzle as ORM. Schema is always managed by Drizzle migrations. All tests use in-memory PGLite connector instead. 
 - **See project root README and module docs for build, test, and deployment commands.**
 
 # Legal & Compliance

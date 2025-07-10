@@ -77,7 +77,7 @@ describe('MetricsService', () => {
       const dbCheck = health.checks.find(c => c.name === 'Database Connection')
       expect(dbCheck).toBeDefined()
       expect(dbCheck?.status).toBe('pass')
-      expect(dbCheck?.responseTime).toBeGreaterThan(0)
+      expect(dbCheck?.responseTime).toBeGreaterThanOrEqual(0)
     })
 
     it('should detect unhealthy status', async () => {

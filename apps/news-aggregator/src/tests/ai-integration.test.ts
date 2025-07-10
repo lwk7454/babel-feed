@@ -3,7 +3,7 @@ import { AIIntegrationService } from '../modules/aggregator/ai-integration'
 
 class StubProviderManager {
   count = 0
-  async initialize() {}
+  async initialize() { return }
   async getEnabledProviders() {
     return [{ id: 'p1', name: 'openrouter', baseUrl: 'https://example.com', providerType: 'translation', metadata: { models: ['gpt-3.5-turbo'] } }]
   }

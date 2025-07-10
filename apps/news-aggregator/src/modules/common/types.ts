@@ -152,6 +152,10 @@ export interface AiProvider {
   circuitBreakerThreshold: number;
   circuitBreakerTimeout: number;
   healthCheckInterval?: number;
+  metadata?: {
+    models?: string[];
+    [key: string]: unknown;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

@@ -226,6 +226,11 @@ export class NewsAggregatorService {
     return this.healthChecker
   }
 
+  async getDatabase(): Promise<any> {
+    // Return the same database connection used by services
+    return (this.sourceManager as any).db
+  }
+
   getRssProcessor(): RssProcessor {
     return this.rssProcessor
   }

@@ -1,11 +1,35 @@
-import { articles, articleTranslations, getDatabase } from '@babel-feed/pgdb'
-import { and, desc, eq, like, or, sql } from 'drizzle-orm'
+import { articles, articleTranslations, getDatabase, getTestDb } from '@babel-feed/pgdb'
+import { and, desc, eq, like, or, sql, type SQL } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { logger } from '../modules/common/logger'
-import { ArticleStorage } from '../services/article-storage'
 import { HealthChecker } from '../services/health-checker'
 import { MetricsService } from '../services/metrics-service'
 import { NewsSourceManager } from '../services/news-source-manager'
+
+interface CreateSourceRequest {
+  name: string
+  slug: string
+  url: string
+  sourceType: 'rss' | 'json' | 'html' | 'api' | 'scraper'
+  language: string
+  category: string
+  tags: string[]
+  enabled: boolean
+  pollingInterval: number
+  reliability: number
+  priority: number
+  metadata: Record<string, unknown>
+}
+
+type UpdateSourceRequest = Partial<CreateSourceRequest>
+
+interface BulkOperationRequest {
+  ids: string[]
+}
+
+interface AlertConfig {
+  [key: string]: unknown
+}
 
 function adminAuth() {
   return new Elysia()
@@ -21,17 +45,21 @@ function adminAuth() {
         set.status = 401
         return { error: 'Unauthorized' }
       }
+      return undefined
     })
 }
 
 export class AdminAPIServer {
   private isRunning = false
   private app = new Elysia({ prefix: '/admin' })
-  private server?: any
+  private server?: unknown
   private sourceManager = new NewsSourceManager()
   private healthChecker = new HealthChecker(this.sourceManager)
-  private articleStorage = new ArticleStorage()
   private metricsService = new MetricsService()
+  
+  private async getDb() {
+    return process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
+  }
 
   async initialize(): Promise<void> {
     await this.sourceManager.initialize()
@@ -44,7 +72,7 @@ export class AdminAPIServer {
 
     // Content Delivery API Endpoints
     this.app.get('/articles', async ({ query }) => {
-      const { page = '1', limit = '20', language, source, category, search } = query as {
+      const { page = '1', limit = '20', language, source: _source, category: _category, search } = query as {
         page?: string
         limit?: string
         language?: string
@@ -57,9 +85,9 @@ export class AdminAPIServer {
       const limitNum = Math.min(parseInt(limit) || 20, 100)
       const offset = (pageNum - 1) * limitNum
       
-      const db = await getDatabase()
+      const db = await this.getDb()
       
-      let whereConditions: any[] = []
+      const whereConditions: SQL[] = []
       
       if (language) {
         whereConditions.push(eq(articleTranslations.language, language))
@@ -70,10 +98,12 @@ export class AdminAPIServer {
           or(
             like(articleTranslations.title, `%${search}%`),
             like(articleTranslations.summary, `%${search}%`)
-          )
+          )!
         )
       }
       
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions)! : sql`1=1`
+
       const query_builder = db
         .select({
           id: articles.id,
@@ -88,11 +118,11 @@ export class AdminAPIServer {
         })
         .from(articles)
         .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
-        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .where(whereClause)
         .orderBy(desc(articles.publishedAt))
         .limit(limitNum)
         .offset(offset)
-      
+
       const results = await query_builder
       
       // Get total count for pagination
@@ -100,8 +130,7 @@ export class AdminAPIServer {
         .select({ count: sql<number>`count(*)` })
         .from(articles)
         .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
-        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      
+        .where(whereClause)
       const [{ count }] = await countQuery
       
       return {
@@ -116,7 +145,7 @@ export class AdminAPIServer {
     })
 
     this.app.get('/articles/:id', async ({ params }) => {
-      const db = await getDatabase()
+      const db = await this.getDb()
       
       const article = await db
         .select()
@@ -155,7 +184,7 @@ export class AdminAPIServer {
       const limitNum = Math.min(parseInt(limit) || 20, 100)
       const offset = (pageNum - 1) * limitNum
       
-      const db = await getDatabase()
+      const db = await this.getDb()
       
       const results = await db
         .select({
@@ -208,16 +237,17 @@ export class AdminAPIServer {
       }
       
       const limitNum = Math.min(parseInt(limit) || 20, 50)
-      const db = await getDatabase()
+      const db = await this.getDb()
       
-      let whereConditions: any[] = [eq(articleTranslations.language, language)]
+      const whereConditions: SQL[] = [eq(articleTranslations.language, language)]
       
       if (categories) {
-        const categoryList = categories.split(',').map(c => c.trim())
+        // const _categoryList = categories.split(',').map(c => c.trim())
         // Note: This would need to be extended with actual category filtering
         // For now, we'll use a simple approach
       }
       
+      const feedWhereClause = whereConditions.length > 0 ? and(...whereConditions) : sql`1=1`
       const results = await db
         .select({
           id: articles.id,
@@ -232,7 +262,7 @@ export class AdminAPIServer {
         })
         .from(articles)
         .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
-        .where(and(...whereConditions))
+        .where(feedWhereClause)
         .orderBy(desc(articles.publishedAt))
         .limit(limitNum)
       
@@ -254,7 +284,7 @@ export class AdminAPIServer {
     })
 
     this.app.post('/sources', async ({ body }) => {
-      const data = body as any
+      const data = body as CreateSourceRequest
       return await this.sourceManager.createSource(data)
     }, { body: t.Object({
       name: t.String(), slug: t.String(), url: t.String(), sourceType: t.String(),
@@ -264,7 +294,7 @@ export class AdminAPIServer {
     }) })
 
     this.app.put('/sources/:id', async ({ params, body }) => {
-      return await this.sourceManager.updateSource(params.id, body as any)
+      return await this.sourceManager.updateSource(params.id, body as UpdateSourceRequest)
     })
 
     this.app.delete('/sources/:id', async ({ params }) => {
@@ -273,12 +303,12 @@ export class AdminAPIServer {
     })
 
     this.app.post('/sources/bulk-enable', async ({ body }) => {
-      await this.sourceManager.bulkEnableSources((body as any).ids)
+      await this.sourceManager.bulkEnableSources((body as BulkOperationRequest).ids)
       return { success: true }
     })
 
     this.app.post('/sources/bulk-disable', async ({ body }) => {
-      await this.sourceManager.bulkDisableSources((body as any).ids)
+      await this.sourceManager.bulkDisableSources((body as BulkOperationRequest).ids)
       return { success: true }
     })
 
@@ -314,7 +344,7 @@ export class AdminAPIServer {
     })
 
     this.app.put('/alerts/config', async ({ body }) => {
-      await this.metricsService.updateAlertConfig(body as any)
+      await this.metricsService.updateAlertConfig(body as AlertConfig)
       return { success: true }
     })
 
@@ -357,7 +387,7 @@ export class AdminAPIServer {
 
     this.isRunning = false
     await this.metricsService.stop()
-    await this.server?.stop()
+    await (this.server as Elysia)?.stop()
     logger.info('Admin API server stopped')
   }
 

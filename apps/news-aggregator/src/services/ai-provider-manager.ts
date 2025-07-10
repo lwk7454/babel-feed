@@ -15,7 +15,7 @@ import { CircuitBreaker } from './circuit-breaker'
 import { CircuitBreakerOptions } from '../modules/common/types'
 
 export class AiProviderManager {
-  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()
+  private db: Awaited<ReturnType<typeof getDatabase | typeof getTestDb>> | undefined
   private circuitBreakers = new Map<string, CircuitBreaker>()
   private keyRotationIndex = new Map<string, number>()
   private rateLimitTracking = new Map<string, { count: number; resetTime: number }>()
@@ -23,10 +23,22 @@ export class AiProviderManager {
   async initialize(): Promise<void> {
     logger.info('Initializing AI provider manager...')
 
+    // Initialize database connection
+    this.db = process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
+
     // Seed initial providers if none exist
-    const existingProviders = await this.getAllProviders()
+    let existingProviders: AiProvider[] = []
+    try {
+      existingProviders = await this.getAllProviders()
+    } catch (error) {
+      logger.debug('No providers found, will seed initial providers')
+    }
+    
     if (existingProviders.length === 0) {
       await this.seedInitialProviders()
+      logger.info('Seeded initial AI providers')
+      // Get the providers after seeding
+      existingProviders = await this.getAllProviders()
     }
 
     // Initialize circuit breakers for all providers and keys
@@ -40,7 +52,7 @@ export class AiProviderManager {
 
   async getAllProviders(): Promise<AiProvider[]> {
     try {
-      const providers = await this.db
+      const providers = await this.db!
         .select()
         .from(aiProviders)
         .orderBy(desc(aiProviders.priority), asc(aiProviders.name))
@@ -59,7 +71,7 @@ export class AiProviderManager {
         whereCondition = and(whereCondition, eq(aiProviders.providerType, providerType))!
       }
 
-      const providers = await this.db
+      const providers = await this.db!
         .select()
         .from(aiProviders)
         .where(whereCondition)
@@ -73,7 +85,7 @@ export class AiProviderManager {
 
   async getProviderKeys(providerId: string): Promise<AiProviderKey[]> {
     try {
-      const keys = await this.db
+      const keys = await this.db!
         .select()
         .from(aiProviderKeys)
         .where(and(
@@ -236,7 +248,7 @@ export class AiProviderManager {
 
   private async getProviderById(id: string): Promise<AiProvider | null> {
     try {
-      const providers = await this.db
+      const providers = await this.db!
         .select()
         .from(aiProviders)
         .where(eq(aiProviders.id, id))
@@ -332,7 +344,7 @@ export class AiProviderManager {
 
   private async updateKeyMetrics(keyId: string, updates: Partial<AiProviderKey>): Promise<void> {
     try {
-      await this.db
+      await this.db!
         .update(aiProviderKeys)
         .set({
           ...(updates.lastUsed && { lastUsed: updates.lastUsed }),
@@ -374,7 +386,7 @@ export class AiProviderManager {
 
   private async resetDailyQuotas(): Promise<void> {
     try {
-      await this.db
+      await this.db!
         .update(aiProviderKeys)
         .set({
           currentUsage: 0,
@@ -478,7 +490,7 @@ export class AiProviderManager {
     ]
 
     for (const providerData of initialProviders) {
-      const [created] = await this.db
+      const [created] = await this.db!
         .insert(aiProviders)
         .values(providerData as NewAiProvider)
         .returning()
@@ -493,7 +505,7 @@ export class AiProviderManager {
     try {
       if (providerIds.length === 0) return
 
-      await this.db
+      await this.db!
         .update(aiProviders)
         .set({ enabled: true })
         .where(inArray(aiProviders.id, providerIds))
@@ -509,7 +521,7 @@ export class AiProviderManager {
     try {
       if (providerIds.length === 0) return
 
-      await this.db
+      await this.db!
         .update(aiProviders)
         .set({ enabled: false })
         .where(inArray(aiProviders.id, providerIds))
@@ -525,7 +537,7 @@ export class AiProviderManager {
     try {
       if (keyIds.length === 0) return
 
-      await this.db
+      await this.db!
         .update(aiProviderKeys)
         .set({ enabled: true })
         .where(inArray(aiProviderKeys.id, keyIds))
@@ -541,7 +553,7 @@ export class AiProviderManager {
     try {
       if (keyIds.length === 0) return
 
-      await this.db
+      await this.db!
         .update(aiProviderKeys)
         .set({ enabled: false })
         .where(inArray(aiProviderKeys.id, keyIds))

@@ -1,13 +1,20 @@
 import { logger } from '../common/logger'
+import { RawArticle } from '../common/types'
+
+interface ContentHashEntry {
+  hash: string
+  url: string
+  timestamp: Date
+}
 
 export class DeduplicationService {
-  private contentHashes = new Map<string, any>()
+  private contentHashes = new Map<string, ContentHashEntry>()
 
   async initialize(): Promise<void> {
     logger.info('Deduplication service initialized')
   }
 
-  async deduplicateArticles(articles: any[]): Promise<any[]> {
+  async deduplicateArticles(articles: RawArticle[]): Promise<RawArticle[]> {
     logger.info('Deduplicating articles (placeholder):', articles.length)
     
     // TODO: Implement sophisticated deduplication logic
@@ -26,7 +33,7 @@ export class DeduplicationService {
     throw new Error('Not implemented - needs content hashing logic')
   }
 
-  async findSimilarArticles(_article: any): Promise<any[]> {
+  async findSimilarArticles(_article: RawArticle): Promise<RawArticle[]> {
     // Placeholder implementation
     logger.info('Finding similar articles (placeholder)')
     throw new Error('Not implemented - needs similarity detection')
@@ -38,7 +45,7 @@ export class DeduplicationService {
     throw new Error('Not implemented - needs URL normalization')
   }
 
-  async calculateSimilarity(_article1: any, _article2: any): Promise<number> {
+  async calculateSimilarity(_article1: RawArticle, _article2: RawArticle): Promise<number> {
     // Placeholder implementation
     logger.info('Calculating similarity (placeholder)')
     throw new Error('Not implemented - needs similarity calculation')

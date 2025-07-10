@@ -1,4 +1,5 @@
 import { logger } from '../common/logger'
+import { NewsSource } from '../common/types'
 
 export class SourceCRUDService {
   async initialize(): Promise<void> {
@@ -12,13 +13,13 @@ export class SourceCRUDService {
   // - Delete source (with soft delete)
   // - Bulk operations
 
-  async createSource(sourceData: any): Promise<any> {
+  async createSource(sourceData: Omit<NewsSource, 'id' | 'createdAt' | 'updatedAt'>): Promise<NewsSource> {
     // Placeholder implementation
     logger.info('Creating source (placeholder):', sourceData)
     throw new Error('Not implemented - needs database-driven source management')
   }
 
-  async updateSource(id: string, sourceData: any): Promise<any> {
+  async updateSource(id: string, sourceData: Partial<NewsSource>): Promise<NewsSource> {
     // Placeholder implementation
     logger.info('Updating source (placeholder):', { id, sourceData })
     throw new Error('Not implemented - needs database-driven source management')
@@ -30,20 +31,20 @@ export class SourceCRUDService {
     throw new Error('Not implemented - needs database-driven source management')
   }
 
-  async getAllSources(): Promise<any[]> {
+  async getAllSources(): Promise<NewsSource[]> {
     // Placeholder implementation
     logger.info('Getting all sources (placeholder)')
     throw new Error('Not implemented - needs database-driven source management')
   }
 
-  async getSourceById(id: string): Promise<any> {
+  async getSourceById(id: string): Promise<NewsSource | null> {
     // Placeholder implementation
     logger.info('Getting source by ID (placeholder):', id)
     throw new Error('Not implemented - needs database-driven source management')
   }
 
   // Legacy method will be removed after full migration
-  getSourceManager(): any {
+  getSourceManager(): null {
     logger.warn('Using legacy getSourceManager - should be replaced with CRUD methods')
     // Temporarily return null - this forces using the service layer for legacy access
     return null

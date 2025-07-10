@@ -1,11 +1,12 @@
 import { logger } from '../common/logger'
+import { HealthStatusResponse } from '../common/types'
 
 export class HealthMonitorService {
   async initialize(): Promise<void> {
     logger.info('Health monitor service initialized')
   }
 
-  async getHealthStatus(): Promise<any> {
+  async getHealthStatus(): Promise<HealthStatusResponse> {
     // TODO: Implement independent health monitoring
     return {
       status: 'healthy',
@@ -39,7 +40,7 @@ export class HealthMonitorService {
   }
 
   // Legacy method will be removed after full migration
-  getHealthChecker(): any {
+  getHealthChecker(): null {
     logger.warn('Using legacy getHealthChecker - should be replaced with module methods')
     return null
   }

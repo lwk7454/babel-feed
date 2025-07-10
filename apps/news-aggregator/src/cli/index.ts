@@ -2,6 +2,8 @@
 import { logger } from '../modules/common/logger'
 import { ensureDbConnection } from '../modules/common/db'
 import { NewsAggregatorService } from '../services/news-aggregator-service'
+import { articles, articleTranslations } from '@babel-feed/pgdb'
+import { sql, eq, desc } from 'drizzle-orm'
 
 const COMMANDS = {
   'status': 'Show aggregator status',
@@ -270,13 +272,13 @@ export class NewsAggregatorCLI {
     if (!this.service) throw new Error('Service not initialized')
     
     try {
-      const sourceCRUD = this.service.getSourceCRUD()
+      const sourceManager = this.service.getSourceManager()
       
       const newSource = {
         name,
         slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         url,
-        sourceType: 'rss',
+        sourceType: 'rss' as const,
         language,
         category,
         tags: [],
@@ -287,7 +289,7 @@ export class NewsAggregatorCLI {
         metadata: {}
       }
       
-      const source = await sourceCRUD.createSource(newSource)
+      const source = await sourceManager.createSource(newSource)
       console.log(`✅ Added source: ${source.name} (${source.id})`)
       console.log(`   URL: ${source.url}`)
       console.log(`   Language: ${source.language}`)
@@ -357,9 +359,6 @@ export class NewsAggregatorCLI {
       console.log('\n=== Services Status ===')
       for (const service of health.services || []) {
         console.log(`${service.name}: ${this.getHealthIcon(service.status)} ${service.status}`)
-        if (service.responseTime) {
-          console.log(`  Response Time: ${service.responseTime}ms`)
-        }
       }
     } catch (error) {
       console.log('Error during health check:', error)
@@ -412,11 +411,8 @@ export class NewsAggregatorCLI {
     const limit = parseInt(args[0]) || 10
     
     try {
-      const { getDatabase } = await import('@babel-feed/pgdb')
-      const { articles, articleTranslations } = await import('@babel-feed/pgdb')
-      const { eq, desc } = await import('drizzle-orm')
-      
-      const db = await getDatabase()
+      // Use the same database connection that the service uses
+      const db = await this.service.getDatabase()
       
       const recentArticles = await db
         .select({
@@ -438,7 +434,14 @@ export class NewsAggregatorCLI {
         return
       }
       
-      recentArticles.forEach(article => {
+      recentArticles.forEach((article: {
+        id: string
+        url: string
+        source: string
+        publishedAt: Date | null
+        title: string | null
+        language: string | null
+      }) => {
         console.log(`\n${article.title || 'Untitled'} (${article.language || 'unknown'})`)
         console.log(`  Source: ${article.source}`)
         console.log(`  Published: ${article.publishedAt ? article.publishedAt.toISOString() : 'Unknown'}`)
@@ -453,11 +456,8 @@ export class NewsAggregatorCLI {
     if (!this.service) throw new Error('Service not initialized')
     
     try {
-      const { getDatabase } = await import('@babel-feed/pgdb')
-      const { articles, articleTranslations } = await import('@babel-feed/pgdb')
-      const { sql, eq } = await import('drizzle-orm')
-      
-      const db = await getDatabase()
+      // Use the same database connection that the service uses
+      const db = await this.service.getDatabase()
       
       // Total articles
       const [{ count: totalArticles }] = await db
@@ -490,14 +490,14 @@ export class NewsAggregatorCLI {
       
       if (articlesByLanguage.length > 0) {
         console.log('\n=== Articles by Language ===')
-        articlesByLanguage.forEach(item => {
+        articlesByLanguage.forEach((item: { language: string; count: number }) => {
           console.log(`${item.language}: ${item.count}`)
         })
       }
       
       if (articlesBySource.length > 0) {
         console.log('\n=== Top 10 Sources by Article Count ===')
-        articlesBySource.forEach(item => {
+        articlesBySource.forEach((item: { source: string; count: number }) => {
           console.log(`${item.source}: ${item.count}`)
         })
       }

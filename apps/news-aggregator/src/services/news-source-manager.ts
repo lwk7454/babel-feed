@@ -10,15 +10,27 @@ import { NewsSource, AggregatorError, ValidationError } from '../modules/common/
 import { logger } from '../modules/common/logger'
 
 export class NewsSourceManager {
-  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()
+  private db: Awaited<ReturnType<typeof getDatabase | typeof getTestDb>> | undefined
 
   async initialize(): Promise<void> {
     logger.info('Initializing database-based source manager...')
     
+    // Initialize database connection
+    this.db = process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
+    
     // Seed initial sources if none exist
-    const existingSources = await this.getAllSources()
+    let existingSources: NewsSource[] = []
+    try {
+      existingSources = await this.getAllSources()
+    } catch (error) {
+      logger.debug('No sources found, will seed initial sources')
+    }
+    
     if (existingSources.length === 0) {
       await this.seedInitialSources()
+      logger.info('Seeded initial sources')
+      // Get the sources after seeding
+      existingSources = await this.getAllSources()
     }
     
     logger.info(`Database source manager initialized with ${existingSources.length} sources`)
@@ -26,7 +38,7 @@ export class NewsSourceManager {
 
   async getAllSources(): Promise<NewsSource[]> {
     try {
-      const sources = await this.db
+      const sources = await this.db!
         .select()
         .from(newsSources)
         .orderBy(asc(newsSources.priority), asc(newsSources.name))
@@ -40,7 +52,7 @@ export class NewsSourceManager {
 
   async getEnabledSources(): Promise<NewsSource[]> {
     try {
-      const sources = await this.db
+      const sources = await this.db!
         .select()
         .from(newsSources)
         .where(eq(newsSources.enabled, true))
@@ -55,7 +67,7 @@ export class NewsSourceManager {
 
   async getSourceById(id: string): Promise<NewsSource | null> {
     try {
-      const sources = await this.db
+      const sources = await this.db!
         .select()
         .from(newsSources)
         .where(eq(newsSources.id, id))
@@ -70,7 +82,7 @@ export class NewsSourceManager {
 
   async getSourceBySlug(slug: string): Promise<NewsSource | null> {
     try {
-      const sources = await this.db
+      const sources = await this.db!
         .select()
         .from(newsSources)
         .where(eq(newsSources.slug, slug))
@@ -85,7 +97,7 @@ export class NewsSourceManager {
 
   async getSourcesByLanguage(language: string): Promise<NewsSource[]> {
     try {
-      const sources = await this.db
+      const sources = await this.db!
         .select()
         .from(newsSources)
         .where(eq(newsSources.language, language))
@@ -100,7 +112,7 @@ export class NewsSourceManager {
 
   async getSourcesByCategory(category: string): Promise<NewsSource[]> {
     try {
-      const sources = await this.db
+      const sources = await this.db!
         .select()
         .from(newsSources)
         .where(eq(newsSources.category, category))
@@ -135,7 +147,7 @@ export class NewsSourceManager {
         lastError: sourceData.lastError,
       }
 
-      const [created] = await this.db
+      const [created] = await this.db!
         .insert(newsSources)
         .values(newSource)
         .returning()
@@ -177,7 +189,7 @@ export class NewsSourceManager {
         ...(updates.successCount !== undefined && { successCount: updates.successCount }),
       }
 
-      const [updated] = await this.db
+      const [updated] = await this.db!
         .update(newsSources)
         .set(updateData)
         .where(eq(newsSources.id, id))
@@ -200,10 +212,10 @@ export class NewsSourceManager {
 
   async deleteSource(id: string): Promise<void> {
     try {
-      const deleted = await this.db
+      const deleted = await this.db!
         .delete(newsSources)
         .where(eq(newsSources.id, id))
-        .returning({ name: newsSources.name })
+        .returning()
 
       if (deleted.length === 0) {
         throw new AggregatorError(`Source with id ${id} not found`, 'NOT_FOUND', 404)
@@ -265,7 +277,7 @@ export class NewsSourceManager {
     try {
       if (ids.length === 0) return
 
-      await this.db
+      await this.db!
         .update(newsSources)
         .set({ enabled: true })
         .where(inArray(newsSources.id, ids))
@@ -281,7 +293,7 @@ export class NewsSourceManager {
     try {
       if (ids.length === 0) return
 
-      await this.db
+      await this.db!
         .update(newsSources)
         .set({ enabled: false })
         .where(inArray(newsSources.id, ids))

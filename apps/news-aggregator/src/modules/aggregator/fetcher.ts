@@ -1,6 +1,6 @@
 import { Article } from '@babel-feed/news-extractor'
 import { logger } from '../common/logger'
-import { NewsSource, RawArticle, AggregatorError } from '../common/types'
+import { NewsSource, RawArticle, ProcessingResult, AggregatorError } from '../common/types'
 
 export class FetcherService {
   private htmlExtractor: HtmlContentExtractor
@@ -13,18 +13,19 @@ export class FetcherService {
     logger.info('Fetcher service initialized')
   }
 
-  async fetchFromAllSources(): Promise<any> {
+  async fetchFromAllSources(): Promise<ProcessingResult> {
     logger.info('Fetching from all sources')
     // TODO: Implement independent fetching logic
     return {
       processed: 0,
       articles: [],
       errors: 0,
-      skipped: 0
+      skipped: 0,
+      processingTime: 0
     }
   }
 
-  async fetchFromSource(sourceId: string): Promise<any> {
+  async fetchFromSource(sourceId: string): Promise<ProcessingResult> {
     logger.info('Fetching from source:', sourceId)
     // TODO: Implement single source fetching
     throw new Error('Not implemented - needs single source fetching')
@@ -38,7 +39,7 @@ export class FetcherService {
   // - Rate limiting per source
   // - Bandwidth monitoring
 
-  async fetchRSS(url: string): Promise<any> {
+  async fetchRSS(url: string): Promise<RawArticle[]> {
     // Placeholder implementation
     logger.info('Fetching RSS (placeholder):', url)
     throw new Error('Not implemented - needs RSS fetching logic')
@@ -49,14 +50,14 @@ export class FetcherService {
     return this.htmlExtractor.extractFromUrl(url, source)
   }
 
-  async fetchJSON(url: string): Promise<any> {
+  async fetchJSON(url: string): Promise<RawArticle[]> {
     // Placeholder implementation
     logger.info('Fetching JSON (placeholder):', url)
     throw new Error('Not implemented - needs JSON API fetching')
   }
 
   // Legacy method will be removed after full migration
-  getRssProcessor(): any {
+  getRssProcessor(): null {
     logger.warn('Using legacy getRssProcessor - should be replaced with module methods')
     return null
   }
@@ -83,61 +84,38 @@ export class FetcherService {
 }
 
 class HtmlContentExtractor {
-  private readonly config = {
-    language: 'en',
-    userAgent: 'BabelFeed-NewsAggregator/1.0',
-    timeout: 30000,
-    maxContentLength: 10 * 1024 * 1024, // 10MB
-    minWordCount: 50,
-    minSentCount: 3,
-    maxTitle: 200,
-    maxText: 1000000
-  }
 
   async extractFromUrl(url: string, source: NewsSource): Promise<RawArticle[]> {
     try {
       logger.info(`Extracting content from ${url} using news-extractor`)
       
-      // Create article instance with source language preference
-      const article = new Article(url, {
-        language: source.language || 'en',
-        userAgent: this.config.userAgent,
-        timeout: this.config.timeout,
-        minWordCount: this.config.minWordCount,
-        minSentCount: this.config.minSentCount,
-        maxTitle: this.config.maxTitle,
-        maxText: this.config.maxText
-      })
-      
-      // Download and parse article content
-      await article.build()
+      // Create article instance and process it
+      const article = new Article(url)
+      const result = await article.process()
       
       // Validate article quality
-      if (!article.isValidArticle()) {
+      if (!result.title || result.text.length < 100) {
         logger.debug(`Article quality validation failed for ${url}`)
         return []
       }
       
-      // Extract the data we need
-      const result = article.getExtractionResult()
-      
       // Convert to our internal format
       const rawArticle: RawArticle = {
         url: article.url,
-        title: result.title,
-        description: this.generateDescription(result.text, result.meta.description),
-        imageUrl: result.images.length > 0 ? result.images[0] : undefined,
+        title: result.title || '',
+        description: this.generateDescription(result.text, result.metadata?.description || ''),
+        imageUrl: result.images && result.images.length > 0 ? result.images[0] : undefined,
         publishedAt: result.publishDate || new Date(),
-        author: result.authors.length > 0 ? result.authors.join(', ') : undefined,
+        author: result.authors && result.authors.length > 0 ? result.authors.join(', ') : undefined,
         source: source.name,
-        sourceLanguage: result.language || source.language,
+        sourceLanguage: result.metadata?.language || source.language,
         metadata: {
           extractor: 'news-extractor',
-          wordCount: article.getStats().wordCount,
-          readingTime: article.getStats().readingTime,
-          keywords: result.meta.keywords?.join(', '),
-          siteName: result.meta.siteName,
-          canonicalUrl: result.meta.canonicalUrl
+          wordCount: 0, // Will be calculated from text
+          readingTime: Math.ceil(result.text.length / 200), // Rough estimate
+          keywords: result.metadata?.keywords?.join(', '),
+          siteName: result.metadata?.siteName,
+          canonicalUrl: result.metadata?.canonicalUrl
         }
       }
       

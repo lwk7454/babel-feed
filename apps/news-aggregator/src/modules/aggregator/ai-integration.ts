@@ -1,6 +1,7 @@
 import { logger } from '../common/logger'
 import { AiProviderManager } from '../../services/ai-provider-manager'
 import { CacheManager } from '../../services/cache-manager'
+import { RawArticle } from '../common/types'
 
 export class AIIntegrationService {
   private translationCache = CacheManager.createTranslationCache()
@@ -77,7 +78,7 @@ export class AIIntegrationService {
     return 'general'
   }
 
-  async detectTrends(articles: any[]): Promise<any[]> {
+  async detectTrends(articles: RawArticle[]): Promise<Array<[string, number]>> {
     const counts: Record<string, number> = {}
     for (const a of articles) {
       (a.tags || []).forEach((t: string) => {

@@ -55,21 +55,21 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun test",
+        "command": "NODE_ENV=test bun test",
         "cwd": "apps/news-aggregator"
       }
     },
     "test:watch": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun test --watch",
+        "command": "NODE_ENV=test bun test --watch",
         "cwd": "apps/news-aggregator"
       }
     },
     "test:coverage": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun test --coverage",
+        "command": "NODE_ENV=test bun test --coverage",
         "cwd": "apps/news-aggregator"
       }
     },

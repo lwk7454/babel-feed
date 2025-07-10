@@ -2,12 +2,17 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
 import { setupTestDatabase, cleanupTestDatabase, clearTestData, insertTestArticle, insertTestArticleTranslation } from '@babel-feed/pgdb'
 import { AdminAPIServer } from '../api/admin-api'
 
+// Ensure test environment is set before any imports
+process.env.NODE_ENV = 'test'
+
 describe('Content Delivery API', () => {
   let apiServer: AdminAPIServer
   let baseUrl: string
 
   beforeAll(async () => {
     await setupTestDatabase()
+    // Wait a moment to ensure database is ready
+    await new Promise(resolve => setTimeout(resolve, 100))
     apiServer = new AdminAPIServer()
     await apiServer.initialize()
     await apiServer.start()

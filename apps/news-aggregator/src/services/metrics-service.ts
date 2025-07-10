@@ -1,4 +1,4 @@
-import { articles, articleTranslations, getDatabase, newsSources } from '@babel-feed/pgdb'
+import { articles, articleTranslations, getDatabase, getTestDb, newsSources } from '@babel-feed/pgdb'
 import { gte, sql } from 'drizzle-orm'
 import { logger } from '../modules/common/logger'
 
@@ -50,6 +50,10 @@ export class MetricsService {
   private metrics: SystemMetrics | null = null
   private metricsInterval?: NodeJS.Timeout
   private alertInterval?: NodeJS.Timeout
+  
+  private async getDb() {
+    return process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
+  }
 
   async initialize(): Promise<void> {
     logger.info('Initializing metrics service...')
@@ -74,7 +78,7 @@ export class MetricsService {
 
   async collectMetrics(): Promise<SystemMetrics> {
     try {
-      const db = await getDatabase()
+      const db = await this.getDb()
       const now = new Date()
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
       const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)

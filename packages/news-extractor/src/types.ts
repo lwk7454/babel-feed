@@ -82,7 +82,6 @@ export interface ProcessingConfig {
   cleanArticleHtml?: boolean;
   httpSuccessOnly?: boolean;
   language?: string;
-  // NOTE: maxKeywords removed - no keyword extraction in this package
 }
 
 export interface LanguageConfig {
@@ -90,7 +89,6 @@ export interface LanguageConfig {
   name: string;
   tokenizer?: string;
   unicodeRanges?: string[];
-  // NOTE: stopwords removed - no keyword extraction in this package
 }
 
 /**

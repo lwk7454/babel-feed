@@ -26,10 +26,7 @@ export class Configuration {
   public minSentCount = 7
   public maxTitle = 200
   public maxText = 100000
-  public maxKeywords = 35 // Kept for compatibility but unused
   public maxAuthors = 10
-  public maxSummary = 5000 // Kept for compatibility but unused
-  public maxSummarySent = 5 // Kept for compatibility but unused
   public maxFileMemo = 20000
 
   // Image processing settings
@@ -248,10 +245,7 @@ export class Configuration {
       minSentCount: this.minSentCount,
       maxTitle: this.maxTitle,
       maxText: this.maxText,
-      maxKeywords: this.maxKeywords,
       maxAuthors: this.maxAuthors,
-      maxSummary: this.maxSummary,
-      maxSummarySent: this.maxSummarySent,
       maxFileMemo: this.maxFileMemo,
       topImageSettings: this.topImageSettings,
       memorizeArticles: this.memorizeArticles,

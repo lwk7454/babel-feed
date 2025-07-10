@@ -1,4 +1,4 @@
-import { fulltext } from '@babel-feed/news-extractor'
+import { fulltext, Configuration } from '@babel-feed/news-extractor'
 import { logger } from '../common/logger'
 import { RawArticle } from '../common/types'
 
@@ -47,8 +47,16 @@ export class ProcessorService {
     keywords: string[];
   }> {
     try {
-      // Extract text content first
-      const extractedText = await fulltext(rawContent, 'en')
+      // Extract text content first  
+      const config = new Configuration()
+      config.update({
+        language: 'en',
+        minWordCount: 10,
+        minSentCount: 1,
+        maxTitle: 500,
+        maxText: 100000
+      })
+      const extractedText = await fulltext(rawContent, config)
       
       // For now, return basic extraction result
       // In future, we can use the full Article class for complete extraction
