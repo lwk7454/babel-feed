@@ -16,6 +16,7 @@ import { contentValidationMiddleware, rateLimitMiddleware, securityMiddleware } 
 import { articleRoutes } from "./routes/article.routes.js"
 import { authRoutes } from "./routes/auth.routes.js"
 import { translationRoutes } from "./routes/translation.js"
+import { translationService } from './services/translation.service.js'
 
 const app = new Elysia()
   // Add stats middleware
@@ -252,6 +253,7 @@ const app = new Elysia()
 // Initialize database on startup
 async function initializeApp() {
   await initializeDatabase()
+  await translationService.initialize()
 }
 
 // Run initialization
