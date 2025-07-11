@@ -1,4 +1,4 @@
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { CacheEntry } from '../modules/common/types'
 import { config } from '../modules/common/config'
 

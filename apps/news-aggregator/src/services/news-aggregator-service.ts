@@ -1,4 +1,4 @@
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { config } from '../modules/common/config'
 import { ModuleStatus, LegacyService } from '../modules/common/types'
 
@@ -15,7 +15,7 @@ import { DeduplicationService } from '../modules/aggregator/deduplication'
 
 // Working service managers (for immediate functionality)
 import { NewsSourceManager } from './news-source-manager'
-import { AiProviderManager } from './ai-provider-manager'
+import { AiProviderManager } from '@babel-feed/llm-provider'
 import { CacheManager } from './cache-manager'
 import { HealthChecker } from './health-checker'
 import { RssProcessor } from './rss-processor'
@@ -251,7 +251,7 @@ export class NewsAggregatorService {
 
   getLegacyAiProviderManager() {
     if (!this.legacyAiProviderManager) {
-      const { AiProviderManager } = require('./ai-provider-manager')
+      const { AiProviderManager } = require('@babel-feed/llm-provider')
       this.legacyAiProviderManager = new AiProviderManager()
       if (this.legacyAiProviderManager && !this.legacyAiProviderManager.initialized) {
         (this.legacyAiProviderManager as any).initialize().catch(console.error)

@@ -1,7 +1,7 @@
 import { articles, articleTranslations, getDatabase, getTestDb } from '@babel-feed/pgdb'
 import { and, desc, eq, like, or, sql, type SQL } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { HealthChecker } from '../services/health-checker'
 import { MetricsService } from '../services/metrics-service'
 import { NewsSourceManager } from '../services/news-source-manager'

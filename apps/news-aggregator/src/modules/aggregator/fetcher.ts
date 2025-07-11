@@ -1,5 +1,5 @@
 import { Article } from '@babel-feed/news-extractor'
-import { logger } from '../common/logger'
+import { logger } from '@babel-feed/utils'
 import { NewsSource, RawArticle, ProcessingResult, AggregatorError } from '../common/types'
 
 export class FetcherService {

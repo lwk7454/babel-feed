@@ -1,5 +1,5 @@
 import { initializeDatabase } from '@babel-feed/pgdb'
-import { logger } from './logger'
+import { logger } from '@babel-feed/utils'
 
 export { initializeDatabase } from '@babel-feed/pgdb'
 export * from '@babel-feed/pgdb'

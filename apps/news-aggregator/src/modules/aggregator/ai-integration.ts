@@ -1,5 +1,5 @@
-import { logger } from '../common/logger'
-import { AiProviderManager } from '../../services/ai-provider-manager'
+import { logger } from '@babel-feed/utils'
+import { AiProviderManager } from '@babel-feed/llm-provider'
 import { CacheManager } from '../../services/cache-manager'
 import { RawArticle } from '../common/types'
 

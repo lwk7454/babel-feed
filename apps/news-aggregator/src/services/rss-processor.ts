@@ -2,7 +2,7 @@ import { createHash } from 'crypto'
 import RSSParser from 'rss-parser'
 import * as cheerio from 'cheerio'
 import { NewsSource, RawArticle, AggregatorError, RSSItem } from '../modules/common/types'
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { NewsSourceManager } from './news-source-manager'
 
 export class RssProcessor {
