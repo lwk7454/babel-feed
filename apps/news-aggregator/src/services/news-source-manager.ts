@@ -7,7 +7,7 @@ import {
 } from '@babel-feed/pgdb'
 import { asc, desc, eq, inArray } from 'drizzle-orm'
 import { NewsSource, AggregatorError, ValidationError } from '../modules/common/types'
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 
 export class NewsSourceManager {
   private db: Awaited<ReturnType<typeof getDatabase | typeof getTestDb>> | undefined

@@ -1,7 +1,7 @@
 import { articles, type NewArticle, getDatabase, getTestDb } from '@babel-feed/pgdb'
 import { eq } from 'drizzle-orm'
 import { RawArticle } from '../modules/common/types'
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 
 export class ArticleStorage {
   private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()

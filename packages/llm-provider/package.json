@@ -1,0 +1,21 @@
+{
+  "name": "@babel-feed/llm-provider",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "../../dist/packages/llm-provider/index.js",
+  "types": "../../dist/packages/llm-provider/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "../../dist/packages/llm-provider/index.js",
+      "types": "../../dist/packages/llm-provider/src/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.2",
+    "@babel-feed/utils": "*"
+  },
+  "devDependencies": {
+    "@types/node": "~18.16.9",
+    "typescript": "~5.8.3"
+  }
+}

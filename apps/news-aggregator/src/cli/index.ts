@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { ensureDbConnection } from '../modules/common/db'
 import { NewsAggregatorService } from '../services/news-aggregator-service'
 import { articles, articleTranslations } from '@babel-feed/pgdb'

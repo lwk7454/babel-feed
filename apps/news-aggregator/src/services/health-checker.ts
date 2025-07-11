@@ -1,6 +1,6 @@
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { NewsSourceManager } from './news-source-manager'
-import { AiProviderManager } from './ai-provider-manager'
+import { AiProviderManager } from '@babel-feed/llm-provider'
 
 export interface HealthStatus {
   status: 'healthy' | 'unhealthy' | 'degraded';

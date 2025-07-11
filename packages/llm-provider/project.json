@@ -1,0 +1,44 @@
+{
+  "name": "llm-provider",
+  "root": "packages/llm-provider",
+  "sourceRoot": "packages/llm-provider/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/llm-provider",
+        "main": "packages/llm-provider/src/index.ts",
+        "tsConfig": "packages/llm-provider/tsconfig.json",
+        "bundle": false,
+        "format": ["esm"],
+        "platform": "node",
+        "target": "node18",
+        "declaration": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/llm-provider/**/*.ts"]
+      }
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "packages/llm-provider"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test",
+        "cwd": "packages/llm-provider"
+      }
+    }
+  },
+  "tags": ["scope:llm-provider", "type:library"]
+}

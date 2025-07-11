@@ -1,4 +1,6 @@
 import { OpenAI } from "openai"
+import { AiProviderManager } from '@babel-feed/llm-provider'
+import { logger } from '@babel-feed/utils'
 import { 
   TranslationRequest, 
   StreamingTranslationResult, 
@@ -29,18 +31,14 @@ function getLanguageName(code: string): string {
 }
 
 export class TranslationService {
-  private openaiClient: OpenAI
-  
-  constructor() {
-    // Configure OpenAI client for OpenRouter - USING PAID MODELS FOR BETTER PERFORMANCE
-    this.openaiClient = new OpenAI({
-      apiKey: CONFIG.OPENROUTER_API_KEY,
-      baseURL: CONFIG.OPENROUTER_BASE_URL,
-      defaultHeaders: {
-        "HTTP-Referer": "https://babel-feed.com",
-        "X-Title": "Babel Feed Translation - Paid Models",
-      },
-    })
+  private aiProviderManager: AiProviderManager
+
+  constructor(aiProviderManager = new AiProviderManager()) {
+    this.aiProviderManager = aiProviderManager
+  }
+
+  async initialize(): Promise<void> {
+    await this.aiProviderManager.initialize()
   }
 
   /**
@@ -97,6 +95,28 @@ export class TranslationService {
     prompt += "\n\nProvide only the translation without explanations or additional text."
     
     return prompt
+  }
+
+  private async withProvider<T>(operation: (client: OpenAI) => Promise<T>): Promise<T> {
+    const providers = await this.aiProviderManager.getEnabledProviders('translation')
+    for (const provider of providers) {
+      try {
+        return await this.aiProviderManager.executeWithProvider(provider.id, async (_p, key) => {
+          const client = new OpenAI({
+            apiKey: key.apiKey || key.keyValue,
+            baseURL: provider.baseUrl,
+            defaultHeaders: {
+              'HTTP-Referer': 'https://babel-feed.com',
+              'X-Title': 'Babel Feed Translation - Paid Models'
+            }
+          })
+          return await operation(client)
+        })
+      } catch (error) {
+        logger.warn(`Provider ${provider.name} failed:`, error)
+      }
+    }
+    throw new Error('All translation providers failed')
   }
 
   /**
@@ -188,22 +208,25 @@ export class TranslationService {
   ): AsyncGenerator<StreamingTranslationResult> {
     const prompt = this.generateTranslationPrompt(request)
     
-    const stream = await this.openaiClient.chat.completions.create({
-      model: modelConfig.modelId,
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional translator specializing in accurate, contextually appropriate translations. Focus on preserving meaning and cultural nuances."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: modelConfig.maxTokens,
-      temperature: modelConfig.temperature,
-      stream: true,
-    })
+    const stream = await this.withProvider(client =>
+      client.chat.completions.create({
+        model: modelConfig.modelId,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional translator specializing in accurate, contextually appropriate translations. Focus on preserving meaning and cultural nuances."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: modelConfig.maxTokens,
+        temperature: modelConfig.temperature,
+        stream: true
+      })
+    )
 
     let accumulatedContent = ""
     let chunkNumber = 0
@@ -416,22 +439,25 @@ export class TranslationService {
   ): AsyncGenerator<string> {
     const prompt = this.generateBatchedTranslationPrompt(request)
     
-    const stream = await this.openaiClient.chat.completions.create({
-      model: modelConfig.modelId,
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional translator specializing in accurate, contextually appropriate translations. You must return valid JSON with the exact structure requested, preserving all element IDs."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: modelConfig.maxTokens,
-      temperature: modelConfig.temperature,
-      stream: true,
-    })
+    const stream = await this.withProvider(client =>
+      client.chat.completions.create({
+        model: modelConfig.modelId,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional translator specializing in accurate, contextually appropriate translations. You must return valid JSON with the exact structure requested, preserving all element IDs."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: modelConfig.maxTokens,
+        temperature: modelConfig.temperature,
+        stream: true
+      })
+    )
 
     let accumulatedContent = ""
     let processedElements = 0
@@ -732,3 +758,4 @@ export class TranslationService {
 
 // Export singleton instance
 export const translationService = new TranslationService()
+

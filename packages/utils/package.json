@@ -1,0 +1,17 @@
+{
+  "name": "@babel-feed/utils",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "../../dist/packages/utils/index.js",
+  "types": "../../dist/packages/utils/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "../../dist/packages/utils/index.js",
+      "types": "../../dist/packages/utils/src/index.d.ts"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "~18.16.9",
+    "typescript": "~5.8.3"
+  }
+}

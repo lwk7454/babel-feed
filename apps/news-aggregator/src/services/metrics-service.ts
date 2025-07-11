@@ -1,6 +1,6 @@
 import { articles, articleTranslations, getDatabase, getTestDb, newsSources } from '@babel-feed/pgdb'
 import { gte, sql } from 'drizzle-orm'
-import { logger } from '../modules/common/logger'
+import { logger } from '@babel-feed/utils'
 
 export interface SystemMetrics {
   timestamp: string

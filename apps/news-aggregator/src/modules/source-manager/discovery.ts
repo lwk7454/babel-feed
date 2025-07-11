@@ -1,4 +1,4 @@
-import { logger } from '../common/logger'
+import { logger } from '@babel-feed/utils'
 import { DiscoveredSource } from '../common/types'
 
 export class SourceDiscoveryService {

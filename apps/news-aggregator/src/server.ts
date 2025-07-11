@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { logger } from './modules/common/logger'
+import { logger } from '@babel-feed/utils'
 import { config } from './modules/common/config'
 import { ensureDbConnection } from './modules/common/db'
 import { AdminAPIServer } from './api/admin-api'
