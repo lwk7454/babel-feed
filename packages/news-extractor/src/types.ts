@@ -46,7 +46,6 @@ export interface ExtractionResult {
   videos: string[];
   topNode: any;
   html?: string;
-  cleanedHtml?: string;
   downloadState?: DownloadState;
   parseState?: ParseState;
 }

@@ -2,10 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "../../dist/packages/llm-provider",
-    "rootDir": ".",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
   },
-  "include": ["src/**/*"],
+  "include": ["**/*.ts"],
   "exclude": ["dist/**/*", "node_modules/**/*"]
 }

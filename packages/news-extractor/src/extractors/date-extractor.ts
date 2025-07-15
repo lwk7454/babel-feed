@@ -7,6 +7,7 @@ import type { CheerioAPI, Cheerio } from 'cheerio'
 import type { Element } from 'domhandler'
 import { Configuration } from '../configuration.js'
 import { PUBLISH_DATE_META_INFO, PUBLISH_DATE_TAGS } from './defines.js'
+import { RelativeDateParser } from './relative-date-parser.js'
 
 interface DateMatch {
   date: Date
@@ -16,9 +17,11 @@ interface DateMatch {
 export class DateExtractor {
   private config: Configuration
   private pubdate: Date | null = null
+  private relativeDateParser: RelativeDateParser
 
   constructor(config: Configuration) {
     this.config = config
+    this.relativeDateParser = new RelativeDateParser()
   }
 
   /**
@@ -90,6 +93,9 @@ export class DateExtractor {
         // Invalid JSON, continue
       }
     })
+
+    // Strategy 2.5: Extract from relative date patterns
+    this.extractRelativeDates($, dateMatches, parseDateStr)
 
     // Strategy 3: Extract from <time> tags
     $('time').each((_, timeEl) => {
@@ -197,6 +203,82 @@ export class DateExtractor {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Extract relative dates from time elements and article content
+   */
+  private extractRelativeDates($: CheerioAPI, dateMatches: DateMatch[], parseDateStr: (dateStr: string, isUrlDate?: boolean) => Date | null): void {
+    const language = this.config.language || 'en'
+    
+    // Strategy 2.5a: Check <time> elements with relative text content
+    $('time').each((_, timeEl) => {
+      const $timeEl = $(timeEl)
+      const text = $timeEl.text().trim()
+      const datetime = $timeEl.attr('datetime')
+      
+      if (text) {
+        // Check if the text contains relative time expressions
+        const relativeMatch = this.relativeDateParser.parse(text, language)
+        if (relativeMatch) {
+          if (datetime) {
+            // If we have both datetime and relative text, use the datetime but give it highest score
+            const dateObj = parseDateStr(datetime)
+            if (dateObj) {
+              // Highest score for time elements with both datetime and relative text
+              const score = 11 // Higher than URL/JSON-LD (10) since it has both precise datetime and relative confirmation
+              dateMatches.push({ date: dateObj, score })
+            }
+          } else {
+            // No datetime attribute, use relative parsing
+            const score = Math.floor(relativeMatch.confidence * 7) // Max score of 7
+            dateMatches.push({ date: relativeMatch.date, score })
+          }
+        }
+      }
+    })
+    
+    // Strategy 2.5b: Check common date container elements
+    const dateSelectors = [
+      '.date', '.publish-date', '.published', '.timestamp', '.byline',
+      '.article-date', '.post-date', '.entry-date', '.time',
+      '[class*="date"]', '[class*="time"]', '[class*="published"]'
+    ]
+    
+    for (const selector of dateSelectors) {
+      $(selector).each((_, el) => {
+        const $el = $(el)
+        const text = $el.text().trim()
+        
+        if (text && text.length < 100) { // Avoid long content blocks
+          const relativeMatch = this.relativeDateParser.parse(text, language)
+          if (relativeMatch) {
+            // Lower score for content-based extraction
+            const score = Math.floor(relativeMatch.confidence * 6) // Max score of 6
+            dateMatches.push({ date: relativeMatch.date, score })
+          }
+        }
+      })
+    }
+    
+    // Strategy 2.5c: Check article content for relative dates (limited search)
+    const contentElements = $('article, .article-body, .content, .post-content, .entry-content')
+    if (contentElements.length > 0) {
+      contentElements.first().find('p, div, span').each((_, el) => {
+        const $el = $(el)
+        const text = $el.text().trim()
+        
+        // Only check relatively short text blocks that might contain dates
+        if (text && text.length > 5 && text.length < 200) {
+          const relativeMatch = this.relativeDateParser.parse(text, language)
+          if (relativeMatch) {
+            // Lowest score for content-based extraction
+            const score = Math.floor(relativeMatch.confidence * 4) // Max score of 4
+            dateMatches.push({ date: relativeMatch.date, score })
+          }
+        }
+      })
     }
   }
 

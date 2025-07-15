@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { CircuitBreaker } from '../src/circuit-breaker'
-import { logger } from '@babel-feed/utils'
 
 describe('CircuitBreaker', () => {
   let breaker: CircuitBreaker

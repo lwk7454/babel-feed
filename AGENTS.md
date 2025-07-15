@@ -8,7 +8,11 @@
 - ALWAYS write quality, clean and modular code that follow best practices
 - When writing tests always use BDD style (describe, it, before, after, etc.), and use expect not assert. 
 - When using libraries, make you sure have sufficient knowledge of that version you are using. If not, search for its documentation and make sure you fully understand that version before proceeding. 
-- When writing JS/TS code, make sure you follow eslint rules in the project. 
+
+# Tyepscript Guidelines
+- Make sure you follow eslint rules in the project. 
+- After code changes, always run type check and linting tools to confirm your code is warning and error free. 
+- You should not use `any` type, always use proper typing, fallback to `unknown` if you must. The only exception is when mocking tests. 
 
 # ERROR FIXING PROCESS
 - DO NOT JUMP TO CONCLUSIONS! Consider multiple possible causes before deciding. 

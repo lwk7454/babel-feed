@@ -237,3 +237,143 @@ export function getStopWords(text: string, language = 'en'): StopWordStats {
     score
   }
 }
+
+/**
+ * Extract time-related phrases from text for relative date parsing
+ */
+export function extractTimePhrases(text: string, language = 'en'): string[] {
+  if (!text) return []
+  
+  const timePhrases: string[] = []
+  const sentences = getSentences(text, language)
+  
+  // Time-related keywords by language
+  const timeKeywords: Record<string, string[]> = {
+    'en': [
+      'ago', 'yesterday', 'today', 'tomorrow', 'last', 'next', 'previous',
+      'minute', 'hour', 'day', 'week', 'month', 'year', 'recently',
+      'earlier', 'later', 'now', 'current', 'past', 'future'
+    ],
+    'zh': [
+      '前', '昨天', '今天', '明天', '上', '下', '去年', '明年',
+      '分钟', '小时', '天', '周', '星期', '月', '年', '最近',
+      '早些时候', '稍后', '现在', '当前', '过去', '未来'
+    ],
+    'ja': [
+      '前', '昨日', '今日', '明日', '先', '来', '去年', '来年',
+      '分', '時間', '日', '週間', '月', '年', '最近',
+      '早く', '後で', '今', '現在', '過去', '未来'
+    ]
+  }
+  
+  const keywords = timeKeywords[language] || timeKeywords['en']
+  
+  // Look for sentences containing time keywords
+  for (const sentence of sentences) {
+    const lowerSentence = sentence.toLowerCase()
+    let hasTimeKeyword = false
+    
+    for (const keyword of keywords) {
+      if (lowerSentence.includes(keyword.toLowerCase())) {
+        hasTimeKeyword = true
+        break
+      }
+    }
+    
+    if (hasTimeKeyword && sentence.length < 200) {
+      timePhrases.push(sentence.trim())
+    }
+  }
+  
+  return timePhrases
+}
+
+/**
+ * Normalize time expressions for consistent parsing
+ */
+export function normalizeTimeExpression(text: string, language = 'en'): string {
+  if (!text) return ''
+  
+  let normalized = text.toLowerCase().trim()
+  
+  // Language-specific normalizations
+  if (language === 'en') {
+    // Normalize common variations
+    normalized = normalized.replace(/\bmins?\b/g, 'minutes')
+    normalized = normalized.replace(/\bhrs?\b/g, 'hours')
+    normalized = normalized.replace(/\bdays?\b/g, 'day')
+    normalized = normalized.replace(/\bweeks?\b/g, 'week')
+    normalized = normalized.replace(/\bmonths?\b/g, 'month')
+    normalized = normalized.replace(/\byears?\b/g, 'year')
+    
+    // Handle compound expressions first
+    normalized = normalized.replace(/\bhalf\s+an?\s+/g, '0.5 ')
+    normalized = normalized.replace(/\bcouple\s+of\s+/g, '2 ')
+    normalized = normalized.replace(/\bfew\s+/g, '3 ')
+    normalized = normalized.replace(/\bseveral\s+/g, '4 ')
+    
+    // Handle "a/an" articles after compound expressions
+    normalized = normalized.replace(/\ba\s+/g, '1 ')
+    normalized = normalized.replace(/\ban\s+/g, '1 ')
+    
+  } else if (language === 'zh') {
+    // Chinese normalizations
+    normalized = normalized.replace(/分钟/g, '分钟')
+    normalized = normalized.replace(/小时/g, '小时')
+    normalized = normalized.replace(/个小时/g, '小时')
+    normalized = normalized.replace(/天/g, '天')
+    normalized = normalized.replace(/个星期/g, '周')
+    normalized = normalized.replace(/星期/g, '周')
+    normalized = normalized.replace(/个月/g, '月')
+    normalized = normalized.replace(/年/g, '年')
+    
+  } else if (language === 'ja') {
+    // Japanese normalizations
+    normalized = normalized.replace(/分間/g, '分')
+    normalized = normalized.replace(/時間/g, '時間')
+    normalized = normalized.replace(/日間/g, '日')
+    normalized = normalized.replace(/週間/g, '週間')
+    normalized = normalized.replace(/ヶ月/g, 'ヶ月')
+    normalized = normalized.replace(/年間/g, '年')
+  }
+  
+  // Remove extra whitespace
+  normalized = normalized.replace(/\s+/g, ' ').trim()
+  
+  return normalized
+}
+
+/**
+ * Check if text contains potential relative time expressions
+ */
+export function hasRelativeTimeExpression(text: string, language = 'en'): boolean {
+  if (!text) return false
+  
+  const normalized = normalizeTimeExpression(text, language)
+  
+  // Common relative time patterns
+  const patterns: Record<string, RegExp[]> = {
+    'en': [
+      /\d+\s*(minute|hour|day|week|month|year)s?\s*ago/i,
+      /\b(yesterday|today|tomorrow|last|next|previous)\b/i,
+      /\b(recently|earlier|later|now|current)\b/i,
+      /\b(a|an|one|two|three|four|five|six|seven|eight|nine|ten)\s+(minute|hour|day|week|month|year)s?\s*ago/i
+    ],
+    'zh': [
+      /\d+\s*(分钟|小时|天|周|月|年)\s*前/,
+      /(昨天|今天|明天|上|下|去年|明年)/,
+      /(最近|早些时候|稍后|现在|当前)/,
+      /(一|二|三|四|五|六|七|八|九|十|几)\s*(分钟|小时|天|周|月|年)\s*前/
+    ],
+    'ja': [
+      /\d+\s*(分|時間|日|週間|月|年)\s*前/,
+      /(昨日|今日|明日|先|来|去年|来年)/,
+      /(最近|早く|後で|今|現在)/,
+      /(１|２|３|４|５|６|７|８|９)\s*(分|時間|日|週間|月|年)\s*前/
+    ]
+  }
+  
+  const langPatterns = patterns[language] || patterns['en']
+  
+  return langPatterns.some(pattern => pattern.test(normalized))
+}

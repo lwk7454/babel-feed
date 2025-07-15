@@ -12,7 +12,6 @@ export class Article {
   private _url: string
   private _config: Configuration
   private _html = ''
-  private _cleanedHtml = ''
   private _text = ''
   private _metadata: ArticleMetadata = {}
   private _downloadState: DownloadState = DownloadState.NOT_STARTED
@@ -62,7 +61,7 @@ export class Article {
         images: result.images,
         videos: result.videos
       }
-      this._cleanedHtml = result.cleanedHtml || this._html
+      // cleanedHtml removed
       
       this._parseState = ParseState.SUCCESS
       this._isParsed = true
@@ -95,7 +94,6 @@ export class Article {
       videos: this._metadata.videos || [],
       topNode: null,
       // html: this._html,
-      // cleanedHtml: this._cleanedHtml,
       downloadState: this._downloadState,
       parseState: this._parseState
     }
@@ -104,7 +102,6 @@ export class Article {
   // Getters for article properties
   get url(): string { return this._url }
   get html(): string { return this._html }
-  get cleanedHtml(): string { return this._cleanedHtml }
   get text(): string { return this._text }
   get title(): string | undefined { return this._metadata.title }
   get authors(): string[] | undefined { return this._metadata.authors }

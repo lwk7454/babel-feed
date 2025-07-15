@@ -258,7 +258,7 @@ describe('Algorithm Verification', () => {
       try {
         await article.parse()
       } catch (error) {
-        throw new Error(`Failed to parse ${htmlFile}: ${error?.message || error}`)
+        throw new Error(`Failed to parse ${htmlFile}: ${(error as Error)?.message || error}`)
       }
       
       // Should extract some content
