@@ -8,6 +8,13 @@
       "when": 1751760131025,
       "tag": "20250706000211_blue_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1752581287419,
+      "tag": "20250715120807_hot_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }

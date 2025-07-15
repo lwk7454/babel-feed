@@ -1,0 +1,45 @@
+{
+  "name": "news-sourcer",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "root": "packages/news-sourcer",
+  "sourceRoot": "packages/news-sourcer/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/news-sourcer",
+        "main": "packages/news-sourcer/src/index.ts",
+        "tsConfig": "packages/news-sourcer/tsconfig.json",
+        "bundle": false,
+        "format": ["esm"],
+        "platform": "node",
+        "target": "node18",
+        "declaration": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/news-sourcer/**/*.ts"]
+      }
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "packages/news-sourcer"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test",
+        "cwd": "packages/news-sourcer"
+      }
+    }
+  },
+  "tags": ["scope:news-sourcer", "type:library"]
+}

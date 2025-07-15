@@ -28,7 +28,8 @@
       "@babel-feed/pgdb": ["packages/pgdb/src/index.ts"],
       "@babel-feed/news-extractor": ["packages/news-extractor/src/index.ts"],
       "@babel-feed/llm-provider": ["packages/llm-provider/src/index.ts"],
-      "@babel-feed/utils": ["packages/utils/src/index.ts"]
+      "@babel-feed/utils": ["packages/utils/src/index.ts"],
+      "@babel-feed/news-sourcer": ["packages/news-sourcer/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

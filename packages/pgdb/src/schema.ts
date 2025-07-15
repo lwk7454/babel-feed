@@ -135,6 +135,28 @@ export const newsSources = pgTable('news_sources', {
 }))
 
 /**
+ * Source endpoints table - stores per-source extraction endpoints
+ */
+export const sourceEndpoints = pgTable('source_endpoints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sourceId: uuid('source_id').references(() => newsSources.id, { onDelete: 'cascade' }).notNull(),
+  endpointUrl: varchar('endpoint_url', { length: 500 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // rss or html
+  category: varchar('category', { length: 100 }),
+  linkSelector: varchar('link_selector', { length: 255 }),
+  pollingInterval: integer('polling_interval').default(300000).notNull(),
+  reliability: integer('reliability').default(100).notNull(),
+  priority: integer('priority').default(5).notNull(),
+  metadata: jsonb('metadata').default('{}'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  sourceIndex: index('source_endpoints_source_idx').on(table.sourceId),
+  typeIndex: index('source_endpoints_type_idx').on(table.type),
+  priorityIndex: index('source_endpoints_priority_idx').on(table.priority)
+}))
+
+/**
  * AI providers table - stores LLM provider configurations and API keys
  */
 export const aiProviders = pgTable('ai_providers', {
@@ -361,6 +383,8 @@ export type NewArticleTranslation = typeof articleTranslations.$inferInsert;
 // News Sources Types
 export type NewsSource = typeof newsSources.$inferSelect;
 export type NewNewsSource = typeof newsSources.$inferInsert;
+export type SourceEndpoint = typeof sourceEndpoints.$inferSelect;
+export type NewSourceEndpoint = typeof sourceEndpoints.$inferInsert;
 
 // AI Providers Types
 export type AiProvider = typeof aiProviders.$inferSelect;

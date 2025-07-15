@@ -1,0 +1,21 @@
+{
+  "name": "@babel-feed/news-sourcer",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "../../dist/packages/news-sourcer/index.js",
+  "types": "../../dist/packages/news-sourcer/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "../../dist/packages/news-sourcer/index.js",
+      "types": "../../dist/packages/news-sourcer/src/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cheerio": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "~18.16.9",
+    "typescript": "~5.8.3"
+  }
+}
