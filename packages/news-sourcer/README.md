@@ -1,32 +1,35 @@
 # @babel-feed/news-sourcer
 
-This package implements automated news source discovery. It runs separately from
-`news-extractor` and learns how to fetch article URLs from each website.
+`news-sourcer` performs automated source discovery and builds an extraction pipeline for each news site. It is **not** responsible for parsing article content—that is handled by `news-extractor`. Instead, this package discovers how a site publishes new articles and saves a reproducible guide that later produces a list of article URLs.
 
 ## Requirements
 
-- Accept a news website URL and determine how it publishes new articles.
-- Prefer RSS feeds when available. If none exist, use HTML crawling.
-- Use LLM calls to inspect page structure and produce extraction hints
-  (CSS selectors, pagination info, etc.). Do **not** rely solely on heuristics.
-- Persist discovered endpoints in the database so the aggregator can poll them.
-- Multiple endpoints may exist per source (different categories or feeds).
+- Accept a news website URL and learn how that site organises its articles.
+- Prefer RSS feeds when available.
+- If no feeds exist, create a repeatable HTML crawling plan.
+- Use the LLM directly (no heuristics) to inspect pages and generate selectors, pagination hints and other metadata.
+- The LLM may make several calls per site, effectively acting as an agent that browses the website until it understands the layout.
+- Store all knowledge in the database so that the aggregator can run the guide later without LLM involvement.
+- Support multiple endpoints per source, such as separate feeds or category pages.
 
 ## Implementation Plan
 
 1. **Database Schema**
-   - Add a `source_endpoints` table referencing `news_sources`.
-   - Fields include endpoint URL, type (`rss` or `html`), optional category,
-     CSS selector, polling interval, reliability and priority scores.
+   - Add a new `source_endpoints` table linked to `news_sources`.
+   - Fields: `endpoint_url`, `type` (`rss`, `html`, `json`, ...), `category`, CSS selector or script, pagination hints, polling interval and reliability metrics.
+   - Keep a versioned `script` or `metadata` column to store the LLM produced instructions used to fetch article URLs.
 
-2. **LLM Driven Analysis**
-   - Create a `NewsSourcer` class which fetches a homepage and sends trimmed HTML
-     to the `AiProviderManager`.
-   - The LLM returns a JSON list of endpoints with selectors when needed.
-   - The class validates the response and stores it using `pgdb` helpers.
+2. **Agentic Source Analysis**
+   - Implement a `NewsSourcer` class that repeatedly fetches pages and invokes the LLM until reliable endpoints are produced.
+   - The LLM receives trimmed HTML and returns candidate endpoints with the required selectors or scripts.
+   - Validate endpoints by running them and ensuring the resulting pages contain article links; `news-extractor` can be used for spot checks.
 
-3. **Integration**
-   - The news aggregator will query `source_endpoints` instead of raw URLs.
-   - `news-extractor` receives article URLs gathered via these endpoints.
+3. **Pipeline Construction**
+   - For each valid endpoint, save the necessary metadata and script to the database.
+   - Multiple endpoints can belong to the same source so that category feeds or pages are handled individually.
 
-This package will evolve as we refine the discovery workflow.
+4. **Integration**
+   - The aggregator queries `source_endpoints` on a schedule and uses the saved scripts or selectors to fetch fresh article URLs.
+   - The URLs are passed to `news-extractor` for detailed parsing.
+
+This design allows `news-sourcer` to operate automatically in messy real-world scenarios while keeping long-term extraction logic stored in the database.
