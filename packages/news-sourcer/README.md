@@ -1,35 +1,43 @@
 # @babel-feed/news-sourcer
 
-`news-sourcer` performs automated source discovery and builds an extraction pipeline for each news site. It is **not** responsible for parsing article content—that is handled by `news-extractor`. Instead, this package discovers how a site publishes new articles and saves a reproducible guide that later produces a list of article URLs.
+`news-sourcer` automatically discovers how a news website publishes new articles and stores a repeatable guide for fetching article URLs. It does **not** parse article pages—`news-extractor` handles that part.
+
+## Purpose
+
+- Build a per-site extraction pipeline so `news-aggregator` can fetch article lists without worrying about each site's layout.
+- Use an agentic LLM workflow that makes multiple calls and browses pages directly. No heuristics.
+- Prefer RSS or Atom feeds when available, otherwise learn how to crawl HTML list pages.
+- Persist all knowledge in the database so later runs do not require another LLM call.
 
 ## Requirements
 
-- Accept a news website URL and learn how that site organises its articles.
-- Prefer RSS feeds when available.
-- If no feeds exist, create a repeatable HTML crawling plan.
-- Use the LLM directly (no heuristics) to inspect pages and generate selectors, pagination hints and other metadata.
-- The LLM may make several calls per site, effectively acting as an agent that browses the website until it understands the layout.
-- Store all knowledge in the database so that the aggregator can run the guide later without LLM involvement.
-- Support multiple endpoints per source, such as separate feeds or category pages.
+- Accept a news website URL and figure out how the site organises its articles.
+- If feeds exist, record each feed as an endpoint.
+- If only HTML pages exist, ask the LLM to produce CSS selectors or a small script for collecting article links, including pagination hints.
+- Support multiple endpoints per site (e.g. separate categories).
+- Track reliability metrics and polling intervals for each endpoint.
 
 ## Implementation Plan
 
 1. **Database Schema**
-   - Add a new `source_endpoints` table linked to `news_sources`.
-   - Fields: `endpoint_url`, `type` (`rss`, `html`, `json`, ...), `category`, CSS selector or script, pagination hints, polling interval and reliability metrics.
-   - Keep a versioned `script` or `metadata` column to store the LLM produced instructions used to fetch article URLs.
+   - Add a `source_endpoints` table linked to `news_sources.id`.
+   - Fields include `endpoint_url`, `type` (`rss`, `html`, etc.), `category`, `link_selector`, `polling_interval`, `reliability`, `priority`, and `metadata` for the LLM-produced script.
+   - Maintain success and error counts plus last fetch timestamps.
+   - Optionally keep a `discovered_sources` table for new domains awaiting approval.
 
-2. **Agentic Source Analysis**
-   - Implement a `NewsSourcer` class that repeatedly fetches pages and invokes the LLM until reliable endpoints are produced.
-   - The LLM receives trimmed HTML and returns candidate endpoints with the required selectors or scripts.
-   - Validate endpoints by running them and ensuring the resulting pages contain article links; `news-extractor` can be used for spot checks.
+2. **Agentic Analysis**
+   - Implement a `NewsSourcer` class that repeatedly fetches pages and sends trimmed HTML to the LLM.
+   - The LLM proposes endpoints. `NewsSourcer` validates each by crawling and ensuring the result contains article URLs.
+   - Continue calling the LLM until a reliable set of endpoints is produced.
 
 3. **Pipeline Construction**
-   - For each valid endpoint, save the necessary metadata and script to the database.
-   - Multiple endpoints can belong to the same source so that category feeds or pages are handled individually.
+   - Store validated endpoints in `source_endpoints` with their selectors or script.
+   - Allow multiple endpoints per source so the crawler can follow several feeds or category pages.
+   - Periodically re-run analysis to adapt when site layouts change.
 
-4. **Integration**
-   - The aggregator queries `source_endpoints` on a schedule and uses the saved scripts or selectors to fetch fresh article URLs.
-   - The URLs are passed to `news-extractor` for detailed parsing.
+4. **Integration with Aggregator**
+   - `news-aggregator` polls `source_endpoints` on a schedule and uses the stored instructions to obtain fresh article URLs.
+   - These URLs are then passed to `news-extractor` for content parsing.
+   - Reliability metrics from each run update the corresponding endpoint records.
 
-This design allows `news-sourcer` to operate automatically in messy real-world scenarios while keeping long-term extraction logic stored in the database.
+This design avoids brittle heuristics and keeps long-term crawling logic in the database, allowing autonomous source discovery and robust article extraction.
