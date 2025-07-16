@@ -64,6 +64,7 @@ export default [
       '@typescript-eslint/no-unused-private-class-members': 'off',
       'no-useless-escape': 'off',
       '@typescript-eslint/adjacent-overload-signatures': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 ]

@@ -7,9 +7,9 @@
     {
       "type": "bun",
       "request": "launch",
-      "name": "Debug Babel API",
-      "program": "${workspaceFolder}/apps/babel-api/src/index.ts",
-      "cwd": "${workspaceFolder}/apps/babel-api",
+      "name": "Debug Bun Tests",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
       "stopOnEntry": false,
       "watchMode": false,
       "internalConsoleOptions": "openOnSessionStart",

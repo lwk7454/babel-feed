@@ -15,6 +15,13 @@
       "when": 1752581287419,
       "tag": "20250715120807_hot_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1752658866313,
+      "tag": "20250716094106_deep_slipstream",
+      "breakpoints": true
     }
   ]
 }

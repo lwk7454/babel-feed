@@ -2,9 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "../../dist/packages/pgdb",
-    "declaration": true,
-    "types": ["node"],
-    "module": "ESNext",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -7,7 +7,6 @@
 export {
   getDatabase, 
   checkDatabaseHealth, 
-  closeDatabaseConnection, 
 } from './connection.js'
 
 // Export schema and types
