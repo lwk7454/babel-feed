@@ -120,3 +120,85 @@ export interface BulkEndpointOperation {
   sourceId: string
   replaceExisting?: boolean
 }
+
+// Phase 3 interfaces for LLM-based HTML analysis
+export interface DiscoveredEndpoint {
+  url: string
+  type: 'rss' | 'atom' | 'html'
+  category: string
+  priority: number // 1-10, higher = more important
+  
+  crawlingScript: {
+    articleSelector: string
+    titleSelector?: string
+    timestampSelector?: string
+    excerptSelector?: string
+    imageSelector?: string
+    
+    paginationSelector?: string
+    maxPages?: number
+    
+    excludeSelectors?: string[]
+    includePatterns?: string[]
+    excludePatterns?: string[]
+    
+    delayBetweenRequests?: number
+    maxConcurrentRequests?: number
+  }
+  
+  reliability: {
+    confidence: number
+    testResults: {
+      sampleSize: number
+      successRate: number
+      avgArticlesPerPage: number
+    }
+  }
+  
+  metadata: {
+    discoveredAt: Date
+    lastValidated: Date
+    llmModel: string
+    version: string
+    notes?: string
+  }
+}
+
+export interface SourceAnalysisResult {
+  sourceUrl: string
+  endpoints: DiscoveredEndpoint[]
+  globalConfig: {
+    userAgent: string
+    requestHeaders?: Record<string, string>
+    respectRobotsTxt: boolean
+    baseDelay: number
+  }
+  analysisMetadata: {
+    iterations: number
+    totalAnalysisTime: number
+    finalConfidence: number
+  }
+}
+
+export interface HtmlCrawlingConfig {
+  maxIterations: number
+  minConfidence: number
+  minSuccessRate: number
+  minSampleUrls: number
+  timeout: number
+}
+
+export interface LlmAnalysisResult {
+  endpoints: DiscoveredEndpoint[]
+  confidence: number
+  reasoning: string
+  suggestedImprovements?: string[]
+}
+
+export interface ValidationResult {
+  valid: boolean
+  urlCount: number
+  successRate: number
+  sampleUrls: string[]
+  errors: string[]
+}

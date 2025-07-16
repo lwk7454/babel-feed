@@ -11,7 +11,30 @@ mock.module('axios', () => ({
   }
 }))
 
-describe('NewsSourcer', () => {
+// Mock pgdb
+mock.module('@babel-feed/pgdb', () => ({
+  getDatabase: mock().mockResolvedValue({
+    select: mock().mockReturnThis(),
+    from: mock().mockReturnThis(),
+    where: mock().mockReturnThis(),
+    orderBy: mock().mockReturnThis(),
+    limit: mock().mockReturnThis(),
+    insert: mock().mockReturnThis(),
+    values: mock().mockReturnThis(),
+    returning: mock().mockResolvedValue([])
+  }),
+  sourceEndpoints: {}
+}))
+
+// Mock LLM provider
+mock.module('@babel-feed/llm-provider', () => ({
+  AiProviderManager: mock().mockImplementation(() => ({
+    initialize: mock().mockResolvedValue(undefined),
+    getEnabledProviders: mock().mockResolvedValue([])
+  }))
+}))
+
+describe('NewsSourcer RSS/Atom Feed Discovery', () => {
   let sourcer: NewsSourcer
 
   beforeEach(() => {

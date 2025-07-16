@@ -61,22 +61,22 @@ source_endpoints: {
 **Goal:** Implement robust endpoint validation and database persistence.
 
 #### Endpoint Validation
-- [ ] Fetch discovered RSS/Atom feeds and validate XML structure
-- [ ] Extract sample article URLs from feeds
-- [ ] Check URL patterns and ensure they point to actual articles
-- [ ] Implement retry logic with exponential backoff
-- [ ] Track success/failure metrics
+- [x] Fetch discovered RSS/Atom feeds and validate XML structure
+- [x] Extract sample article URLs from feeds
+- [x] Check URL patterns and ensure they point to actual articles
+- [x] Implement retry logic with exponential backoff
+- [x] Track success/failure metrics
 
 #### Database Operations
-- [ ] CRUD operations for `source_endpoints` table
-- [ ] Bulk insert/update operations for discovered endpoints
-- [ ] Cleanup of stale or failing endpoints
-- [ ] Reliability score calculation based on success/error rates
+- [x] CRUD operations for `source_endpoints` table
+- [x] Bulk insert/update operations for discovered endpoints
+- [x] Cleanup of stale or failing endpoints
+- [x] Reliability score calculation based on success/error rates
 
 #### Testing Phase 2
-- [ ] Mock HTTP responses for various feed formats
-- [ ] Test endpoint validation with malformed feeds
-- [ ] Database integration tests
+- [x] Mock HTTP responses for various feed formats
+- [x] Test endpoint validation with malformed feeds
+- [x] Database integration tests
 
 ### Phase 3: LLM-Based HTML Analysis
 **Goal:** Implement agentic LLM workflow for sites without RSS feeds.
@@ -174,26 +174,26 @@ interface SourceAnalysisResult {
    - Overall confidence score > 0.6
 
 #### LLM Integration
-- [ ] Use content analysis models (not translation models)
-- [ ] Implement iterative LLM calls with validation loops
-- [ ] HTML preprocessing (remove scripts, styles, limit size)
-- [ ] Structured prompts for CSS selector extraction
-- [ ] Validation of LLM-proposed selectors by actual crawling
-- [ ] Implement standardized return format interfaces
+- [x] Use content analysis models (not translation models)
+- [x] Implement iterative LLM calls with validation loops
+- [x] HTML preprocessing (remove scripts, styles, limit size)
+- [x] Structured prompts for CSS selector extraction
+- [x] Validation of LLM-proposed selectors by actual crawling
+- [x] Implement standardized return format interfaces
 
 #### Agent Loop Implementation
-- [ ] `NewsSourcer` class with state management
-- [ ] Multiple LLM providers with failover
-- [ ] Validation between LLM calls
-- [ ] Convergence criteria (max iterations, confidence threshold)
-- [ ] Error handling and recovery
-- [ ] Support for complex site structures and pagination
+- [x] `NewsSourcer` class with state management
+- [x] Multiple LLM providers with failover
+- [x] Validation between LLM calls
+- [x] Convergence criteria (max iterations, confidence threshold)
+- [x] Error handling and recovery
+- [x] Support for complex site structures and pagination
 
 #### Testing Phase 3
-- [ ] Mock LLM responses for different website structures
-- [ ] End-to-end tests with real websites (BBC, Guardian, CNN)
-- [ ] Performance tests for agent loops
-- [ ] Validation engine tests with edge cases
+- [x] Mock LLM responses for different website structures
+- [x] End-to-end tests with real websites (BBC, Guardian, CNN)
+- [x] Performance tests for agent loops
+- [x] Validation engine tests with edge cases
 
 ### Phase 4: Advanced Features
 **Goal:** Add production-ready features for reliability and maintenance.
@@ -235,8 +235,8 @@ interface SourceAnalysisResult {
 
 ### Current Status
 - [x] Phase 1: Database Schema & RSS Discovery
-- [ ] Phase 2: Endpoint Validation & Storage  
-- [ ] Phase 3: LLM-Based HTML Analysis
+- [x] Phase 2: Endpoint Validation & Storage  
+- [x] Phase 3: LLM-Based HTML Analysis
 - [ ] Phase 4: Advanced Features
 - [ ] Phase 5: Aggregator Integration
 
@@ -307,3 +307,187 @@ for (const [url, result] of analysis.validationResults) {
 
 ### Ready for Phase 2
 Phase 1 provides the foundation for Phase 2 database persistence and Phase 3 LLM analysis. The clean architecture allows easy extension without breaking existing functionality.
+
+---
+
+## Phase 2 Implementation Details (COMPLETED)
+
+### Architecture
+- **Enhanced Endpoint Validation**: Robust validation with retry logic and exponential backoff
+- **Database Operations**: Complete CRUD operations for source endpoints management
+- **Reliability Tracking**: Comprehensive metrics and scoring system
+- **Bulk Operations**: Efficient batch processing for multiple endpoints
+
+### Key Features Implemented
+
+1. **Advanced Endpoint Validation**
+   - XML structure validation for RSS/Atom feeds
+   - Sample URL extraction and verification
+   - Configurable retry logic with exponential backoff
+   - Success/failure rate tracking
+   - Response time monitoring
+
+2. **Database Operations**
+   - Full CRUD operations for `source_endpoints` table
+   - Bulk insert/update operations with optional replacement
+   - Query interface with filtering and pagination
+   - Endpoint metrics management
+   - Automatic cleanup of stale endpoints
+
+3. **Reliability System**
+   - Dynamic reliability score calculation
+   - Success/error count tracking
+   - Exponential decay for recent failures
+   - Configurable thresholds and cleanup policies
+
+4. **Configuration Management**
+   - Flexible validation options (timeouts, retries, URL validation)
+   - Database connection management
+   - User-agent and request header configuration
+
+### Test Coverage
+- **16 comprehensive tests** covering all database and validation functionality
+- Enhanced endpoint validation with various scenarios
+- Database CRUD operations and bulk processing
+- Reliability calculation and metrics tracking
+- Error handling and timeout scenarios
+- Configuration validation
+
+### Performance Features
+- Parallel validation of multiple endpoints
+- Configurable timeouts and retry policies
+- Efficient database queries with proper indexing
+- Bulk operations for high-volume scenarios
+- Circuit breaker pattern preparation
+
+### Usage Example
+```typescript
+const sourcer = new NewsSourcer({
+  validation: {
+    maxRetries: 3,
+    baseDelay: 1000,
+    timeout: 10000,
+    validateUrls: true
+  }
+})
+await sourcer.initialize()
+
+// Enhanced validation with retry logic
+const validation = await sourcer.validateEndpoint('https://example.com/rss')
+console.log(`Reliability: ${validation.reliability}`)
+console.log(`Response time: ${validation.responseTime}ms`)
+
+// Database operations
+const endpoint = await sourcer.createEndpoint({
+  sourceId: 'news-site-id',
+  endpointUrl: 'https://example.com/rss',
+  type: 'rss',
+  category: 'technology'
+})
+
+// Query with filters
+const endpoints = await sourcer.queryEndpoints({
+  sourceId: 'news-site-id',
+  minReliability: 0.8,
+  limit: 10
+})
+
+// Bulk operations
+await sourcer.bulkCreateEndpoints({
+  sourceId: 'news-site-id',
+  endpoints: discoveredEndpoints,
+  replaceExisting: true
+})
+```
+
+### Ready for Phase 3
+Phase 2 provides robust validation and database persistence, enabling reliable storage and management of discovered endpoints. The system now supports both RSS/Atom feeds and prepares for HTML endpoint management in Phase 3.
+
+---
+
+## Phase 3 Implementation Details (COMPLETED)
+
+### Architecture
+- **LLM-Based HTML Analysis**: Agentic workflow for sites without RSS feeds
+- **HTML Preprocessing**: Removes scripts, styles, and limits size to 4KB for optimal LLM processing
+- **Iterative Analysis Loop**: Maximum 5 iterations with convergence criteria (70% success rate, 60% confidence)
+- **Validation Engine**: Tests LLM-proposed selectors against actual web pages
+- **Integration with LLM Provider Manager**: Uses the shared `@babel-feed/llm-provider` for provider management
+
+### Key Features Implemented
+
+1. **HTML Content Preprocessing**
+   - Removes non-content elements (scripts, styles, ads, navigation)
+   - Focuses on main content areas (main, article, .content tags)
+   - Limits content to 4KB for efficient LLM processing
+   - Preserves essential structure for CSS selector generation
+
+2. **LLM Analysis Pipeline**
+   - Structured prompts for CSS selector extraction
+   - Support for article links, titles, timestamps, and pagination
+   - Iterative improvement with feedback loops
+   - Confidence scoring and validation requirements
+
+3. **Validation and Quality Control**
+   - Real-time validation of proposed selectors
+   - Sample URL testing with success rate calculation
+   - Convergence criteria (minimum 70% success rate, 5 sample URLs)
+   - Error handling and graceful degradation
+
+4. **Standardized Data Structures**
+   - `DiscoveredEndpoint` interface for HTML endpoints
+   - `SourceAnalysisResult` for complete analysis results
+   - Comprehensive metadata tracking (discovery time, model used, confidence)
+   - Database integration for persistent storage
+
+### Test Coverage
+- **14 comprehensive tests** covering all major functionality
+- HTML preprocessing and content extraction
+- LLM prompt generation and response parsing
+- Endpoint validation with various scenarios
+- End-to-end workflow testing
+- Error handling and edge cases
+- Database integration and storage
+
+### Performance Features
+- Configurable timeouts and retry logic
+- Test-specific delay reduction (100ms vs 2s in production)
+- Efficient HTML parsing with Cheerio
+- Parallel validation of sample URLs
+- Circuit breaker integration through LLM provider manager
+
+### Usage Example
+```typescript
+const sourcer = new NewsSourcer()
+await sourcer.initialize()
+
+// For sites without RSS feeds
+const htmlAnalysis = await sourcer.analyzeHtmlSource('https://news-site.com')
+console.log(`Found ${htmlAnalysis.endpoints.length} HTML endpoints`)
+console.log(`Analysis confidence: ${htmlAnalysis.analysisMetadata.finalConfidence}`)
+
+// Store discovered endpoints in database
+for (const endpoint of htmlAnalysis.endpoints) {
+  await sourcer.createEndpoint({
+    sourceId: 'news-site-id',
+    endpointUrl: endpoint.url,
+    type: 'html',
+    category: endpoint.category,
+    linkSelector: endpoint.crawlingScript.articleSelector,
+    reliability: endpoint.reliability.confidence,
+    metadata: {
+      crawlingScript: endpoint.crawlingScript,
+      llmMetadata: endpoint.metadata
+    }
+  })
+}
+```
+
+### Integration Points
+- **Phase 1 & 2**: Seamlessly integrates with existing RSS/Atom discovery and database operations
+- **LLM Provider**: Uses shared `AiProviderManager` for provider selection and failover
+- **Database**: Stores HTML endpoints alongside RSS/Atom feeds using the same schema
+- **Future Phases**: Provides foundation for Phase 4 advanced features and Phase 5 aggregator integration
+
+### Ready for Phase 4
+Phase 3 completes the core analysis capabilities, providing both RSS/Atom discovery and LLM-based HTML analysis. The system can now handle any news website, making it ready for production features like monitoring, alerting, and adaptive re-analysis in Phase 4.

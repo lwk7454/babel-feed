@@ -10,6 +10,14 @@ import type {
   EndpointMetrics 
 } from '../src/types.js'
 
+// Mock LLM provider
+mock.module('@babel-feed/llm-provider', () => ({
+  AiProviderManager: mock().mockImplementation(() => ({
+    initialize: mock().mockResolvedValue(undefined),
+    getEnabledProviders: mock().mockResolvedValue([])
+  }))
+}))
+
 // Mock the database
 const mockEndpointData = {
   id: 'test-id',
@@ -128,7 +136,7 @@ mock.module('axios', () => ({
   }
 }))
 
-describe('NewsSourcer Phase 2 - Endpoint Validation & Database Operations', () => {
+describe('NewsSourcer Database Operations & Endpoint Validation', () => {
   let sourcer: NewsSourcer
 
   beforeEach(async () => {

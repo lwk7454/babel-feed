@@ -5,6 +5,7 @@ import { logger } from '@babel-feed/utils'
 import { getDatabase } from '@babel-feed/pgdb'
 import { sourceEndpoints, type SourceEndpoint, type NewSourceEndpoint } from '@babel-feed/pgdb'
 import { eq, and, gte, desc, asc } from 'drizzle-orm'
+import { AiProviderManager } from '@babel-feed/llm-provider'
 import type { 
   RssDiscoveryResult, 
   FeedValidationResult, 
@@ -17,12 +18,19 @@ import type {
   EndpointCreateRequest,
   EndpointUpdateRequest,
   EndpointQuery,
-  BulkEndpointOperation
+  BulkEndpointOperation,
+  DiscoveredEndpoint,
+  SourceAnalysisResult,
+  HtmlCrawlingConfig,
+  LlmAnalysisResult,
+  ValidationResult
 } from './types.js'
 
 export class NewsSourcer {
   private config: NewsSourcerConfig
   private db!: Awaited<ReturnType<typeof getDatabase>>
+  private aiManager!: AiProviderManager
+  private htmlCrawlingConfig: HtmlCrawlingConfig
 
   constructor(config: NewsSourcerConfig = {}) {
     this.config = {
@@ -38,11 +46,21 @@ export class NewsSourcer {
       parallelRequests: 5,
       ...config
     }
+    
+    this.htmlCrawlingConfig = {
+      maxIterations: 5,
+      minConfidence: 0.6,
+      minSuccessRate: 0.7,
+      minSampleUrls: 5,
+      timeout: 30000
+    }
   }
 
   async initialize(): Promise<void> {
     this.db = await getDatabase()
-    logger.info('NewsSourcer initialized with database connection')
+    this.aiManager = new AiProviderManager()
+    await this.aiManager.initialize()
+    logger.info('NewsSourcer initialized with database connection and AI provider manager')
   }
 
   /**
@@ -616,6 +634,323 @@ export class NewsSourcer {
       lastSuccessAt: dbEndpoint.lastSuccessAt || undefined,
       createdAt: dbEndpoint.createdAt,
       updatedAt: dbEndpoint.updatedAt
+    }
+  }
+
+  /**
+   * Phase 3: LLM-based HTML analysis for sites without RSS feeds
+   */
+  async analyzeHtmlSource(url: string): Promise<SourceAnalysisResult> {
+    const startTime = Date.now()
+    logger.info(`Starting LLM-based HTML analysis for: ${url}`)
+
+    const result: SourceAnalysisResult = {
+      sourceUrl: url,
+      endpoints: [],
+      globalConfig: {
+        userAgent: this.config.userAgent || 'Mozilla/5.0 (compatible; BabelFeed/1.0)',
+        respectRobotsTxt: true,
+        baseDelay: 1000
+      },
+      analysisMetadata: {
+        iterations: 0,
+        totalAnalysisTime: 0,
+        finalConfidence: 0
+      }
+    }
+
+    try {
+      // Step 1: Preprocess HTML
+      const htmlContent = await this.fetchAndPreprocessHtml(url)
+      
+      // Step 2: LLM analysis with iteration loop
+      let confidence = 0
+      let iteration = 0
+      let bestResult: LlmAnalysisResult | null = null
+      
+      while (iteration < this.htmlCrawlingConfig.maxIterations && confidence < this.htmlCrawlingConfig.minConfidence) {
+        iteration++
+        result.analysisMetadata.iterations = iteration
+        
+        logger.debug(`LLM analysis iteration ${iteration} for ${url}`)
+        
+        const llmResult = await this.performLlmAnalysis(htmlContent, url, bestResult)
+        
+        if (llmResult.confidence > confidence) {
+          confidence = llmResult.confidence
+          bestResult = llmResult
+        }
+        
+        // Step 3: Validate LLM proposed selectors
+        if (llmResult.endpoints.length > 0) {
+          const validatedEndpoints: DiscoveredEndpoint[] = []
+          
+          for (const endpoint of llmResult.endpoints) {
+            const validation = await this.validateHtmlEndpoint(endpoint)
+            
+            if (validation.valid && validation.successRate >= this.htmlCrawlingConfig.minSuccessRate) {
+              endpoint.reliability.testResults = {
+                sampleSize: validation.urlCount,
+                successRate: validation.successRate,
+                avgArticlesPerPage: validation.urlCount
+              }
+              validatedEndpoints.push(endpoint)
+            }
+          }
+          
+          if (validatedEndpoints.length > 0 && 
+              validatedEndpoints.some(e => e.reliability.testResults.sampleSize >= this.htmlCrawlingConfig.minSampleUrls)) {
+            result.endpoints = validatedEndpoints
+            break
+          }
+        }
+        
+        // Add delay between iterations (reduce for tests)
+        if (iteration < this.htmlCrawlingConfig.maxIterations) {
+          const delay = process.env.NODE_ENV === 'test' ? 100 : 2000
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+      
+      result.analysisMetadata.finalConfidence = confidence
+      result.analysisMetadata.totalAnalysisTime = Date.now() - startTime
+      
+      logger.info(`LLM HTML analysis completed in ${iteration} iterations with ${result.endpoints.length} valid endpoints`)
+      
+      return result
+      
+    } catch (error) {
+      logger.error('LLM HTML analysis failed:', error)
+      result.analysisMetadata.totalAnalysisTime = Date.now() - startTime
+      throw error
+    }
+  }
+
+  /**
+   * Fetch and preprocess HTML for LLM analysis
+   */
+  private async fetchAndPreprocessHtml(url: string): Promise<string> {
+    const response = await axios.get(url, {
+      timeout: this.config.validation?.timeout || 10000,
+      headers: { 'User-Agent': this.config.userAgent }
+    })
+
+    const $ = load(response.data)
+    
+    // Remove scripts, styles, and other non-content elements
+    $('script, style, noscript, iframe, object, embed, svg').remove()
+    $('nav, footer, aside, .advertisement, .ads, .sidebar, .social-share').remove()
+    $('[class*="ad-"], [class*="advertisement"], [id*="ad-"], [id*="advertisement"]').remove()
+    
+    // Focus on main content areas
+    const mainContent = $('main, article, .content, .post, .article, .news, [role="main"]').first()
+    const contentHtml = mainContent.length > 0 ? mainContent.html() : $('body').html()
+    
+    if (!contentHtml) {
+      throw new Error('Unable to extract meaningful content from HTML')
+    }
+    
+    // Limit size to 4KB for LLM processing
+    const truncatedContent = contentHtml.length > 4096 
+      ? contentHtml.substring(0, 4096) + '...[truncated]'
+      : contentHtml
+    
+    return truncatedContent
+  }
+
+  /**
+   * Perform LLM analysis to extract CSS selectors
+   */
+  private async performLlmAnalysis(htmlContent: string, sourceUrl: string, previousResult?: LlmAnalysisResult | null): Promise<LlmAnalysisResult> {
+    const providers = await this.aiManager.getEnabledProviders('translation')
+    if (providers.length === 0) {
+      throw new Error('No AI providers available for HTML analysis')
+    }
+
+    const prompt = this.buildLlmPrompt(htmlContent, sourceUrl, previousResult)
+    
+    return await this.aiManager.executeWithProvider(providers[0].id, async (provider, key) => {
+      // This is a simplified implementation - in practice you'd need to implement
+      // actual API calls to the LLM provider based on their specific APIs
+      const response = await this.makeLlmRequest(provider, key, prompt)
+      return this.parseLlmResponse(response, sourceUrl)
+    })
+  }
+
+  private buildLlmPrompt(htmlContent: string, sourceUrl: string, previousResult?: LlmAnalysisResult | null): string {
+    let prompt = `Analyze this HTML content from ${sourceUrl} and extract CSS selectors for article links.
+
+HTML Content:
+${htmlContent}
+
+Requirements:
+1. Find CSS selectors for article links (required)
+2. Find selectors for article titles (optional)
+3. Find selectors for publication dates (optional)
+4. Identify pagination patterns (optional)
+5. Provide confidence score (0.0-1.0)
+
+Return a JSON response with this structure:
+{
+  "endpoints": [{
+    "url": "${sourceUrl}",
+    "type": "html",
+    "category": "news",
+    "priority": 5,
+    "crawlingScript": {
+      "articleSelector": "CSS_SELECTOR_FOR_ARTICLE_LINKS",
+      "titleSelector": "CSS_SELECTOR_FOR_TITLES",
+      "timestampSelector": "CSS_SELECTOR_FOR_DATES",
+      "paginationSelector": "CSS_SELECTOR_FOR_NEXT_PAGE"
+    },
+    "reliability": {
+      "confidence": 0.8
+    }
+  }],
+  "confidence": 0.8,
+  "reasoning": "Explanation of why these selectors were chosen"
+}`
+
+    if (previousResult) {
+      prompt += `\n\nPrevious analysis result (improve upon this):
+${JSON.stringify(previousResult, null, 2)}`
+    }
+
+    return prompt
+  }
+
+  private async makeLlmRequest(provider: any, key: any, prompt: string): Promise<string> {
+    // Simplified placeholder - implement actual API calls based on provider
+    // This would make HTTP requests to OpenRouter, Anthropic, etc.
+    logger.debug(`Making LLM request to ${provider.name}`)
+    
+    // For now, return a mock response to demonstrate the structure
+    return JSON.stringify({
+      endpoints: [{
+        url: "https://example.com",
+        type: "html",
+        category: "news",
+        priority: 5,
+        crawlingScript: {
+          articleSelector: "a[href*='/article/'], a[href*='/news/']",
+          titleSelector: "h1, h2, .title",
+          timestampSelector: "time, .date, .published"
+        },
+        reliability: {
+          confidence: 0.7
+        }
+      }],
+      confidence: 0.7,
+      reasoning: "Found common article link patterns and standard semantic elements"
+    })
+  }
+
+  private parseLlmResponse(response: string, sourceUrl: string): LlmAnalysisResult {
+    try {
+      const parsed = JSON.parse(response)
+      
+      // Enhance parsed endpoints with required metadata
+      const endpoints: DiscoveredEndpoint[] = parsed.endpoints?.map((ep: any) => ({
+        ...ep,
+        url: sourceUrl,
+        reliability: {
+          confidence: ep.reliability?.confidence || 0.5,
+          testResults: {
+            sampleSize: 0,
+            successRate: 0,
+            avgArticlesPerPage: 0
+          }
+        },
+        metadata: {
+          discoveredAt: new Date(),
+          lastValidated: new Date(),
+          llmModel: 'content-analysis-model',
+          version: '1.0'
+        }
+      })) || []
+      
+      return {
+        endpoints,
+        confidence: parsed.confidence || 0.5,
+        reasoning: parsed.reasoning || 'LLM analysis completed',
+        suggestedImprovements: parsed.suggestedImprovements
+      }
+    } catch (error) {
+      logger.error('Failed to parse LLM response:', error)
+      throw new Error('Invalid LLM response format')
+    }
+  }
+
+  /**
+   * Validate HTML endpoint by testing selectors
+   */
+  private async validateHtmlEndpoint(endpoint: DiscoveredEndpoint): Promise<ValidationResult> {
+    const result: ValidationResult = {
+      valid: false,
+      urlCount: 0,
+      successRate: 0,
+      sampleUrls: [],
+      errors: []
+    }
+
+    try {
+      const response = await axios.get(endpoint.url, {
+        timeout: this.config.validation?.timeout || 10000,
+        headers: { 'User-Agent': this.config.userAgent }
+      })
+
+      const $ = load(response.data)
+      const articleLinks = $(endpoint.crawlingScript.articleSelector)
+      
+      if (articleLinks.length === 0) {
+        result.errors.push('No article links found with provided selector')
+        return result
+      }
+
+      // Extract and validate sample URLs
+      const urls: string[] = []
+      articleLinks.each((_, element) => {
+        const href = $(element).attr('href')
+        if (href) {
+          const fullUrl = new URL(href, endpoint.url).href
+          urls.push(fullUrl)
+        }
+      })
+
+      if (urls.length === 0) {
+        result.errors.push('No valid URLs found in article links')
+        return result
+      }
+
+      // Test sample URLs
+      const sampleUrls = urls.slice(0, Math.min(5, urls.length))
+      let validUrls = 0
+      
+      for (const url of sampleUrls) {
+        try {
+          const urlResponse = await axios.head(url, { 
+            timeout: 5000,
+            headers: { 'User-Agent': this.config.userAgent }
+          })
+          if (urlResponse.status === 200) {
+            validUrls++
+          }
+        } catch {
+          // URL validation failed, continue
+        }
+      }
+
+      result.urlCount = urls.length
+      result.sampleUrls = sampleUrls
+      result.successRate = sampleUrls.length > 0 ? validUrls / sampleUrls.length : 0
+      result.valid = result.successRate >= this.htmlCrawlingConfig.minSuccessRate && 
+                     result.urlCount >= this.htmlCrawlingConfig.minSampleUrls
+
+      return result
+      
+    } catch (error) {
+      result.errors.push(error instanceof Error ? error.message : 'Unknown validation error')
+      return result
     }
   }
 

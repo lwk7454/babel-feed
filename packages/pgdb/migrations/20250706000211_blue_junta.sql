@@ -215,3 +215,27 @@ CREATE INDEX "news_sources_category_idx" ON "news_sources" USING btree ("categor
 CREATE INDEX "news_sources_priority_idx" ON "news_sources" USING btree ("priority");--> statement-breakpoint
 CREATE INDEX "news_sources_enabled_language_idx" ON "news_sources" USING btree ("enabled","language");--> statement-breakpoint
 CREATE INDEX "news_sources_enabled_category_idx" ON "news_sources" USING btree ("enabled","category");
+CREATE TABLE "source_endpoints" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"source_id" uuid NOT NULL,
+	"endpoint_url" varchar(500) NOT NULL,
+	"type" varchar(50) NOT NULL,
+	"category" varchar(100),
+	"link_selector" text,
+	"polling_interval" integer DEFAULT 3600 NOT NULL,
+	"reliability" integer DEFAULT 100 NOT NULL,
+	"priority" integer DEFAULT 1 NOT NULL,
+	"metadata" jsonb DEFAULT '{}',
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"success_count" integer DEFAULT 0 NOT NULL,
+	"error_count" integer DEFAULT 0 NOT NULL,
+	"last_fetch_at" timestamp,
+	"last_success_at" timestamp
+);
+--> statement-breakpoint
+ALTER TABLE "source_endpoints" ADD CONSTRAINT "source_endpoints_source_id_news_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."news_sources"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "source_endpoints_source_idx" ON "source_endpoints" USING btree ("source_id");--> statement-breakpoint
+CREATE INDEX "source_endpoints_type_idx" ON "source_endpoints" USING btree ("type");--> statement-breakpoint
+CREATE INDEX "source_endpoints_priority_idx" ON "source_endpoints" USING btree ("priority");--> statement-breakpoint
+CREATE INDEX "source_endpoints_reliability_idx" ON "source_endpoints" USING btree ("reliability");
