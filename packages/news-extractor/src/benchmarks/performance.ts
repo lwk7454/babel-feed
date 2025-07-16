@@ -108,7 +108,7 @@ export class PerformanceBenchmark {
   /**
    * Benchmark multiple articles
    */
-  async benchmarkArticles(urls: string[], concurrency: number = 1): Promise<BenchmarkSuite> {
+  async benchmarkArticles(urls: string[], concurrency = 1): Promise<BenchmarkSuite> {
     const suiteStart = performance.now()
     const results: BenchmarkResult[] = []
 
@@ -164,7 +164,7 @@ export class PerformanceBenchmark {
   /**
    * Memory stress test
    */
-  async stressTestMemory(urls: string[], iterations: number = 100): Promise<{
+  async stressTestMemory(urls: string[], iterations = 100): Promise<{
     memoryLeakDetected: boolean
     memoryGrowthMB: number
     peakMemoryMB: number

@@ -259,11 +259,3 @@ export interface DiscoveredSource {
   quality?: number;
   metadata?: Record<string, unknown>;
 }
-
-// Legacy service types for backward compatibility
-export interface LegacyService {
-  initialize?(): Promise<void>;
-  initialized?: boolean;
-  [key: string]: unknown;
-}
-

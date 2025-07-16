@@ -37,6 +37,12 @@ export interface AlertConfig {
   slackWebhook?: string
 }
 
+export interface Alert {
+  severity: 'warning' | 'critical'
+  message: string
+  threshold: number
+}
+
 export class MetricsService {
   private startTime = Date.now()
   private alertConfig: AlertConfig = {
@@ -206,7 +212,7 @@ export class MetricsService {
         })
 
         // Error rate check
-        const errorRate = sources.performance?.errorRate || 0
+        const errorRate = this.metrics.performance.errorRate || 0
         checks.push({
           name: 'Error Rate',
           status: errorRate < 5 ? 'pass' : errorRate < 15 ? 'warn' : 'fail',
@@ -233,9 +239,15 @@ export class MetricsService {
         overallStatus = 'degraded'
       }
 
+      // Ensure status is always 'pass' | 'fail' | 'warn' for all checks
       return {
         status: overallStatus,
-        checks
+        checks: checks as Array<{
+          name: string
+          status: 'pass' | 'fail' | 'warn'
+          message: string
+          responseTime?: number
+        }>
       }
     } catch (error) {
       logger.error('Health check failed:', error)
@@ -254,7 +266,7 @@ export class MetricsService {
     if (!this.metrics) return
 
     const { sources, performance } = this.metrics
-    const alerts = []
+    const alerts: Alert[] = []
 
     // Check error rate
     if (performance.errorRate > this.alertConfig.errorRateThreshold) {
@@ -281,7 +293,7 @@ export class MetricsService {
     }
   }
 
-  private async sendAlerts(alerts: any[]): Promise<void> {
+  private async sendAlerts(alerts: Alert[]): Promise<void> {
     for (const alert of alerts) {
       logger.warn(`ALERT [${alert.severity}]: ${alert.message}`)
       

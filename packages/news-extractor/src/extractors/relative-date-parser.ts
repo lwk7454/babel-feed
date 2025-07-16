@@ -164,11 +164,12 @@ export class RelativeDateParser {
       case 'minute':
         result.setMinutes(result.getMinutes() - amount)
         break
-      case 'hour':
+      case 'hour': {
         // Handle fractional hours by converting to minutes
         const totalMinutes = amount * 60
         result.setMinutes(result.getMinutes() - totalMinutes)
         break
+      }
       case 'day':
         result.setDate(result.getDate() - amount)
         break

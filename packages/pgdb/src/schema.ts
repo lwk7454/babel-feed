@@ -135,6 +135,33 @@ export const newsSources = pgTable('news_sources', {
 }))
 
 /**
+ * Source endpoints table - stores per-source extraction endpoints
+ */
+export const sourceEndpoints = pgTable('source_endpoints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sourceId: uuid('source_id').references(() => newsSources.id, { onDelete: 'cascade' }).notNull(),
+  endpointUrl: varchar('endpoint_url', { length: 500 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // 'rss' | 'atom' | 'html'
+  category: varchar('category', { length: 100 }),
+  linkSelector: text('link_selector'), // CSS selector for HTML endpoints
+  pollingInterval: integer('polling_interval').default(3600).notNull(), // seconds
+  reliability: integer('reliability').default(100).notNull(), // 0-100 score (convert from 0.0-1.0)
+  priority: integer('priority').default(1).notNull(), // 1-10, higher = more important
+  metadata: jsonb('metadata').default('{}'), // LLM-produced script/instructions
+  successCount: integer('success_count').default(0).notNull(),
+  errorCount: integer('error_count').default(0).notNull(),
+  lastFetchAt: timestamp('last_fetch_at'),
+  lastSuccessAt: timestamp('last_success_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  sourceIndex: index('source_endpoints_source_idx').on(table.sourceId),
+  typeIndex: index('source_endpoints_type_idx').on(table.type),
+  priorityIndex: index('source_endpoints_priority_idx').on(table.priority),
+  reliabilityIndex: index('source_endpoints_reliability_idx').on(table.reliability)
+}))
+
+/**
  * AI providers table - stores LLM provider configurations and API keys
  */
 export const aiProviders = pgTable('ai_providers', {
@@ -296,7 +323,15 @@ export const userActivityRelations = relations(userActivity, ({ one }) => ({
 
 // News Sources Relations
 export const newsSourcesRelations = relations(newsSources, ({ many }) => ({
-  articles: many(articles)
+  articles: many(articles),
+  endpoints: many(sourceEndpoints)
+}))
+
+export const sourceEndpointsRelations = relations(sourceEndpoints, ({ one }) => ({
+  source: one(newsSources, {
+    fields: [sourceEndpoints.sourceId],
+    references: [newsSources.id]
+  })
 }))
 
 // AI Providers Relations
@@ -361,6 +396,8 @@ export type NewArticleTranslation = typeof articleTranslations.$inferInsert;
 // News Sources Types
 export type NewsSource = typeof newsSources.$inferSelect;
 export type NewNewsSource = typeof newsSources.$inferInsert;
+export type SourceEndpoint = typeof sourceEndpoints.$inferSelect;
+export type NewSourceEndpoint = typeof sourceEndpoints.$inferInsert;
 
 // AI Providers Types
 export type AiProvider = typeof aiProviders.$inferSelect;

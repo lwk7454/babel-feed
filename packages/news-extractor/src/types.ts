@@ -31,9 +31,9 @@ export interface ArticleMetadata {
   metaFavicon?: string;
   metaLang?: string;
   metaImage?: string;
-  openGraphData?: Record<string, any>;
-  twitterData?: Record<string, any>;
-  jsonLdData?: Record<string, any>;
+  openGraphData?: Record<string, unknown>;
+  twitterData?: Record<string, unknown>;
+  jsonLdData?: Record<string, unknown>;
 }
 
 export interface ExtractionResult {
@@ -44,7 +44,7 @@ export interface ExtractionResult {
   metadata: ArticleMetadata;
   images: string[];
   videos: string[];
-  topNode: any;
+  topNode: unknown;
   html?: string;
   downloadState?: DownloadState;
   parseState?: ParseState;

@@ -5,8 +5,383 @@ import { Elysia, t } from 'elysia'
 import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
 
+const createApp = (testUserService: UserService) => {
+  const testAuthGuard = createAuthGuard(testUserService)
+  return new Elysia()
+    .use(testAuthGuard)
+    .group('/api/auth', (app) => 
+      app
+        .post('/guest', 
+          async ({ body }) => {
+            try {
+              const deviceFingerprint = (body as any).deviceFingerprint
+              const user = await testUserService.createGuestUser(deviceFingerprint)
+              
+              return {
+                success: true,
+                data: {
+                  guestId: user.guestId,
+                  userId: user.id,
+                  createdAt: user.createdAt
+                },
+                message: 'Guest profile created successfully'
+              }
+            } catch (error) {
+              throw new Error('Failed to create guest profile')
+            }
+          },
+          {
+            body: t.Object({
+              deviceFingerprint: t.Optional(t.String())
+            })
+          }
+        )
+        
+        .post('/start-verification',
+          async ({ body }) => {
+            try {
+              const { guestId, email } = body as any
+              const result = await testUserService.startVerification(guestId, email)
+              
+              return {
+                success: true,
+                data: {
+                  userId: result.user.id,
+                  email: result.user.email,
+                  verificationSent: true,
+                  isExistingUser: result.isExistingUser
+                },
+                message: result.isExistingUser 
+                  ? 'Verification code sent to your email address.'
+                  : 'Account created successfully. Please check your email for verification.'
+              }
+            } catch (error) {
+              if (error instanceof Error) {
+                if (error.message === 'Guest user not found') {
+                  throw new Error('Invalid guest user')
+                }
+              }
+              throw new Error('Failed to start verification')
+            }
+          },
+          {
+            body: t.Object({
+              guestId: t.String(),
+              email: t.String({ format: 'email' })
+            })
+          }
+        )
+        
+        .post('/verify',
+          async ({ body }) => {
+            try {
+              const { verificationToken } = body as any
+              const result = await testUserService.verifyEmail(verificationToken)
+              
+              const responseData: {
+                user: {
+                  id: string;
+                  email: string | null;
+                  guestId: string | null;
+                  emailVerified: boolean;
+                  userStatus: string;
+                  createdAt: Date;
+                };
+                accessToken: string;
+                refreshToken: string;
+                preferences?: unknown;
+              } = {
+                user: {
+                  id: result.user.id,
+                  email: result.user.email,
+                  guestId: result.user.guestId,
+                  emailVerified: result.user.emailVerified || false,
+                  userStatus: result.user.userStatus,
+                  createdAt: result.user.createdAt
+                },
+                accessToken: result.tokens.accessToken,
+                refreshToken: result.tokens.refreshToken
+              }
+
+              if (result.preferences) {
+                responseData.preferences = result.preferences
+              }
+              
+              return {
+                success: true,
+                data: responseData,
+                message: 'Email verified successfully'
+              }
+            } catch (error) {
+              if (error instanceof Error) {
+                if (error.message.includes('Invalid or expired')) {
+                  throw new Error('Invalid or expired verification token')
+                }
+                if (error.message.includes('expired')) {
+                  throw new Error('Verification token has expired')
+                }
+              }
+              throw new Error('Email verification failed')
+            }
+          },
+          {
+            body: t.Object({
+              verificationToken: t.String()
+            })
+          }
+        )
+        
+        .post('/resend-verification',
+          async ({ body }) => {
+            try {
+              const { email } = body as any
+              await testUserService.resendVerificationCode(email)
+              
+              return {
+                success: true,
+                message: 'Verification code sent successfully'
+              }
+            } catch (error) {
+              if (error instanceof Error) {
+                if (error.message.includes('User not found')) {
+                  throw new Error('User not found')
+                }
+              }
+              throw new Error('Failed to resend verification code')
+            }
+          },
+          {
+            body: t.Object({
+              email: t.String({ format: 'email' })
+            })
+          }
+        )
+        
+        .get('/profile',
+          async ({ user, set }) => {
+            if (!user) {
+              set.status = 401
+              return {
+                error: {
+                  code: 'UNAUTHORIZED',
+                  message: 'Authentication required',
+                  details: null
+                },
+                timestamp: new Date().toISOString()
+              }
+            }
+            
+            return {
+              success: true,
+              data: {
+                id: user.id,
+                email: user.email,
+                guestId: user.guestId,
+                emailVerified: user.emailVerified,
+                userStatus: user.userStatus,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt
+              }
+            }
+          }
+        )
+        
+        .put('/preferences',
+          async ({ user, body, set }) => {
+            if (!user) {
+              set.status = 401
+              return {
+                error: {
+                  code: 'UNAUTHORIZED',
+                  message: 'Authentication required',
+                  details: null
+                },
+                timestamp: new Date().toISOString()
+              }
+            }
+            
+            try {
+              await testUserService.updateUserPreferences(user.id, body as any)
+              const preferences = await testUserService.getUserPreferences(user.id)
+              
+              return {
+                success: true,
+                data: preferences,
+                message: 'Preferences updated successfully'
+              }
+            } catch (error) {
+              set.status = 500
+              return {
+                success: false,
+                error: {
+                  code: 'PREFERENCES_UPDATE_FAILED',
+                  message: 'Failed to update preferences'
+                }
+              }
+            }
+          },
+          {
+            body: t.Object({
+              preferredLanguages: t.Optional(t.Array(t.String())),
+              feedCategories: t.Optional(t.Array(t.String())),
+              translationSettings: t.Optional(t.Object({
+                autoTranslate: t.Optional(t.Boolean()),
+                defaultTargetLanguage: t.Optional(t.String())
+              })),
+              themePreference: t.Optional(t.String()),
+              notificationSettings: t.Optional(t.Object({
+                emailNotifications: t.Optional(t.Boolean()),
+                pushNotifications: t.Optional(t.Boolean())
+              })),
+              privacySettings: t.Optional(t.Object({
+                analytics: t.Optional(t.Boolean()),
+                personalization: t.Optional(t.Boolean())
+              }))
+            })
+          }
+        )
+        
+        .get('/preferences',
+          async ({ user, set }) => {
+            if (!user) {
+              set.status = 401
+              return {
+                error: {
+                  code: 'UNAUTHORIZED',
+                  message: 'Authentication required',
+                  details: null
+                },
+                timestamp: new Date().toISOString()
+              }
+            }
+            
+            try {
+              const preferences = await testUserService.getUserPreferences(user.id)
+              
+              return {
+                success: true,
+                data: preferences || null
+              }
+            } catch (error) {
+              set.status = 500
+              return {
+                success: false,
+                error: {
+                  code: 'PREFERENCES_FETCH_FAILED',
+                  message: 'Failed to get preferences'
+                }
+              }
+            }
+          }
+        )
+        
+        .post('/save-settings',
+          async ({ user, body, set }) => {
+            if (!user) {
+              set.status = 401
+              return {
+                error: {
+                  code: 'UNAUTHORIZED',
+                  message: 'Authentication required',
+                  details: null
+                },
+                timestamp: new Date().toISOString()
+              }
+            }
+            
+            if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
+              set.status = 403
+              return {
+                success: false,
+                error: {
+                  code: 'SETTINGS_SYNC_FORBIDDEN',
+                  message: 'Settings sync requires verified account'
+                }
+              }
+            }
+            
+            try {
+              await testUserService.updateUserPreferences(user.id, body as any)
+              const preferences = await testUserService.getUserPreferences(user.id)
+              
+              return {
+                success: true,
+                data: preferences,
+                message: 'Settings saved and synced to server successfully'
+              }
+            } catch (error) {
+              set.status = 500
+              return {
+                success: false,
+                error: {
+                  code: 'SETTINGS_SAVE_FAILED',
+                  message: 'Failed to save settings'
+                }
+              }
+            }
+          },
+          {
+            body: t.Object({
+              preferredLanguages: t.Optional(t.Array(t.String())),
+              feedCategories: t.Optional(t.Array(t.String())),
+              translationSettings: t.Optional(t.Object({
+                autoTranslate: t.Optional(t.Boolean()),
+                defaultTargetLanguage: t.Optional(t.String())
+              })),
+              themePreference: t.Optional(t.String()),
+              notificationSettings: t.Optional(t.Object({
+                emailNotifications: t.Optional(t.Boolean()),
+                pushNotifications: t.Optional(t.Boolean())
+              })),
+              privacySettings: t.Optional(t.Object({
+                analytics: t.Optional(t.Boolean()),
+                personalization: t.Optional(t.Boolean())
+              }))
+            })
+          }
+        )
+        
+        .get('/status',
+          async ({ user }) => {
+            return {
+              success: true,
+              data: {
+                authenticated: !!user,
+                emailVerified: user?.emailVerified || false,
+                userId: user?.id || null
+              }
+            }
+          }
+        )
+        
+        .post('/logout',
+          async ({ headers }) => {
+            try {
+              const authorization = headers.authorization
+              if (authorization && authorization.startsWith('Bearer ')) {
+                const accessToken = authorization.substring(7)
+                await testUserService.logout(accessToken)
+              }
+              
+              return {
+                success: true,
+                message: 'Logged out successfully'
+              }
+            } catch (error) {
+              return {
+                success: true,
+                message: 'Logged out successfully'
+              }
+            }
+          }
+        )
+    )
+}
+
+type AppType = ReturnType<typeof createApp>
+
 describe('User Verification E2E Tests', () => {
-  let app: Elysia
+  let app: AppType
   let testUserService: UserService
 
   beforeAll(async () => {
@@ -17,387 +392,16 @@ describe('User Verification E2E Tests', () => {
     await cleanupTestDatabase()
   })
 
-  afterEach(async () => {
-    await clearTestData()
-  })
-
   beforeEach(() => {
     testUserService = new UserService(getTestDb())
     
-    // Create auth guard with test user service
-    const testAuthGuard = createAuthGuard(testUserService)
-    
     // Create test app with manually defined auth routes using test user service
     // This ensures the auth routes use the test database instead of the production one
-    app = new Elysia()
-      .use(testAuthGuard)
-      .group('/api/auth', (app) => 
-        app
-          .post('/guest', 
-            async ({ body }) => {
-              try {
-                const deviceFingerprint = (body as any).deviceFingerprint
-                const user = await testUserService.createGuestUser(deviceFingerprint)
-                
-                return {
-                  success: true,
-                  data: {
-                    guestId: user.guestId,
-                    userId: user.id,
-                    createdAt: user.createdAt
-                  },
-                  message: 'Guest profile created successfully'
-                }
-              } catch (error) {
-                throw new Error('Failed to create guest profile')
-              }
-            },
-            {
-              body: t.Object({
-                deviceFingerprint: t.Optional(t.String())
-              })
-            }
-          )
-          
-          .post('/start-verification',
-            async ({ body }) => {
-              try {
-                const { guestId, email } = body as any
-                const result = await testUserService.startVerification(guestId, email)
-                
-                return {
-                  success: true,
-                  data: {
-                    userId: result.user.id,
-                    email: result.user.email,
-                    verificationSent: true,
-                    isExistingUser: result.isExistingUser
-                  },
-                  message: result.isExistingUser 
-                    ? 'Verification code sent to your email address.'
-                    : 'Account created successfully. Please check your email for verification.'
-                }
-              } catch (error) {
-                if (error instanceof Error) {
-                  if (error.message === 'Guest user not found') {
-                    throw new Error('Invalid guest user')
-                  }
-                }
-                throw new Error('Failed to start verification')
-              }
-            },
-            {
-              body: t.Object({
-                guestId: t.String(),
-                email: t.String({ format: 'email' })
-              })
-            }
-          )
-          
-          .post('/verify',
-            async ({ body }) => {
-              try {
-                const { verificationToken } = body as any
-                const result = await testUserService.verifyEmail(verificationToken)
-                
-                const responseData: {
-                  user: {
-                    id: string;
-                    email: string | null;
-                    guestId: string | null;
-                    emailVerified: boolean;
-                    userStatus: string;
-                    createdAt: Date;
-                  };
-                  accessToken: string;
-                  refreshToken: string;
-                  preferences?: unknown;
-                } = {
-                  user: {
-                    id: result.user.id,
-                    email: result.user.email,
-                    guestId: result.user.guestId,
-                    emailVerified: result.user.emailVerified,
-                    userStatus: result.user.userStatus,
-                    createdAt: result.user.createdAt
-                  },
-                  accessToken: result.tokens.accessToken,
-                  refreshToken: result.tokens.refreshToken
-                }
+    app = createApp(testUserService)
+  })
 
-                if (result.preferences) {
-                  responseData.preferences = result.preferences
-                }
-                
-                return {
-                  success: true,
-                  data: responseData,
-                  message: 'Email verified successfully'
-                }
-              } catch (error) {
-                if (error instanceof Error) {
-                  if (error.message.includes('Invalid or expired')) {
-                    throw new Error('Invalid or expired verification token')
-                  }
-                  if (error.message.includes('expired')) {
-                    throw new Error('Verification token has expired')
-                  }
-                }
-                throw new Error('Email verification failed')
-              }
-            },
-            {
-              body: t.Object({
-                verificationToken: t.String()
-              })
-            }
-          )
-          
-          .post('/resend-verification',
-            async ({ body }) => {
-              try {
-                const { email } = body as any
-                await testUserService.resendVerificationCode(email)
-                
-                return {
-                  success: true,
-                  message: 'Verification code sent successfully'
-                }
-              } catch (error) {
-                if (error instanceof Error) {
-                  if (error.message.includes('User not found')) {
-                    throw new Error('User not found')
-                  }
-                }
-                throw new Error('Failed to resend verification code')
-              }
-            },
-            {
-              body: t.Object({
-                email: t.String({ format: 'email' })
-              })
-            }
-          )
-          
-          .get('/profile',
-            async ({ user, set }) => {
-              if (!user) {
-                set.status = 401
-                return {
-                  error: {
-                    code: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                    details: null
-                  },
-                  timestamp: new Date().toISOString()
-                }
-              }
-              
-              return {
-                success: true,
-                data: {
-                  id: user.id,
-                  email: user.email,
-                  guestId: user.guestId,
-                  emailVerified: user.emailVerified,
-                  userStatus: user.userStatus,
-                  createdAt: user.createdAt,
-                  updatedAt: user.updatedAt
-                }
-              }
-            }
-          )
-          
-          .put('/preferences',
-            async ({ user, body, set }) => {
-              if (!user) {
-                set.status = 401
-                return {
-                  error: {
-                    code: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                    details: null
-                  },
-                  timestamp: new Date().toISOString()
-                }
-              }
-              
-              try {
-                await testUserService.updateUserPreferences(user.id, body as any)
-                const preferences = await testUserService.getUserPreferences(user.id)
-                
-                return {
-                  success: true,
-                  data: preferences,
-                  message: 'Preferences updated successfully'
-                }
-              } catch (error) {
-                set.status = 500
-                return {
-                  success: false,
-                  error: {
-                    code: 'PREFERENCES_UPDATE_FAILED',
-                    message: 'Failed to update preferences'
-                  }
-                }
-              }
-            },
-            {
-              body: t.Object({
-                preferredLanguages: t.Optional(t.Array(t.String())),
-                feedCategories: t.Optional(t.Array(t.String())),
-                translationSettings: t.Optional(t.Object({
-                  autoTranslate: t.Optional(t.Boolean()),
-                  defaultTargetLanguage: t.Optional(t.String())
-                })),
-                themePreference: t.Optional(t.String()),
-                notificationSettings: t.Optional(t.Object({
-                  emailNotifications: t.Optional(t.Boolean()),
-                  pushNotifications: t.Optional(t.Boolean())
-                })),
-                privacySettings: t.Optional(t.Object({
-                  analytics: t.Optional(t.Boolean()),
-                  personalization: t.Optional(t.Boolean())
-                }))
-              })
-            }
-          )
-          
-          .get('/preferences',
-            async ({ user, set }) => {
-              if (!user) {
-                set.status = 401
-                return {
-                  error: {
-                    code: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                    details: null
-                  },
-                  timestamp: new Date().toISOString()
-                }
-              }
-              
-              try {
-                const preferences = await testUserService.getUserPreferences(user.id)
-                
-                return {
-                  success: true,
-                  data: preferences || null
-                }
-              } catch (error) {
-                set.status = 500
-                return {
-                  success: false,
-                  error: {
-                    code: 'PREFERENCES_FETCH_FAILED',
-                    message: 'Failed to get preferences'
-                  }
-                }
-              }
-            }
-          )
-          
-          .post('/save-settings',
-            async ({ user, body, set }) => {
-              if (!user) {
-                set.status = 401
-                return {
-                  error: {
-                    code: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                    details: null
-                  },
-                  timestamp: new Date().toISOString()
-                }
-              }
-              
-              if (user.userStatus !== 'verified' && user.userStatus !== 'vip') {
-                set.status = 403
-                return {
-                  success: false,
-                  error: {
-                    code: 'SETTINGS_SYNC_FORBIDDEN',
-                    message: 'Settings sync requires verified account'
-                  }
-                }
-              }
-              
-              try {
-                await testUserService.updateUserPreferences(user.id, body as any)
-                const preferences = await testUserService.getUserPreferences(user.id)
-                
-                return {
-                  success: true,
-                  data: preferences,
-                  message: 'Settings saved and synced to server successfully'
-                }
-              } catch (error) {
-                set.status = 500
-                return {
-                  success: false,
-                  error: {
-                    code: 'SETTINGS_SAVE_FAILED',
-                    message: 'Failed to save settings'
-                  }
-                }
-              }
-            },
-            {
-              body: t.Object({
-                preferredLanguages: t.Optional(t.Array(t.String())),
-                feedCategories: t.Optional(t.Array(t.String())),
-                translationSettings: t.Optional(t.Object({
-                  autoTranslate: t.Optional(t.Boolean()),
-                  defaultTargetLanguage: t.Optional(t.String())
-                })),
-                themePreference: t.Optional(t.String()),
-                notificationSettings: t.Optional(t.Object({
-                  emailNotifications: t.Optional(t.Boolean()),
-                  pushNotifications: t.Optional(t.Boolean())
-                })),
-                privacySettings: t.Optional(t.Object({
-                  analytics: t.Optional(t.Boolean()),
-                  personalization: t.Optional(t.Boolean())
-                }))
-              })
-            }
-          )
-          
-          .get('/status',
-            async ({ user }) => {
-              return {
-                success: true,
-                data: {
-                  authenticated: !!user,
-                  emailVerified: user?.emailVerified || false,
-                  userId: user?.id || null
-                }
-              }
-            }
-          )
-          
-          .post('/logout',
-            async ({ headers }) => {
-              try {
-                const authorization = headers.authorization
-                if (authorization && authorization.startsWith('Bearer ')) {
-                  const accessToken = authorization.substring(7)
-                  await testUserService.logout(accessToken)
-                }
-                
-                return {
-                  success: true,
-                  message: 'Logged out successfully'
-                }
-              } catch (error) {
-                return {
-                  success: true,
-                  message: 'Logged out successfully'
-                }
-              }
-            }
-          )
-      )
+  afterEach(async () => {
+    await clearTestData()
   })
 
   describe('Complete User Verification Flow (Mobile Screen Flow)', () => {

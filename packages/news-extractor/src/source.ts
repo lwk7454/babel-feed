@@ -8,8 +8,16 @@ import { Configuration } from './configuration'
 import { NetworkClient } from './network'
 import { ContentExtractor } from './extractors/content-extractor'
 import RSSParser from 'rss-parser'
+import type { CheerioAPI } from 'cheerio'
+import type { Element } from 'domhandler'
+
+export interface SourceConfig {
+  [key: string]: unknown
+}
 
 export class Source {
+  id: string
+  config: SourceConfig
   private _url: string
   private _config: Configuration
   private _articles: Article[] = []
@@ -24,10 +32,12 @@ export class Source {
   private contentExtractor: ContentExtractor
   private rssParser: RSSParser
 
-  constructor(url: string, config?: Configuration) {
-    this._url = url
-    this._config = config || new Configuration()
-    this._domain = this.extractDomain(url)
+  constructor(id: string, config: SourceConfig | Configuration) {
+    this.id = id
+    this.config = config as SourceConfig
+    this._url = (this.config.url as string) || ''
+    this._config = config instanceof Configuration ? config : Configuration.fromJSON(config)
+    this._domain = this.extractDomain(this._url)
     this.networkClient = new NetworkClient(this._config)
     this.contentExtractor = new ContentExtractor(this._config)
     this.rssParser = new RSSParser()
@@ -101,7 +111,7 @@ export class Source {
   /**
    * Extract category URLs from homepage
    */
-  private extractCategoryUrls($: any): string[] {
+  private extractCategoryUrls($: CheerioAPI): string[] {
     const categoryUrls: string[] = []
     const seenUrls = new Set<string>()
     
@@ -117,7 +127,7 @@ export class Source {
       'subscribe', 'login', 'register', 'search', 'archive', 'sitemap'
     ])
 
-    $('a[href]').each((_: number, element: any) => {
+    $('a[href]').each((_: number, element: Element) => {
       const href = $(element).attr('href')
       if (!href) return
 

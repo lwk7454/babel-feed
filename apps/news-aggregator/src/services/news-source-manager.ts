@@ -10,7 +10,7 @@ import { NewsSource, AggregatorError, ValidationError } from '../modules/common/
 import { logger } from '@babel-feed/utils'
 
 export class NewsSourceManager {
-  private db: Awaited<ReturnType<typeof getDatabase | typeof getTestDb>> | undefined
+  public db: Awaited<ReturnType<typeof getDatabase | typeof getTestDb>> | undefined
 
   async initialize(): Promise<void> {
     logger.info('Initializing database-based source manager...')

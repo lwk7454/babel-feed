@@ -1,9 +1,10 @@
 import { eq, and } from 'drizzle-orm'
-import { db } from '@babel-feed/pgdb'
+import { getDatabase } from '@babel-feed/pgdb'
 import { users, userSessions, userPreferences, type User, type NewUser, type NewUserSession, type NewUserPreferences } from '@babel-feed/pgdb'
 import * as jwt from 'jsonwebtoken'
 import { randomBytes, createHash } from 'crypto'
 import { emailService } from './email.service.js'
+import { DatabaseInstance } from 'packages/pgdb/src/connection.js'
 
 /**
  * User service for managing user accounts, authentication, and sessions
@@ -13,12 +14,12 @@ export class UserService {
   private readonly accessTokenExpiry = '30d' // 30 days for news app - longer sessions preferred
   private readonly db
   
-  constructor(database?: any) {
+  constructor(database?: DatabaseInstance) {
     this.jwtSecret = process.env.JWT_SECRET || 'development-secret-key'
     if (this.jwtSecret === 'development-secret-key' && process.env.NODE_ENV === 'production') {
       throw new Error('JWT_SECRET must be set in production environment')
     }
-    this.db = database || db
+    this.db = database || getDatabase()
   }
 
   /**
@@ -314,8 +315,8 @@ export class UserService {
   /**
    * Get user by ID
    */
-  async getUserById(userId: string): Promise<User | null> {
-    const [user] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1)
+  async getUserById(id: string): Promise<User | null> {
+    const [user] = await this.db.select().from(users).where(eq(users.id, id)).limit(1)
     return user || null
   }
 
@@ -476,6 +477,6 @@ export const userService = new Proxy({} as UserService, {
     if (!_userServiceInstance) {
       _userServiceInstance = new UserService()
     }
-    return (_userServiceInstance as any)[prop]
+    return (_userServiceInstance)[prop as keyof UserService]
   }
 })

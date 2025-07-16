@@ -10,7 +10,7 @@ export interface RequestsParams {
   timeout?: number;
   proxies?: Record<string, string>;
   headers?: Record<string, string>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TopImageSettings {
@@ -239,7 +239,7 @@ export class Configuration {
   /**
    * Serialize configuration to JSON
    */
-  public toJSON(): Record<string, any> {
+  public toJSON(): Record<string, unknown> {
     return {
       minWordCount: this.minWordCount,
       minSentCount: this.minSentCount,
@@ -268,24 +268,21 @@ export class Configuration {
   /**
    * Load configuration from JSON
    */
-  public static fromJSON(data: Record<string, any>): Configuration {
+  public static fromJSON(data: Record<string, unknown>): Configuration {
     const config = new Configuration()
-    
     // Handle language settings separately
-    if (data.languageSettings) {
-      config.languageManager = LanguageManager.fromJSON(data.languageSettings)
-      delete data.languageSettings
-    } else if (data.language || data.useMetaLanguage !== undefined) {
+    if ('languageSettings' in data && data.languageSettings) {
+      config.languageManager = LanguageManager.fromJSON(data.languageSettings as Record<string, unknown>)
+      delete (data as Record<string, unknown>)['languageSettings']
+    } else if ('language' in data || 'useMetaLanguage' in data) {
       // Handle legacy format
-      config.languageManager = new LanguageManager(
-        data.language || 'en',
-        data.useMetaLanguage ?? true
-      )
-      delete data.language
-      delete data.useMetaLanguage
+      const language = typeof data.language === 'string' ? data.language : 'en'
+      const useMetaLanguage = typeof data.useMetaLanguage === 'boolean' ? data.useMetaLanguage : true
+      config.languageManager = new LanguageManager(language, useMetaLanguage)
+      delete (data as Record<string, unknown>)['language']
+      delete (data as Record<string, unknown>)['useMetaLanguage']
     }
-    
-    config.update(data)
+    config.update(data as Partial<Configuration>)
     return config
   }
 

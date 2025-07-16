@@ -1,6 +1,6 @@
 import { logger } from '@babel-feed/utils'
 import { config } from '../modules/common/config'
-import { ModuleStatus, LegacyService } from '../modules/common/types'
+import { ModuleStatus } from '../modules/common/types'
 
 // Source Manager modules
 import { SourceCRUDService } from '../modules/source-manager/source-crud'
@@ -40,12 +40,6 @@ export class NewsAggregatorService {
   private rssProcessor: RssProcessor
   private articleStorage: ArticleStorage
   
-  // Legacy service instances (lazy-loaded when needed)
-  private legacySourceManager?: LegacyService
-  private legacyAiProviderManager?: LegacyService
-  private legacyHealthChecker?: LegacyService
-  private legacyRssProcessor?: LegacyService
-
   // Service state
   private isRunning = false
   private pollingInterval?: NodeJS.Timeout
@@ -226,57 +220,13 @@ export class NewsAggregatorService {
     return this.healthChecker
   }
 
-  async getDatabase(): Promise<any> {
+  async getDatabase() {
     // Return the same database connection used by services
-    return (this.sourceManager as any).db
+    return this.sourceManager.db
   }
 
   getRssProcessor(): RssProcessor {
     return this.rssProcessor
-  }
-
-  // Legacy methods for backward compatibility (lazy-loaded)
-  getLegacySourceManager() {
-    if (!this.legacySourceManager) {
-      // Import and instantiate only when needed
-      const { NewsSourceManager } = require('./news-source-manager')
-      this.legacySourceManager = new NewsSourceManager()
-      // Initialize if not already done
-      if (this.legacySourceManager && !this.legacySourceManager.initialized) {
-        (this.legacySourceManager as any).initialize().catch(console.error)
-      }
-    }
-    return this.legacySourceManager
-  }
-
-  getLegacyAiProviderManager() {
-    if (!this.legacyAiProviderManager) {
-      const { AiProviderManager } = require('@babel-feed/llm-provider')
-      this.legacyAiProviderManager = new AiProviderManager()
-      if (this.legacyAiProviderManager && !this.legacyAiProviderManager.initialized) {
-        (this.legacyAiProviderManager as any).initialize().catch(console.error)
-      }
-    }
-    return this.legacyAiProviderManager
-  }
-
-  getLegacyHealthChecker() {
-    if (!this.legacyHealthChecker) {
-      const { HealthChecker } = require('./health-checker')
-      this.legacyHealthChecker = new HealthChecker(
-        this.getSourceManager(),
-        this.getAiProviderManager()
-      )
-    }
-    return this.legacyHealthChecker
-  }
-
-  getLegacyRssProcessor() {
-    if (!this.legacyRssProcessor) {
-      const { RssProcessor } = require('./rss-processor')
-      this.legacyRssProcessor = new RssProcessor(this.getSourceManager())
-    }
-    return this.legacyRssProcessor
   }
 
   getContentCache(): CacheManager {

@@ -173,8 +173,8 @@ export class ErrorRecovery {
    */
   static createCircuitBreaker<T>(
     operation: () => Promise<T>,
-    failureThreshold: number = 5,
-    resetTimeoutMs: number = 60000
+    failureThreshold = 5,
+    resetTimeoutMs = 60000
   ) {
     let failures = 0
     let lastFailureTime = 0

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/packages/news-sourcer",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["dist/**/*", "node_modules/**/*"]
+}

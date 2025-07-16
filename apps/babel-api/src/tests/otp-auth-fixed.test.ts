@@ -1,4 +1,4 @@
-import { cleanupTestDatabase, clearTestData, db, getTestDb, setupTestDatabase, users } from '@babel-feed/pgdb'
+import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users } from '@babel-feed/pgdb'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { UserService } from '../services/user.service'
@@ -133,7 +133,7 @@ describe('OTP Authentication Flow - Fixed', () => {
     const result = await userService.createAccountFromGuest(guestUser.guestId!, testEmail)
     
     // Manually expire the token by setting expiry to past
-    await db.update(users)
+    await getTestDb().update(users)
       .set({ verificationTokenExpiry: new Date(Date.now() - 1000) }) // 1 second ago
       .where(eq(users.id, guestUser.id))
     

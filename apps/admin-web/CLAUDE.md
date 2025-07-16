@@ -1,0 +1,1 @@
+../../.cursor/rules/admin-web-features.md
