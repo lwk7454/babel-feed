@@ -7,6 +7,7 @@
 export {
   getDatabase, 
   checkDatabaseHealth, 
+  type DatabaseInstance
 } from './connection.js'
 
 // Export schema and types

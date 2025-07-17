@@ -55,6 +55,39 @@ export interface EndpointMetrics {
   avgResponseTime?: number
 }
 
+export interface CircuitBreakerConfig {
+  failureThreshold?: number
+  resetTimeout?: number
+  timeout?: number
+  monitoringPeriod?: number
+}
+
+export interface RateLimitConfig {
+  enabled?: boolean
+  requestsPerSecond?: number
+  burstSize?: number
+  backoffMultiplier?: number
+  maxBackoffDelay?: number
+}
+
+export interface HealthCheckConfig {
+  endpointHealthThreshold?: number
+  reliabilityThreshold?: number
+  circuitBreakerThreshold?: number
+  rateLimitRejectionThreshold?: number
+  checkInterval?: number
+}
+
+export interface ReanalysisConfig {
+  failureThreshold?: number
+  maxConsecutiveFailures?: number
+  cooldownPeriod?: number
+  maxReanalysisAttempts?: number
+  stalenessThreshold?: number
+  batchSize?: number
+  scheduleInterval?: number
+}
+
 export interface NewsSourcerConfig {
   database?: {
     connectionString?: string
@@ -63,6 +96,10 @@ export interface NewsSourcerConfig {
   validation?: EndpointValidationOptions
   userAgent?: string
   parallelRequests?: number
+  circuitBreaker?: CircuitBreakerConfig
+  rateLimit?: RateLimitConfig
+  health?: HealthCheckConfig
+  reanalysis?: ReanalysisConfig
 }
 
 export interface StoredEndpoint {
@@ -78,6 +115,7 @@ export interface StoredEndpoint {
   metadata: Record<string, unknown>
   successCount: number
   errorCount: number
+  consecutiveFailureCount: number // Track actual consecutive failures
   lastFetchAt?: Date
   lastSuccessAt?: Date
   createdAt: Date

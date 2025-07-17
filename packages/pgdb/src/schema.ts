@@ -150,6 +150,7 @@ export const sourceEndpoints = pgTable('source_endpoints', {
   metadata: jsonb('metadata').default('{}'), // LLM-produced script/instructions
   successCount: integer('success_count').default(0).notNull(),
   errorCount: integer('error_count').default(0).notNull(),
+  consecutiveFailureCount: integer('consecutive_failure_count').default(0).notNull(),
   lastFetchAt: timestamp('last_fetch_at'),
   lastSuccessAt: timestamp('last_success_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

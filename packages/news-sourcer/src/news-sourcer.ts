@@ -1,36 +1,45 @@
+import { AiProviderManager, type AiProvider, type AiProviderKey } from '@babel-feed/llm-provider'
+import { getDatabase, getTestDb, sourceEndpoints, type DatabaseInstance, type NewSourceEndpoint, type SourceEndpoint } from '@babel-feed/pgdb'
+import { logger } from '@babel-feed/utils'
 import axios from 'axios'
 import { load } from 'cheerio'
+import { and, asc, desc, eq, gte } from 'drizzle-orm'
 import { XMLParser } from 'fast-xml-parser'
-import { logger } from '@babel-feed/utils'
-import { getDatabase } from '@babel-feed/pgdb'
-import { sourceEndpoints, type SourceEndpoint, type NewSourceEndpoint } from '@babel-feed/pgdb'
-import { eq, and, gte, desc, asc } from 'drizzle-orm'
-import { AiProviderManager } from '@babel-feed/llm-provider'
-import type { 
-  RssDiscoveryResult, 
-  FeedValidationResult, 
-  NewsSourceAnalysis,
-  EndpointValidationOptions,
-  EndpointValidationResult,
-  EndpointMetrics,
-  NewsSourcerConfig,
-  StoredEndpoint,
-  EndpointCreateRequest,
-  EndpointUpdateRequest,
-  EndpointQuery,
+import { AdaptiveAnalyzer, type ReanalysisResult } from './adaptive-analyzer.js'
+import { CircuitBreakerRegistry, type CircuitBreakerMetrics } from './circuit-breaker.js'
+import { HealthMonitor, type HealthCheckResult } from './health-monitor.js'
+import { MetricsCollector, type CollectedMetrics } from './metrics-collector.js'
+import { RateLimiterRegistry, type RateLimiterMetrics } from './rate-limiter.js'
+import type {
   BulkEndpointOperation,
   DiscoveredEndpoint,
-  SourceAnalysisResult,
+  EndpointCreateRequest,
+  EndpointMetrics,
+  EndpointQuery,
+  EndpointUpdateRequest,
+  EndpointValidationOptions,
+  EndpointValidationResult,
+  FeedValidationResult,
   HtmlCrawlingConfig,
   LlmAnalysisResult,
+  NewsSourceAnalysis,
+  NewsSourcerConfig,
+  RssDiscoveryResult,
+  SourceAnalysisResult,
+  StoredEndpoint,
   ValidationResult
 } from './types.js'
 
 export class NewsSourcer {
   private config: NewsSourcerConfig
-  private db!: Awaited<ReturnType<typeof getDatabase>>
+  private db!: DatabaseInstance
   private aiManager!: AiProviderManager
   private htmlCrawlingConfig: HtmlCrawlingConfig
+  private circuitBreakers: CircuitBreakerRegistry
+  private rateLimiters: RateLimiterRegistry
+  private healthMonitor: HealthMonitor
+  private metricsCollector: MetricsCollector
+  private adaptiveAnalyzer: AdaptiveAnalyzer
 
   constructor(config: NewsSourcerConfig = {}) {
     this.config = {
@@ -44,6 +53,39 @@ export class NewsSourcer {
       },
       userAgent: 'Mozilla/5.0 (compatible; BabelFeed/1.0)',
       parallelRequests: 5,
+      circuitBreaker: {
+        failureThreshold: 5,
+        resetTimeout: 60000,
+        timeout: 30000,
+        monitoringPeriod: 300000,
+        ...config.circuitBreaker
+      },
+      rateLimit: {
+        enabled: true,
+        requestsPerSecond: 2,
+        burstSize: 5,
+        backoffMultiplier: 1.5,
+        maxBackoffDelay: 30000,
+        ...config.rateLimit
+      },
+      health: {
+        endpointHealthThreshold: 0.8,
+        reliabilityThreshold: 0.7,
+        circuitBreakerThreshold: 0.2,
+        rateLimitRejectionThreshold: 0.1,
+        checkInterval: 60000,
+        ...config.health
+      },
+      reanalysis: {
+        failureThreshold: 0.3,
+        maxConsecutiveFailures: 5,
+        cooldownPeriod: 3600000,
+        maxReanalysisAttempts: 3,
+        stalenessThreshold: 2592000000,
+        batchSize: 5,
+        scheduleInterval: 1800000,
+        ...config.reanalysis
+      },
       ...config
     }
     
@@ -54,13 +96,270 @@ export class NewsSourcer {
       minSampleUrls: 5,
       timeout: 30000
     }
+
+    this.circuitBreakers = new CircuitBreakerRegistry()
+    this.rateLimiters = new RateLimiterRegistry()
+    this.healthMonitor = new HealthMonitor(this.config.health)
+    this.metricsCollector = new MetricsCollector()
+    this.adaptiveAnalyzer = new AdaptiveAnalyzer(this.config.reanalysis)
   }
 
   async initialize(): Promise<void> {
-    this.db = await getDatabase()
+    // Use test database if available in test mode, otherwise use regular database
+    try {
+      if (process.env.NODE_ENV === 'test') {
+        this.db = getTestDb()
+      } else {
+        this.db = await getDatabase()
+      }
+    } catch (error) {
+      // Fallback to regular database if test database is not available
+      this.db = await getDatabase()
+    }
+    
     this.aiManager = new AiProviderManager()
     await this.aiManager.initialize()
     logger.info('NewsSourcer initialized with database connection and AI provider manager')
+  }
+
+  /**
+   * Protected HTTP request with circuit breaker and rate limiting
+   */
+  private async makeProtectedRequest(url: string, options: Record<string, unknown> = {}): Promise<{ data: string }> {
+    const domain = new URL(url).hostname
+    const circuitBreakerOptions = this.config.circuitBreaker ? {
+      failureThreshold: this.config.circuitBreaker.failureThreshold ?? 5,
+      resetTimeout: this.config.circuitBreaker.resetTimeout ?? 60000,
+      timeout: this.config.circuitBreaker.timeout ?? 30000,
+      monitoringPeriod: this.config.circuitBreaker.monitoringPeriod ?? 300000
+    } : undefined
+    const circuitBreaker = this.circuitBreakers.getCircuitBreaker(domain, circuitBreakerOptions)
+    
+    // Apply rate limiting if enabled
+    if (this.config.rateLimit?.enabled) {
+      const rateLimiterOptions = this.config.rateLimit ? {
+        requestsPerSecond: this.config.rateLimit.requestsPerSecond ?? 2,
+        burstSize: this.config.rateLimit.burstSize ?? 5,
+        backoffMultiplier: this.config.rateLimit.backoffMultiplier ?? 1.5,
+        maxBackoffDelay: this.config.rateLimit.maxBackoffDelay ?? 30000
+      } : undefined
+      const rateLimiter = this.rateLimiters.getRateLimiter(domain, rateLimiterOptions)
+      await rateLimiter.acquire()
+    }
+
+    // Execute request through circuit breaker with metrics
+    return await this.metricsCollector.time('http_request', async () => {
+      try {
+        const result = await circuitBreaker.execute(async () => {
+          return await axios.get(url, {
+            timeout: this.config.validation?.timeout || 10000,
+            headers: { 'User-Agent': this.config.userAgent },
+            ...options
+          })
+        })
+        
+        this.metricsCollector.incrementCounter('http_requests_total', 1, { domain, status: 'success' })
+        this.metricsCollector.recordRate('http_request_rate', { domain })
+        
+        return result
+      } catch (error) {
+        this.metricsCollector.incrementCounter('http_requests_total', 1, { domain, status: 'error' })
+        this.metricsCollector.incrementCounter('http_request_errors', 1, { domain })
+        throw error
+      }
+    }, { domain })
+  }
+
+  /**
+   * Get circuit breaker and rate limiter metrics for monitoring
+   */
+  getMetrics(): { circuitBreakers: Record<string, CircuitBreakerMetrics>; rateLimiters: Record<string, RateLimiterMetrics> } {
+    return {
+      circuitBreakers: this.circuitBreakers.getAllMetrics(),
+      rateLimiters: this.rateLimiters.getAllMetrics()
+    }
+  }
+
+  /**
+   * Get performance metrics
+   */
+  getPerformanceMetrics(): CollectedMetrics {
+    return this.metricsCollector.getMetrics()
+  }
+
+  /**
+   * Get performance metrics for a specific time window
+   */
+  getPerformanceMetricsForWindow(windowMs: number): CollectedMetrics {
+    return this.metricsCollector.getMetricsForWindow(windowMs)
+  }
+
+  /**
+   * Export metrics in Prometheus format
+   */
+  exportPrometheusMetrics(): string {
+    return this.metricsCollector.exportPrometheusMetrics()
+  }
+
+  /**
+   * Log metrics summary
+   */
+  logMetricsSummary(windowMs?: number): void {
+    this.metricsCollector.logMetricsSummary(windowMs)
+  }
+
+  /**
+   * Reset all performance metrics
+   */
+  resetMetrics(): void {
+    this.metricsCollector.reset()
+  }
+
+  /**
+   * Reset all circuit breakers and rate limiters
+   */
+  resetProtection(): void {
+    this.circuitBreakers.resetAll()
+    this.rateLimiters.resetAll()
+  }
+
+  /**
+   * Perform a health check on all system components
+   */
+  async performHealthCheck(): Promise<HealthCheckResult> {
+    return await this.healthMonitor.performHealthCheck(
+      () => this.queryEndpoints({}),
+      () => this.circuitBreakers.getAllMetrics(),
+      () => this.rateLimiters.getAllMetrics(),
+      () => this.testDatabaseConnection()
+    )
+  }
+
+  /**
+   * Get the last health check result
+   */
+  getLastHealthCheck(): HealthCheckResult | null {
+    return this.healthMonitor.getLastHealthCheck()
+  }
+
+  /**
+   * Start periodic health checks
+   */
+  startHealthMonitoring(): void {
+    this.healthMonitor.startPeriodicHealthChecks(
+      () => this.queryEndpoints({}),
+      () => this.circuitBreakers.getAllMetrics(),
+      () => this.rateLimiters.getAllMetrics(),
+      () => this.testDatabaseConnection()
+    )
+  }
+
+  /**
+   * Stop periodic health checks
+   */
+  stopHealthMonitoring(): void {
+    this.healthMonitor.stopPeriodicHealthChecks()
+  }
+
+  /**
+   * Test database connection for health monitoring
+   */
+  private async testDatabaseConnection(): Promise<{ success: boolean; responseTime: number; error?: string }> {
+    const startTime = Date.now()
+    
+    try {
+      // Simple database query to test connectivity
+      await this.db.select().from(sourceEndpoints).limit(1)
+      
+      return {
+        success: true,
+        responseTime: Date.now() - startTime
+      }
+    } catch (error) {
+      return {
+        success: false,
+        responseTime: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown database error'
+      }
+    }
+  }
+
+  /**
+   * Start adaptive re-analysis system
+   */
+  startAdaptiveReanalysis(): void {
+    this.adaptiveAnalyzer.startScheduledReanalysis(
+      () => this.queryEndpoints({}),
+      (id) => this.getEndpoint(id),
+      (url) => this.analyzeHtmlSource(url),
+      async (id, updates) => { await this.updateEndpoint({ id, ...updates }) },
+      (sourceId, endpoints) => this.bulkCreateEndpoints({ 
+        sourceId, 
+        endpoints: endpoints.map(ep => ({ ...ep, sourceId }))
+      })
+    )
+  }
+
+  /**
+   * Stop adaptive re-analysis system
+   */
+  stopAdaptiveReanalysis(): void {
+    this.adaptiveAnalyzer.stopScheduledReanalysis()
+  }
+
+  /**
+   * Manually trigger re-analysis for specific endpoint
+   */
+  async triggerReanalysis(endpointId: string): Promise<ReanalysisResult> {
+    this.adaptiveAnalyzer.queueForReanalysis(endpointId)
+    
+    const results = await this.adaptiveAnalyzer.processReanalysisQueue(
+      (id) => this.getEndpoint(id),
+      (url) => this.analyzeHtmlSource(url),
+      async (id, updates) => { await this.updateEndpoint({ id, ...updates }) },
+      (sourceId, endpoints) => this.bulkCreateEndpoints({ 
+        sourceId, 
+        endpoints: endpoints.map(ep => ({ ...ep, sourceId }))
+      })
+    )
+    
+    return results[0] || {
+      endpointId,
+      success: false,
+      newEndpoints: [],
+      previousVersion: 'unknown',
+      newVersion: 'unknown',
+      analysisTime: Date.now(),
+      error: 'No results from re-analysis queue'
+    }
+  }
+
+  /**
+   * Get re-analysis statistics
+   */
+  getReanalysisStats(): {
+    queueSize: number
+    totalReanalyses: number
+    successfulReanalyses: number
+    failedReanalyses: number
+    endpointsWithHistory: number
+    averageReanalysisTime: number
+  } {
+    return this.adaptiveAnalyzer.getReanalysisStats()
+  }
+
+  /**
+   * Check if endpoint needs re-analysis
+   */
+  needsReanalysis(endpoint: StoredEndpoint): boolean {
+    return this.adaptiveAnalyzer.shouldReanalyze(endpoint)
+  }
+
+  /**
+   * Clear re-analysis history
+   */
+  clearReanalysisHistory(): void {
+    this.adaptiveAnalyzer.clearHistory()
   }
 
   /**
@@ -69,51 +368,62 @@ export class NewsSourcer {
   async analyzeSource(url: string): Promise<NewsSourceAnalysis> {
     logger.info(`Starting RSS/Atom discovery for: ${url}`)
     
-    const analysis: NewsSourceAnalysis = {
-      sourceUrl: url,
-      rssFeeds: [],
-      atomFeeds: [],
-      validationResults: new Map(),
-      totalEndpoints: 0,
-      successRate: 0
-    }
+    return await this.metricsCollector.time('analyze_source', async () => {
+      const analysis: NewsSourceAnalysis = {
+        sourceUrl: url,
+        rssFeeds: [],
+        atomFeeds: [],
+        validationResults: new Map(),
+        totalEndpoints: 0,
+        successRate: 0
+      }
 
-    try {
-      // Step 1: Discover RSS/Atom feeds
-      const discoveredFeeds = await this.discoverFeeds(url)
-      
-      // Step 2: Validate each discovered feed
-      const validationPromises = discoveredFeeds.map(feed => 
-        this.validateFeed(feed.url).then(result => ({ feed, result }))
-      )
-      
-      const validatedFeeds = await Promise.all(validationPromises)
-      
-      // Step 3: Process results
-      for (const { feed, result } of validatedFeeds) {
-        analysis.validationResults.set(feed.url, result)
+      try {
+        // Step 1: Discover RSS/Atom feeds
+        const discoveredFeeds = await this.discoverFeeds(url)
+        this.metricsCollector.setGauge('discovered_feeds', discoveredFeeds.length, { url })
         
-        if (result.valid) {
-          if (feed.type === 'rss') {
-            analysis.rssFeeds.push(feed)
-          } else if (feed.type === 'atom') {
-            analysis.atomFeeds.push(feed)
+        // Step 2: Validate each discovered feed
+        const validationPromises = discoveredFeeds.map(feed => 
+          this.validateFeed(feed.url).then(result => ({ feed, result }))
+        )
+        
+        const validatedFeeds = await Promise.all(validationPromises)
+        
+        // Step 3: Process results
+        for (const { feed, result } of validatedFeeds) {
+          analysis.validationResults.set(feed.url, result)
+          
+          if (result.valid) {
+            if (feed.type === 'rss') {
+              analysis.rssFeeds.push(feed)
+            } else if (feed.type === 'atom') {
+              analysis.atomFeeds.push(feed)
+            }
           }
         }
+        
+        analysis.totalEndpoints = discoveredFeeds.length
+        analysis.successRate = discoveredFeeds.length > 0 
+          ? (analysis.rssFeeds.length + analysis.atomFeeds.length) / discoveredFeeds.length 
+          : 0
+        
+        // Record metrics
+        this.metricsCollector.incrementCounter('source_analysis_total', 1, { status: 'success' })
+        this.metricsCollector.setGauge('valid_feeds', analysis.rssFeeds.length + analysis.atomFeeds.length, { url })
+        this.metricsCollector.recordHistogram('success_rate', analysis.successRate * 100, { url })
+        
+        logger.info(`RSS/Atom discovery completed. Found ${analysis.rssFeeds.length} RSS + ${analysis.atomFeeds.length} Atom feeds`)
+        
+        return analysis
+      } catch (error) {
+        this.metricsCollector.incrementCounter('source_analysis_total', 1, { status: 'error' })
+        this.metricsCollector.incrementCounter('source_analysis_errors', 1, { url })
+        logger.error('RSS/Atom discovery failed:', error)
+        // Re-throw the error so circuit breaker can properly handle it
+        throw error
       }
-      
-      analysis.totalEndpoints = discoveredFeeds.length
-      analysis.successRate = discoveredFeeds.length > 0 
-        ? (analysis.rssFeeds.length + analysis.atomFeeds.length) / discoveredFeeds.length 
-        : 0
-      
-      logger.info(`RSS/Atom discovery completed. Found ${analysis.rssFeeds.length} RSS + ${analysis.atomFeeds.length} Atom feeds`)
-      
-      return analysis
-    } catch (error) {
-      logger.error('RSS/Atom discovery failed:', error)
-      throw error
-    }
+    }, { url })
   }
 
   /**
@@ -121,68 +431,86 @@ export class NewsSourcer {
    */
   private async discoverFeeds(url: string): Promise<RssDiscoveryResult[]> {
     const discovered: RssDiscoveryResult[] = []
+    const maxRetries = this.config.validation?.maxRetries || 3
+    let lastError: Error | undefined
     
-    try {
-      // Fetch the main page
-      const response = await axios.get(url, { 
-        timeout: this.config.validation?.timeout || 10000,
-        headers: { 'User-Agent': this.config.userAgent }
-      })
-      
-      const html: string = response.data
-      const $ = load(html)
-      
-      // Method 1: Parse HTML for RSS/Atom link tags
-      $('link[rel="alternate"]').each((_, element) => {
-        const $link = $(element)
-        const type = $link.attr('type')
-        const href = $link.attr('href')
-        const title = $link.attr('title')
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Fetch the main page
+        const response = await this.makeProtectedRequest(url)
         
-        if (href && (type === 'application/rss+xml' || type === 'application/atom+xml')) {
-          const feedUrl = new URL(href, url).href
-          discovered.push({
-            type: type === 'application/rss+xml' ? 'rss' : 'atom',
-            url: feedUrl,
-            title: title || undefined
-          })
-        }
-      })
-      
-      // Method 2: Check common RSS/Atom paths
-      const commonPaths = ['/rss', '/feed', '/rss.xml', '/atom.xml', '/feeds/all.atom.xml']
-      const baseUrl = new URL(url).origin
-      
-      for (const path of commonPaths) {
-        const feedUrl = `${baseUrl}${path}`
-        try {
-          const feedResponse = await axios.head(feedUrl, { timeout: 5000 })
-          if (feedResponse.status === 200) {
-            const contentType = feedResponse.headers['content-type'] || ''
-            if (contentType.includes('xml') || contentType.includes('rss') || contentType.includes('atom')) {
-              discovered.push({
-                type: contentType.includes('atom') ? 'atom' : 'rss',
-                url: feedUrl
-              })
-            }
+        const html: string = response.data
+        const $ = load(html)
+        
+        // Method 1: Parse HTML for RSS/Atom link tags
+        $('link[rel="alternate"]').each((_, element) => {
+          const $link = $(element)
+          const type = $link.attr('type')
+          const href = $link.attr('href')
+          const title = $link.attr('title')
+          
+          if (href && (type === 'application/rss+xml' || type === 'application/atom+xml')) {
+            const feedUrl = new URL(href, url).href
+            discovered.push({
+              type: type === 'application/rss+xml' ? 'rss' : 'atom',
+              url: feedUrl,
+              title: title || undefined
+            })
           }
-        } catch {
-          // Ignore errors for common path checking
+        })
+        
+        // Method 2: Check common RSS/Atom paths
+        const commonPaths = ['/rss', '/feed', '/rss.xml', '/atom.xml', '/feeds/all.atom.xml']
+        const baseUrl = new URL(url).origin
+        
+        for (const path of commonPaths) {
+          const feedUrl = `${baseUrl}${path}`
+          try {
+            const feedResponse = await axios.head(feedUrl, { timeout: 5000 })
+            if (feedResponse.status === 200) {
+              const contentType = feedResponse.headers['content-type'] || ''
+              if (contentType.includes('xml') || contentType.includes('rss') || contentType.includes('atom')) {
+                discovered.push({
+                  type: contentType.includes('atom') ? 'atom' : 'rss',
+                  url: feedUrl
+                })
+              }
+            }
+          } catch {
+            // Ignore errors for common path checking
+          }
+        }
+        
+        // Remove duplicates
+        const seen = new Set<string>()
+        return discovered.filter(feed => {
+          if (seen.has(feed.url)) return false
+          seen.add(feed.url)
+          return true
+        })
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error')
+        
+        if (attempt < maxRetries) {
+          // Wait before retry with exponential backoff
+          let delay = Math.min(
+            (this.config.validation?.baseDelay || 1000) * Math.pow(2, attempt),
+            this.config.validation?.maxDelay || 30000
+          )
+          if (process.env.NODE_ENV === 'test') {
+            delay = 10
+          }
+          await new Promise(resolve => setTimeout(resolve, delay))
+        } else {
+          logger.error('Feed discovery failed after all retries:', error)
+          throw lastError
         }
       }
-      
-      // Remove duplicates
-      const seen = new Set<string>()
-      return discovered.filter(feed => {
-        if (seen.has(feed.url)) return false
-        seen.add(feed.url)
-        return true
-      })
-      
-    } catch (error) {
-      logger.error('Feed discovery failed:', error)
-      return []
     }
+    
+    // This should never be reached, but TypeScript requires it
+    throw lastError || new Error('Feed discovery failed')
   }
 
   /**
@@ -190,10 +518,7 @@ export class NewsSourcer {
    */
   private async validateFeed(feedUrl: string): Promise<FeedValidationResult> {
     try {
-      const response = await axios.get(feedUrl, { 
-        timeout: this.config.validation?.timeout || 10000,
-        headers: { 'User-Agent': this.config.userAgent }
-      })
+      const response = await this.makeProtectedRequest(feedUrl)
       
       const xmlContent = response.data
       
@@ -269,10 +594,7 @@ export class NewsSourcer {
 
     while (retryCount <= (opts.maxRetries || 3)) {
       try {
-        const response = await axios.get(endpointUrl, { 
-          timeout: opts.timeout || 10000,
-          headers: { 'User-Agent': this.config.userAgent }
-        })
+        const response = await this.makeProtectedRequest(endpointUrl, { timeout: opts.timeout || 10000 })
         
         const xmlContent = response.data
         const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
@@ -630,6 +952,7 @@ export class NewsSourcer {
       metadata: dbEndpoint.metadata as Record<string, unknown>,
       successCount: dbEndpoint.successCount,
       errorCount: dbEndpoint.errorCount,
+      consecutiveFailureCount: dbEndpoint.consecutiveFailureCount || 0,
       lastFetchAt: dbEndpoint.lastFetchAt || undefined,
       lastSuccessAt: dbEndpoint.lastSuccessAt || undefined,
       createdAt: dbEndpoint.createdAt,
@@ -730,10 +1053,7 @@ export class NewsSourcer {
    * Fetch and preprocess HTML for LLM analysis
    */
   private async fetchAndPreprocessHtml(url: string): Promise<string> {
-    const response = await axios.get(url, {
-      timeout: this.config.validation?.timeout || 10000,
-      headers: { 'User-Agent': this.config.userAgent }
-    })
+    const response = await this.makeProtectedRequest(url)
 
     const $ = load(response.data)
     
@@ -762,7 +1082,14 @@ export class NewsSourcer {
    * Perform LLM analysis to extract CSS selectors
    */
   private async performLlmAnalysis(htmlContent: string, sourceUrl: string, previousResult?: LlmAnalysisResult | null): Promise<LlmAnalysisResult> {
-    const providers = await this.aiManager.getEnabledProviders('translation')
+    // Try content analysis providers first, fallback to translation providers
+    let providers = await this.aiManager.getEnabledProviders('content_analysis')
+    if (providers.length === 0) {
+      providers = await this.aiManager.getEnabledProviders('translation')
+    }
+    if (providers.length === 0) {
+      providers = await this.aiManager.getEnabledProviders()
+    }
     if (providers.length === 0) {
       throw new Error('No AI providers available for HTML analysis')
     }
@@ -819,30 +1146,36 @@ ${JSON.stringify(previousResult, null, 2)}`
     return prompt
   }
 
-  private async makeLlmRequest(provider: any, key: any, prompt: string): Promise<string> {
-    // Simplified placeholder - implement actual API calls based on provider
-    // This would make HTTP requests to OpenRouter, Anthropic, etc.
+  private async makeLlmRequest(provider: AiProvider, key: AiProviderKey, prompt: string): Promise<string> {
     logger.debug(`Making LLM request to ${provider.name}`)
     
-    // For now, return a mock response to demonstrate the structure
-    return JSON.stringify({
-      endpoints: [{
-        url: "https://example.com",
-        type: "html",
-        category: "news",
-        priority: 5,
-        crawlingScript: {
-          articleSelector: "a[href*='/article/'], a[href*='/news/']",
-          titleSelector: "h1, h2, .title",
-          timestampSelector: "time, .date, .published"
-        },
-        reliability: {
-          confidence: 0.7
-        }
-      }],
-      confidence: 0.7,
-      reasoning: "Found common article link patterns and standard semantic elements"
-    })
+    try {
+      const { OpenAI } = await import('openai')
+      const client = new OpenAI({ 
+        apiKey: key.apiKey || key.keyValue, 
+        baseURL: provider.baseUrl 
+      })
+      
+      const response = await client.chat.completions.create({
+        model: provider.metadata?.models?.[0] || 'gpt-3.5-turbo',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are an expert at analyzing HTML content and extracting CSS selectors for news article links. Always respond with valid JSON only.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 1500
+      })
+      
+      const content = response.choices[0]?.message?.content?.trim() || ''
+      logger.debug(`LLM response received: ${content.length} characters`)
+      return content
+    } catch (error) {
+      logger.error(`LLM request failed for provider ${provider.name}:`, error)
+      throw error
+    }
   }
 
   private parseLlmResponse(response: string, sourceUrl: string): LlmAnalysisResult {
@@ -850,11 +1183,11 @@ ${JSON.stringify(previousResult, null, 2)}`
       const parsed = JSON.parse(response)
       
       // Enhance parsed endpoints with required metadata
-      const endpoints: DiscoveredEndpoint[] = parsed.endpoints?.map((ep: any) => ({
+      const endpoints: DiscoveredEndpoint[] = parsed.endpoints?.map((ep: Record<string, unknown>) => ({
         ...ep,
         url: sourceUrl,
         reliability: {
-          confidence: ep.reliability?.confidence || 0.5,
+          confidence: (ep.reliability as Record<string, unknown>)?.confidence as number || 0.5,
           testResults: {
             sampleSize: 0,
             successRate: 0,
@@ -894,10 +1227,7 @@ ${JSON.stringify(previousResult, null, 2)}`
     }
 
     try {
-      const response = await axios.get(endpoint.url, {
-        timeout: this.config.validation?.timeout || 10000,
-        headers: { 'User-Agent': this.config.userAgent }
-      })
+      const response = await this.makeProtectedRequest(endpoint.url)
 
       const $ = load(response.data)
       const articleLinks = $(endpoint.crawlingScript.articleSelector)

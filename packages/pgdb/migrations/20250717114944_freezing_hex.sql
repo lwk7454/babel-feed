@@ -1,0 +1,1 @@
+ALTER TABLE "source_endpoints" ADD COLUMN "consecutive_failure_count" integer DEFAULT 0 NOT NULL;

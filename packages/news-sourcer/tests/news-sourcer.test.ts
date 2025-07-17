@@ -1,5 +1,10 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach, mock } from 'bun:test'
 import { NewsSourcer } from '../src/news-sourcer'
+import { 
+  setupNewsSourcerTestDatabase, 
+  cleanupNewsSourcerTestDatabase, 
+  clearNewsSourcerTestData 
+} from './helpers/test-database.js'
 
 // Mock axios to avoid real HTTP calls in tests
 const mockAxiosGet = mock()
@@ -11,19 +16,9 @@ mock.module('axios', () => ({
   }
 }))
 
-// Mock pgdb
+// Mock pgdb - only mock getDatabase to use test database
 mock.module('@babel-feed/pgdb', () => ({
-  getDatabase: mock().mockResolvedValue({
-    select: mock().mockReturnThis(),
-    from: mock().mockReturnThis(),
-    where: mock().mockReturnThis(),
-    orderBy: mock().mockReturnThis(),
-    limit: mock().mockReturnThis(),
-    insert: mock().mockReturnThis(),
-    values: mock().mockReturnThis(),
-    returning: mock().mockResolvedValue([])
-  }),
-  sourceEndpoints: {}
+  getDatabase: mock().mockResolvedValue(null) // This will cause fallback to test database
 }))
 
 // Mock LLM provider
@@ -37,10 +32,23 @@ mock.module('@babel-feed/llm-provider', () => ({
 describe('NewsSourcer RSS/Atom Feed Discovery', () => {
   let sourcer: NewsSourcer
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    await setupNewsSourcerTestDatabase()
+  })
+
+  afterAll(async () => {
+    await cleanupNewsSourcerTestDatabase()
+  })
+
+  beforeEach(async () => {
     sourcer = new NewsSourcer()
+    await sourcer.initialize()
     mockAxiosGet.mockClear()
     mockAxiosHead.mockClear()
+  })
+
+  afterEach(async () => {
+    await clearNewsSourcerTestData()
   })
 
   describe('Initialization', () => {
