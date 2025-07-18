@@ -350,7 +350,7 @@ export class AiProviderManager {
       {
         name: 'openrouter',
         displayName: 'OpenRouter',
-        providerType: 'translation',
+        providerType: 'content_analysis',
         baseUrl: 'https://openrouter.ai/api/v1',
         enabled: true,
         priority: 9,
@@ -360,7 +360,7 @@ export class AiProviderManager {
         circuitBreakerThreshold: 5,
         circuitBreakerTimeout: 60000,
         healthCheckInterval: 30000,
-        metadata: { models: ['gpt-3.5-turbo', 'claude-3-haiku'] }
+        metadata: { models: ['gpt-3.5-turbo', 'gpt-4', 'claude-3-haiku'] }
       },
       {
         name: 'huggingface',
@@ -378,11 +378,26 @@ export class AiProviderManager {
         metadata: { models: ['Helsinki-NLP/opus-mt-en-zh'] }
       }
     ]
+    
     for (const providerData of initialProviders) {
       const [created] = await this.db!
         .insert(aiProviders)
         .values(providerData as NewAiProvider)
         .returning()
+      
+      // Seed a test API key for each provider
+      await this.db!
+        .insert(aiProviderKeys)
+        .values({
+          providerId: created.id,
+          keyName: 'test-key',
+          apiKey: 'test-api-key',
+          enabled: true,
+          priority: 5,
+          successCount: 0,
+          errorCount: 0
+        })
+      
       logger.info(`Seeded AI provider: ${created.displayName} (${created.id})`)
     }
     logger.info(`Seeded ${initialProviders.length} initial AI providers`)

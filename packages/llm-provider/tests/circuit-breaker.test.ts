@@ -1,25 +1,48 @@
-import { describe, it, expect, beforeEach } from 'bun:test'
-import { CircuitBreaker } from '../src/circuit-breaker'
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'bun:test'
+import { CircuitBreaker } from '../src/circuit-breaker.js'
+import { install } from '@sinonjs/fake-timers'
+
+let clock: ReturnType<typeof install> | undefined
 
 describe('CircuitBreaker', () => {
-  let breaker: CircuitBreaker
+  beforeAll(() => {
+    clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
+  })
+
+  afterAll(() => {
+    clock?.uninstall()
+    clock = undefined
+  })
 
   beforeEach(() => {
-    breaker = new CircuitBreaker('test', { threshold: 2, timeout: 50, resetTimeout: 10 })
+    clock?.reset()
   })
 
   it('executes operation when closed', async () => {
-    const result = await breaker.execute(async () => 'ok')
-    expect(result).toBe('ok')
-    expect(breaker.isClosed()).toBe(true)
+    const breaker = new CircuitBreaker('test', { threshold: 2, timeout: 1000, resetTimeout: 1000 })
+    const operation = () => Promise.resolve('success')
+    
+    const result = await breaker.execute(operation)
+    expect(result).toBe('success')
   })
 
   it('opens after failures and resets', async () => {
-    await expect(breaker.execute(async () => { throw new Error('fail') })).rejects.toThrow('fail')
-    await expect(breaker.execute(async () => { throw new Error('fail') })).rejects.toThrow('fail')
-    expect(breaker.isOpen()).toBe(true)
-    await new Promise(r => setTimeout(r, 60))
-    await expect(breaker.execute(async () => 'recovered')).resolves.toBe('recovered')
-    expect(breaker.isClosed()).toBe(true)
+    const breaker = new CircuitBreaker('test', { threshold: 2, timeout: 1000, resetTimeout: 1000 })
+    const operation = () => Promise.reject(new Error('fail'))
+    
+    // First two failures
+    await expect(breaker.execute(operation)).rejects.toThrow('fail')
+    await expect(breaker.execute(operation)).rejects.toThrow('fail')
+    
+    // Circuit should be open
+    await expect(breaker.execute(operation)).rejects.toThrow('Circuit breaker test is open')
+    
+    // Advance time past timeout
+    clock!.tick(1100)
+    
+    // Should be half-open and succeed
+    const successOp = () => Promise.resolve('success')
+    const result = await breaker.execute(successOp)
+    expect(result).toBe('success')
   })
 })

@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
 import { AiProviderManager } from '../src/ai-provider-manager'
 import { setupTestDatabase, cleanupTestDatabase, getTestDb, aiProviderKeys } from '@babel-feed/pgdb'
+import { install } from '@sinonjs/fake-timers'
+
+let clock: ReturnType<typeof install> | undefined
 
 const manager = new AiProviderManager()
 let providerId: string
 
 beforeAll(async () => {
+  clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
   await setupTestDatabase()
   await manager.initialize()
   const [provider] = await manager.getAllProviders()
@@ -19,6 +23,29 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await cleanupTestDatabase()
+  clock?.uninstall()
+  clock = undefined
+})
+
+beforeEach(() => {
+  clock?.reset()
+  
+  // Mock the delay function to be instant for tests
+  const originalDelay = global.setTimeout
+  global.setTimeout = ((fn: (...args: unknown[]) => void, delay: number) => {
+    if (delay > 0) {
+      // For retry delays, execute immediately
+      fn()
+      return {} as any
+    }
+    return originalDelay(fn, delay)
+  }) as any
+})
+
+afterEach(() => {
+  clock?.reset()
+  // Restore original setTimeout
+  global.setTimeout = setTimeout
 })
 
 describe('AiProviderManager', () => {
@@ -46,6 +73,7 @@ describe('AiProviderManager', () => {
       const err = new Error('Rate limit exceeded')
       throw err
     })).rejects.toThrow('All retries exhausted')
+    
     const keys = await manager.getProviderKeys(providerId)
     const limited = keys.find(k => (k.rateLimitHits || 0) > 0)
     expect(limited).toBeDefined()

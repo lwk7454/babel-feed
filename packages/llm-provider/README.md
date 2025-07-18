@@ -7,13 +7,14 @@ Production-ready LLM provider management with OpenAI API compatibility, circuit 
 - **OpenAI API Compatibility**: Full support for chat completions and streaming
 - **Unified Provider Support**: Any OpenAI-compatible provider with configuration-based customization
 - **Pre-configured Providers**: OpenRouter and Kimi (Moonshot) with optimized settings
-- **Circuit Breaker Pattern**: Automatic failover and recovery
+- **Circuit Breaker Pattern**: Automatic failover and recovery with configurable thresholds
 - **Rate Limiting**: Intelligent rate limit handling and quota management
 - **Key Rotation**: Automatic rotation between multiple API keys per provider
 - **Streaming Support**: Server-sent events for real-time responses
 - **Configuration-Based**: All provider differences handled through configuration, not code
-- **Extensible**: Easy to add new OpenAI-compatible providers via configuration
-- **Comprehensive Testing**: Full test coverage with unified adapter testing
+- **Database Integration**: PostgreSQL-based provider and key management
+- **Comprehensive Testing**: Full test coverage with BDD-style tests
+- **TypeScript**: Fully typed with comprehensive type definitions
 
 ## Quick Start
 
@@ -171,7 +172,18 @@ const result = await manager.executeWithProvider('openrouter-provider-id', async
 })
 ```
 
-## Unified OpenAI Adapter
+## Architecture
+
+### Core Components
+
+- **LlmClient**: High-level client for easy usage
+- **AiProviderManager**: Database-backed provider management
+- **OpenAIAdapter**: Unified adapter for all OpenAI-compatible providers
+- **LlmHttpClient**: HTTP client with retry and error handling
+- **CircuitBreaker**: Automatic failover protection
+- **ConfigManager**: Environment-based configuration management
+
+### Provider Configuration
 
 All providers use the same OpenAI-compatible interface with configuration-based customization:
 
@@ -224,7 +236,7 @@ The system will automatically detect and configure the new provider.
 The package provides structured error handling with retryable error detection:
 
 ```typescript
-import { LlmClient } from '@babel-feed/llm-provider'
+import { LlmClient, LlmProviderError } from '@babel-feed/llm-provider'
 
 const client = new LlmClient()
 await client.initialize()
@@ -233,20 +245,15 @@ try {
   const response = await client.createChatCompletion(request)
   // Handle success
 } catch (error) {
-  if (error.retryable) {
-    console.log('Temporary error, can retry:', error.message)
+  if (error instanceof LlmProviderError) {
+    console.log('Provider error:', {
+      code: error.code,
+      statusCode: error.statusCode,
+      message: error.message
+    })
   } else {
-    console.log('Permanent error:', error.message)
+    console.log('Unexpected error:', error.message)
   }
-  
-  console.log('Error details:', {
-    code: error.code,
-    statusCode: error.statusCode,
-    provider: error.provider,
-    requestId: error.requestId,
-    rateLimited: error.rateLimited,
-    quotaExceeded: error.quotaExceeded
-  })
 }
 ```
 
@@ -264,33 +271,22 @@ const health = await client.getProviderHealth()
 console.log(`Provider circuit state: ${health['OpenRouter'].circuitState}`)
 ```
 
-## Advanced Configuration
+## Database Integration
 
-### Custom HTTP Client
+The provider manager uses PostgreSQL for persistence:
 
-```typescript
-import { LlmClient, LlmHttpClient } from '@babel-feed/llm-provider'
+- **Providers**: Configuration, priorities, rate limits
+- **API Keys**: Multiple keys per provider with rotation
+- **Circuit Breakers**: State tracking and automatic recovery
+- **Usage Metrics**: Success/error counts, rate limit tracking
 
-const customHttpClient = new LlmHttpClient({
-  timeout: 60000,
-  retryAttempts: 5,
-  retryDelay: 2000,
-  userAgent: 'MyApp/1.0'
-})
+### Database Schema
 
-const client = new LlmClient({}, customHttpClient)
-```
+The package integrates with `@babel-feed/pgdb` for database operations:
 
-### Provider Configuration Validation
-
-```typescript
-import { configManager } from '@babel-feed/llm-provider'
-
-const validation = configManager.validateConfig()
-if (!validation.valid) {
-  console.error('Configuration issues:', validation.issues)
-}
-```
+- `aiProviders` table: Provider configuration and metadata
+- `aiProviderKeys` table: API keys with usage tracking
+- Automatic migrations and schema management
 
 ## Testing
 
@@ -311,14 +307,18 @@ afterEach(async () => {
 })
 ```
 
-## Database Integration
+### Running Tests
 
-The provider manager uses PostgreSQL for persistence:
+```bash
+# Run all tests
+bun test
 
-- **Providers**: Configuration, priorities, rate limits
-- **API Keys**: Multiple keys per provider with rotation
-- **Circuit Breakers**: State tracking and automatic recovery
-- **Usage Metrics**: Success/error counts, rate limit tracking
+# Run specific test file
+bun test llm-client.test.ts
+
+# Run with coverage
+bun test --coverage
+```
 
 ## Production Deployment
 
@@ -336,24 +336,84 @@ The provider manager uses PostgreSQL for persistence:
 - `streamChatCompletion(request)` - Stream chat completion  
 - `createChatCompletionWithProviderType(request, type)` - Use specific provider type
 - `getProviderHealth()` - Get provider health status
+- `getProviderManager()` - Get underlying provider manager
 
 ### AiProviderManager
 
 - `getAllProviders()` - Get all providers
 - `getEnabledProviders(type?)` - Get enabled providers by type
+- `getProviderKeys(providerId)` - Get keys for a provider
 - `executeWithProvider(id, callback)` - Execute with specific provider
 - `getProviderHealth(id)` - Get provider health status
+- `bulkEnableProviders(ids)` - Enable multiple providers
+- `bulkDisableProviders(ids)` - Disable multiple providers
 
-### Provider Adapters
+### OpenAIAdapter
 
-- `OpenRouterAdapter` - OpenRouter API adapter
-- `KimiAdapter` - Kimi/Moonshot API adapter  
-- `createProviderAdapter(name, config?)` - Provider factory
+- `createChatCompletion(request, provider, key, context)` - Create completion
+- `streamChatCompletion(request, provider, key, context)` - Stream completion
+- `validateRequest(request, provider)` - Validate request against provider
+- `transformRequest(request, provider)` - Transform request for provider
+- `transformResponse(response, provider)` - Normalize response
 
 ### Configuration
 
 - `configManager` - Global configuration manager
 - `loadLlmProviderConfig()` - Load configuration from environment
+- `validateConfig()` - Validate configuration
+
+### Types
+
+- `ChatCompletionRequest` - OpenAI-compatible request
+- `ChatCompletionResponse` - OpenAI-compatible response
+- `ChatCompletionStreamResponse` - Streaming response
+- `AiProvider` - Provider configuration
+- `AiProviderKey` - API key configuration
+- `LlmProviderError` - Error class with additional context
+
+## Dependencies
+
+- `@babel-feed/pgdb` - Database integration
+- `@babel-feed/utils` - Logging utilities
+- `drizzle-orm` - Database ORM
+- `@sinonjs/fake-timers` - Testing utilities
+
+## Development
+
+### Building
+
+```bash
+# Build the package
+nx build llm-provider
+
+# Type check
+nx type-check llm-provider
+
+# Lint
+nx lint llm-provider
+```
+
+### Project Structure
+
+```
+src/
+├── ai-provider-manager.ts    # Provider management and database operations
+├── circuit-breaker.ts        # Circuit breaker implementation
+├── config.ts                 # Configuration management
+├── http-client.ts           # HTTP client with retry logic
+├── index.ts                 # Public exports
+├── llm-client.ts            # High-level client interface
+├── openai-adapter.ts        # Unified OpenAI adapter
+└── types.ts                 # TypeScript type definitions
+
+tests/
+├── circuit-breaker.test.ts   # Circuit breaker tests
+├── http-client.test.ts      # HTTP client tests
+├── llm-client.test.ts       # Client integration tests
+├── manager.test.ts          # Provider manager tests
+├── openai-adapter.test.ts   # Adapter tests
+└── helpers/                 # Test utilities
+```
 
 ## License
 

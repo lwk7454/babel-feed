@@ -61,9 +61,9 @@ describe('Python Feature Parity Verification', () => {
   
   describe('Title Extraction Comparison', () => {
     const testCases = [
-      { name: 'CNN Article', htmlFile: 'cnn_001.html', baselineFile: 'cnn_001.json' },
-      { name: 'Time Article', htmlFile: 'time_001.html', baselineFile: 'time_001.json' },
-      { name: 'Wired Article', htmlFile: 'wired_001.html', baselineFile: 'wired_001.json' }
+      { name: 'CNN Article', htmlFile: 'cnn_001.html.mock', baselineFile: 'cnn_001.json' },
+      { name: 'Time Article', htmlFile: 'time_001.html.mock', baselineFile: 'time_001.json' },
+      { name: 'Wired Article', htmlFile: 'wired_001.html.mock', baselineFile: 'wired_001.json' }
     ]
 
     testCases.forEach(({ name, htmlFile, baselineFile }) => {
@@ -93,8 +93,8 @@ describe('Python Feature Parity Verification', () => {
 
   describe('Content Extraction Comparison', () => {
     const testCases = [
-      { name: 'CNN Article', htmlFile: 'cnn_001.html', baselineFile: 'cnn_001.json' },
-      { name: 'Time Article', htmlFile: 'time_001.html', baselineFile: 'time_001.json' }
+      { name: 'CNN Article', htmlFile: 'cnn_001.html.mock', baselineFile: 'cnn_001.json' },
+      { name: 'Time Article', htmlFile: 'time_001.html.mock', baselineFile: 'time_001.json' }
     ]
 
     testCases.forEach(({ name, htmlFile, baselineFile }) => {
@@ -132,9 +132,9 @@ describe('Python Feature Parity Verification', () => {
   describe('Error-Free Processing', () => {
     it('should process all test files without errors', async () => {
       const testFiles = [
-        'cnn_001.html',
-        'time_001.html', 
-        'wired_001.html'
+        'cnn_001.html.mock',
+        'time_001.html.mock', 
+        'wired_001.html.mock'
       ]
       
       for (const htmlFile of testFiles) {

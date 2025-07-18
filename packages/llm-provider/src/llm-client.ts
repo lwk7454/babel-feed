@@ -193,9 +193,9 @@ export class LlmClient {
   /**
    * Get provider health status
    */
-  async getProviderHealth(): Promise<Record<string, any>> {
+  async getProviderHealth(): Promise<Record<string, unknown>> {
     const providers = await this.providerManager.getAllProviders()
-    const health: Record<string, any> = {}
+    const health: Record<string, unknown> = {}
 
     for (const provider of providers) {
       try {

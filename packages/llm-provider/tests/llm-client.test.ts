@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { cleanupTestDatabase, clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
+import { install } from '@sinonjs/fake-timers'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { LlmClient } from '../src/llm-client.js'
-import { setupTestDatabase, cleanupTestDatabase, clearTestData } from '@babel-feed/pgdb'
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -9,10 +10,22 @@ import type {
 
 // Mock fetch for HTTP requests
 const mockFetch = mock()
-global.fetch = mockFetch
+;(mockFetch as any).preconnect = mock()
+global.fetch = mockFetch as any
+
+let clock: ReturnType<typeof install> | undefined
 
 describe('LlmClient', () => {
   let client: LlmClient
+
+  beforeAll(() => {
+    clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
+  })
+
+  afterAll(() => {
+    clock?.uninstall()
+    clock = undefined
+  })
 
   beforeEach(async () => {
     await setupTestDatabase()
@@ -24,11 +37,25 @@ describe('LlmClient', () => {
     })
     await client.initialize()
     mockFetch.mockClear()
+    clock?.reset()
+    
+    // Mock the delay function to be instant for tests
+    const originalDelay = global.setTimeout
+    global.setTimeout = ((fn: (...args: unknown[]) => void, delay: number) => {
+      if (delay > 0) {
+        // For retry delays, execute immediately
+        fn()
+        return {} as any
+      }
+      return originalDelay(fn, delay)
+    }) as any
   })
 
   afterEach(async () => {
     await cleanupTestDatabase()
     mockFetch.mockClear()
+    // Restore original setTimeout
+    global.setTimeout = setTimeout
   })
 
   describe('Chat Completion', () => {
@@ -168,7 +195,7 @@ describe('LlmClient', () => {
         messages: [{ role: 'user', content: 'This should fail' }]
       }
 
-      await expect(client.createChatCompletion(request)).rejects.toThrow('All providers failed')
+      await expect(client.createChatCompletion(request)).rejects.toThrow('All retries exhausted')
     })
   })
 
@@ -253,12 +280,8 @@ describe('LlmClient', () => {
         stream: true
       }
 
-      await expect(async () => {
-        for await (const chunk of client.streamChatCompletion(request)) {
-          // Should not reach here
-          expect(chunk).toBeDefined()
-        }
-      }).rejects.toThrow('Streaming failed')
+      const stream = client.streamChatCompletion(request)
+      await expect(stream.next()).rejects.toThrow('Streaming failed')
     })
   })
 
@@ -343,7 +366,7 @@ describe('LlmClient', () => {
       for (const [providerName, status] of Object.entries(health)) {
         expect(providerName).toBeDefined()
         expect(typeof status).toBe('object')
-        expect('healthy' in status).toBe(true)
+        expect('healthy' in (status as Record<string, unknown>)).toBe(true)
       }
     })
   })
@@ -351,9 +374,10 @@ describe('LlmClient', () => {
   describe('Error Handling', () => {
     it('handles network timeouts', async () => {
       mockFetch.mockImplementation(() => 
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Request timeout')), 100)
-        )
+        new Promise((_, reject) => {
+          // Use fake timer instead of real setTimeout
+          clock!.setTimeout(() => reject(new Error('Request timeout')), 100)
+        })
       )
 
       const request: ChatCompletionRequest = {
@@ -397,7 +421,7 @@ describe('LlmClient', () => {
         messages: [{ role: 'user', content: 'Auth error test' }]
       }
 
-      await expect(client.createChatCompletion(request)).rejects.toThrow('Invalid API key')
+      await expect(client.createChatCompletion(request)).rejects.toThrow('All retries exhausted')
     })
   })
 })

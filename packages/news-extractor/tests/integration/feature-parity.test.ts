@@ -37,35 +37,35 @@ interface TestCase {
 const TEST_CASES: TestCase[] = [
   {
     name: 'CNN Article',
-    htmlFile: 'cnn_001.html',
+    htmlFile: 'cnn_001.html.mock',
     metadataFile: 'cnn_001.json', 
     expectedTextFile: 'cnn_001.txt',
     url: 'https://www.cnn.com/2023/11/06/politics/alito-prelogar-supreme-court-analysis/index.html'
   },
   {
     name: 'Time Article',
-    htmlFile: 'time_001.html',
+    htmlFile: 'time_001.html.mock',
     metadataFile: 'time_001.json',
     expectedTextFile: 'time_001.txt',
     url: 'https://time.com/6962948/james-hansen-climate-geoengineering/'
   },
   {
     name: 'Wired Article',
-    htmlFile: 'wired_001.html',
+    htmlFile: 'wired_001.html.mock',
     metadataFile: 'wired_001.json',
     expectedTextFile: 'wired_001.txt',
     url: 'https://www.wired.com/story/israel-palestine-surveillance-west-bank/'
   },
   {
     name: 'Chinese Article',
-    htmlFile: 'chinese_article_001.html',
+    htmlFile: 'chinese_article_001.html.mock',
     metadataFile: 'chinese_article_001.json',
     expectedTextFile: 'chinese_article_001.txt',
     url: 'https://china.chinadaily.com.cn/a/202311/17/WS65571297a310d5acd876f404.html'
   },
   {
     name: 'Japanese Article',
-    htmlFile: 'japanese_article.html',
+    htmlFile: 'japanese_article.html.mock',
     metadataFile: 'japanese_article.json',
     expectedTextFile: 'japanese_article.txt',
     url: 'https://www.nikkei.com/article/DGXMZO31897660Y8A610C1000000/'
@@ -243,7 +243,7 @@ describe('Algorithm Verification', () => {
     
     // Test that we can process each HTML file without errors
     // Use well-known files that should work correctly
-    const testFiles = ['cnn_001.html', 'time_001.html', 'wired_001.html']
+    const testFiles = ['cnn_001.html.mock', 'time_001.html.mock', 'wired_001.html.mock']
     
     for (const htmlFile of testFiles) {
       const htmlContent = await fs.readFile(join(__dirname, '../data/html', htmlFile), 'utf-8')

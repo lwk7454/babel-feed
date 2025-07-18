@@ -1,4 +1,3 @@
-import { logger } from '@babel-feed/utils'
 import { LlmHttpClient } from './http-client.js'
 import type {
   ChatCompletionRequest,
@@ -7,7 +6,7 @@ import type {
   AiProvider,
   AiProviderKey,
   RequestContext,
-  LlmError
+  ToolCall
 } from './types.js'
 
 export interface OpenAIAdapterConfig {
@@ -52,7 +51,7 @@ export class OpenAIAdapter {
     )
 
     return this.config.transformResponse 
-      ? this.transformResponse(response, provider)
+      ? this.transformResponse(response as unknown as Record<string, unknown>, provider)
       : response
   }
 
@@ -110,19 +109,20 @@ export class OpenAIAdapter {
     }
 
     // Validate streaming support
-    const supportsStreaming = provider.metadata?.features?.streaming !== false
+    const features = provider.metadata?.features as Record<string, unknown> | undefined
+    const supportsStreaming = features?.streaming !== false
     if (request.stream && !supportsStreaming) {
       throw new Error(`Streaming is not supported by provider ${provider.name}`)
     }
 
     // Validate tools support
-    const supportsTools = provider.metadata?.features?.tools !== false
+    const supportsTools = features?.tools !== false
     if (request.tools && !supportsTools) {
       throw new Error(`Tools are not supported by provider ${provider.name}`)
     }
 
     // Validate JSON mode support
-    const supportsJsonMode = provider.metadata?.features?.jsonMode !== false
+    const supportsJsonMode = features?.jsonMode !== false
     if (request.response_format?.type === 'json_object' && !supportsJsonMode) {
       throw new Error(`JSON mode is not supported by provider ${provider.name}`)
     }
@@ -132,19 +132,19 @@ export class OpenAIAdapter {
     const transformed = { ...request }
 
     // Provider-specific transformations based on metadata
-    const transforms = provider.metadata?.transforms as Record<string, any> || {}
+    const transforms = provider.metadata?.transforms as Record<string, unknown> || {}
 
     // Remove unsupported parameters
     const unsupportedParams = transforms.removeParams as string[] || []
     unsupportedParams.forEach(param => {
-      delete (transformed as any)[param]
+      delete (transformed as Record<string, unknown>)[param]
     })
 
     // Apply default values
-    const defaults = transforms.defaults as Record<string, any> || {}
+    const defaults = transforms.defaults as Record<string, unknown> || {}
     Object.entries(defaults).forEach(([key, value]) => {
       if (transformed[key as keyof ChatCompletionRequest] === undefined) {
-        (transformed as any)[key] = value
+        (transformed as Record<string, unknown>)[key] = value
       }
     })
 
@@ -152,8 +152,8 @@ export class OpenAIAdapter {
     const paramMappings = transforms.paramMappings as Record<string, string> || {}
     Object.entries(paramMappings).forEach(([from, to]) => {
       if (from in transformed) {
-        (transformed as any)[to] = (transformed as any)[from]
-        delete (transformed as any)[from]
+        (transformed as Record<string, unknown>)[to] = (transformed as Record<string, unknown>)[from]
+        delete (transformed as Record<string, unknown>)[from]
       }
     })
 
@@ -195,29 +195,29 @@ export class OpenAIAdapter {
     return transformed
   }
 
-  private transformResponse(response: any, provider: AiProvider): ChatCompletionResponse {
+  private transformResponse(response: Record<string, unknown>, provider: AiProvider): ChatCompletionResponse {
     // Most providers return standard OpenAI format, but handle edge cases
     const transformed: ChatCompletionResponse = {
-      id: response.id || `${provider.name}_${Date.now()}`,
+      id: response.id as string || `${provider.name}_${Date.now()}`,
       object: 'chat.completion',
-      created: response.created || Math.floor(Date.now() / 1000),
-      model: response.model,
-      choices: response.choices?.map((choice: any, index: number) => ({
-        index: choice.index ?? index,
+      created: response.created as number || Math.floor(Date.now() / 1000),
+      model: response.model as string,
+      choices: (response.choices as Array<Record<string, unknown>>)?.map((choice: Record<string, unknown>, index: number) => ({
+        index: choice.index as number ?? index,
         message: {
-          role: choice.message?.role || 'assistant',
-          content: choice.message?.content || '',
-          tool_calls: choice.message?.tool_calls
+          role: ((choice.message as Record<string, unknown>)?.role as string || 'assistant') as 'system' | 'user' | 'assistant' | 'tool',
+          content: (choice.message as Record<string, unknown>)?.content as string || '',
+          tool_calls: (choice.message as Record<string, unknown>)?.tool_calls as unknown as ToolCall[] | undefined
         },
-        finish_reason: this.normalizeFinishReason(choice.finish_reason, provider)
+        finish_reason: this.normalizeFinishReason(choice.finish_reason as string, provider)
       })) || [],
       usage: response.usage ? {
-        prompt_tokens: response.usage.prompt_tokens || 0,
-        completion_tokens: response.usage.completion_tokens || 0,
-        total_tokens: response.usage.total_tokens || 
-          (response.usage.prompt_tokens || 0) + (response.usage.completion_tokens || 0)
+        prompt_tokens: (response.usage as Record<string, unknown>).prompt_tokens as number || 0,
+        completion_tokens: (response.usage as Record<string, unknown>).completion_tokens as number || 0,
+        total_tokens: (response.usage as Record<string, unknown>).total_tokens as number || 
+          ((response.usage as Record<string, unknown>).prompt_tokens as number || 0) + ((response.usage as Record<string, unknown>).completion_tokens as number || 0)
       } : undefined,
-      system_fingerprint: response.system_fingerprint
+      system_fingerprint: response.system_fingerprint as string | undefined
     }
 
     return transformed

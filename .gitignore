@@ -89,3 +89,6 @@ apps/babel-android/app/src/main/kotlin/**/*.class
 # Nx
 .nx
 .github/instructions/nx.instructions.md
+
+# Drizzle migrations - exclude snapshot files but keep SQL and journal
+packages/pgdb/migrations/meta/*_snapshot.json

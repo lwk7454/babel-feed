@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { LlmHttpClient } from '../src/http-client.js'
 import type {
   ChatCompletionRequest,
@@ -9,9 +9,9 @@ import type {
   RequestContext
 } from '../src/types.js'
 
-// Mock fetch
+// Mock fetch for HTTP requests
 const mockFetch = mock()
-global.fetch = mockFetch
+global.fetch = mockFetch as any
 
 describe('LlmHttpClient', () => {
   let httpClient: LlmHttpClient
@@ -22,13 +22,23 @@ describe('LlmHttpClient', () => {
   beforeEach(() => {
     httpClient = new LlmHttpClient({
       timeout: 5000,
-      retryAttempts: 2,
-      retryDelay: 100,
-      userAgent: 'Test-Agent/1.0'
+      retryAttempts: 3,
+      retryDelay: 100
     })
 
+    // Mock the delay function to be instant for tests
+    const originalDelay = global.setTimeout
+    global.setTimeout = ((fn: (...args: unknown[]) => void, delay: number) => {
+      if (delay > 0) {
+        // For retry delays, execute immediately
+        fn()
+        return {} as any
+      }
+      return originalDelay(fn, delay)
+    }) as any
+
     mockProvider = {
-      id: 'test-provider',
+      id: 'test-provider-id',
       name: 'openrouter',
       displayName: 'OpenRouter',
       providerType: 'content_analysis',
@@ -40,16 +50,38 @@ describe('LlmHttpClient', () => {
       maxRequestsPerDay: 86400,
       circuitBreakerThreshold: 5,
       circuitBreakerTimeout: 60000,
-      metadata: { models: ['gpt-3.5-turbo'] },
+      metadata: {
+        models: ['gpt-3.5-turbo', 'gpt-4'],
+        maxTokens: 200000,
+        temperatureRange: { min: 0, max: 2 },
+        features: {
+          streaming: true,
+          tools: true,
+          jsonMode: true,
+          logprobs: false
+        },
+        transforms: {
+          removeParams: ['logit_bias', 'seed'],
+          defaults: {
+            temperature: 0.7,
+            max_tokens: 2048
+          },
+          modelPrefix: 'auto'
+        },
+        authHeaders: {
+          'HTTP-Referer': 'https://babel-feed.app',
+          'X-Title': 'Babel Feed'
+        }
+      },
       createdAt: new Date(),
       updatedAt: new Date()
     }
 
     mockKey = {
-      id: 'test-key',
-      providerId: 'test-provider',
+      id: 'test-key-id',
+      providerId: 'test-provider-id',
       keyName: 'test-key',
-      keyValue: 'test-api-key-value',
+      keyValue: 'test-api-key',
       enabled: true,
       successCount: 0,
       errorCount: 0,
@@ -66,6 +98,12 @@ describe('LlmHttpClient', () => {
     }
 
     mockFetch.mockClear()
+  })
+
+  afterEach(() => {
+    mockFetch.mockClear()
+    // Restore original setTimeout
+    global.setTimeout = setTimeout
   })
 
   describe('Chat Completion', () => {
@@ -115,7 +153,7 @@ describe('LlmHttpClient', () => {
       const callArgs = mockFetch.mock.calls[0]
       expect(callArgs[0]).toBe('https://openrouter.ai/api/v1/chat/completions')
       expect(callArgs[1].method).toBe('POST')
-      expect(callArgs[1].headers['Authorization']).toBe('Bearer test-api-key-value')
+      expect(callArgs[1].headers['Authorization']).toBe('Bearer test-api-key')
       expect(callArgs[1].headers['Content-Type']).toBe('application/json')
       
       const body = JSON.parse(callArgs[1].body)
@@ -199,7 +237,7 @@ describe('LlmHttpClient', () => {
       await httpClient.createChatCompletion(request, basicProvider, mockKey, mockContext)
 
       const headers = mockFetch.mock.calls[0][1].headers
-      expect(headers['Authorization']).toBe('Bearer test-api-key-value')
+      expect(headers['Authorization']).toBe('Bearer test-api-key')
       expect(headers['Content-Type']).toBe('application/json')
       expect(headers['HTTP-Referer']).toBeUndefined()
     })
@@ -401,7 +439,7 @@ describe('LlmHttpClient', () => {
       }
 
       await expect((async () => {
-        for await (const chunk of httpClient.streamChatCompletion(request, mockProvider, mockKey, mockContext)) {
+        for await (const _chunk of httpClient.streamChatCompletion(request, mockProvider, mockKey, mockContext)) {
           // Should not reach here
         }
       })()).rejects.toThrow('Internal server error')
@@ -421,7 +459,7 @@ describe('LlmHttpClient', () => {
       }
 
       await expect((async () => {
-        for await (const chunk of httpClient.streamChatCompletion(request, mockProvider, mockKey, mockContext)) {
+        for await (const _chunk of httpClient.streamChatCompletion(request, mockProvider, mockKey, mockContext)) {
           // Should not reach here
         }
       })()).rejects.toThrow('No response body for streaming request')
@@ -528,11 +566,11 @@ describe('LlmHttpClient', () => {
 
     it('respects retry configuration', () => {
       const customClient = new LlmHttpClient({ 
-        retryAttempts: 5,
-        retryDelay: 2000
+        timeout: 5000,
+        userAgent: 'Test-Agent/1.0'
       })
-      expect(customClient['retryAttempts']).toBe(5)
-      expect(customClient['retryDelay']).toBe(2000)
+      expect(customClient['timeout']).toBe(5000)
+      expect(customClient['userAgent']).toBe('Test-Agent/1.0')
     })
 
     it('respects user agent configuration', () => {

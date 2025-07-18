@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "~18.16.9",
+    "@sinonjs/fake-timers": "^14.0.0",
     "typescript": "~5.8.3"
   }
 }

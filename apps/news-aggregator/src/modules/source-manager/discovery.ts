@@ -3,11 +3,15 @@ import { NewsSourcer } from '@babel-feed/news-sourcer'
 import { DiscoveredSource } from '../common/types'
 import { newsSources, getDatabase } from '@babel-feed/pgdb'
 import { eq } from 'drizzle-orm'
+import axios from 'axios'
+import * as cheerio from 'cheerio'
 
 export class SourceDiscoveryService {
   private isRunning = false
   private newsSourcer: NewsSourcer
   private db!: Awaited<ReturnType<typeof getDatabase>>
+  private scheduledDiscoveryTimer?: NodeJS.Timeout
+  private discoveryInterval = 6 * 60 * 60 * 1000 // 6 hours
 
   constructor() {
     this.newsSourcer = new NewsSourcer({
@@ -37,9 +41,28 @@ export class SourceDiscoveryService {
     this.isRunning = true
     logger.info('Starting enhanced source discovery pipeline')
     
-    // TODO: Implement discovery pipeline with public lists and search queries
-    // For now, this is a placeholder for the actual automated discovery
-    logger.info('Automated discovery pipeline not yet implemented')
+    try {
+      // Step 1: Crawl public seed lists
+      const seedUrls = await this.crawlPublicSeedLists()
+      logger.info(`Collected ${seedUrls.length} seed URLs from public sources`)
+      
+      // Step 2: Discover sources from seed list
+      const discoveredSources = await this.discoverFromSeedList(seedUrls)
+      logger.info(`Discovered ${discoveredSources.length} potential sources`)
+      
+      // Step 3: Apply quality scoring and diversity filters
+      const qualifiedSources = await this.applyQualityFilters(discoveredSources)
+      logger.info(`${qualifiedSources.length} sources passed quality filters`)
+      
+      // Step 4: Add discovered sources to database
+      await this.addDiscoveredSources(qualifiedSources)
+      logger.info('Source discovery pipeline completed successfully')
+      
+    } catch (error) {
+      logger.error('Source discovery pipeline failed:', error)
+    } finally {
+      this.isRunning = false
+    }
   }
 
   async stopDiscovery(): Promise<void> {
@@ -50,6 +73,407 @@ export class SourceDiscoveryService {
 
     this.isRunning = false
     logger.info('Stopping source discovery')
+  }
+
+  /**
+   * Start periodic source discovery
+   */
+  async startPeriodicDiscovery(intervalHours = 6): Promise<void> {
+    this.discoveryInterval = intervalHours * 60 * 60 * 1000
+    
+    if (this.scheduledDiscoveryTimer) {
+      logger.warn('Periodic discovery is already running')
+      return
+    }
+
+    logger.info(`Starting periodic source discovery (every ${intervalHours} hours)`)
+    
+    // Run initial discovery
+    await this.startDiscovery()
+    
+    // Schedule recurring discovery
+    this.scheduledDiscoveryTimer = setInterval(async () => {
+      try {
+        logger.info('Running scheduled source discovery')
+        await this.startDiscovery()
+      } catch (error) {
+        logger.error('Scheduled discovery failed:', error)
+      }
+    }, this.discoveryInterval)
+  }
+
+  /**
+   * Stop periodic source discovery
+   */
+  stopPeriodicDiscovery(): void {
+    if (this.scheduledDiscoveryTimer) {
+      clearInterval(this.scheduledDiscoveryTimer)
+      this.scheduledDiscoveryTimer = undefined
+      logger.info('Stopped periodic source discovery')
+    } else {
+      logger.warn('Periodic discovery is not running')
+    }
+  }
+
+  /**
+   * Run discovery for specific seed URLs (manual discovery)
+   */
+  async discoverFromUrls(urls: string[]): Promise<DiscoveredSource[]> {
+    logger.info(`Running manual discovery for ${urls.length} URLs`)
+    
+    try {
+      const discoveredSources = await this.discoverFromSeedList(urls)
+      const qualifiedSources = await this.applyQualityFilters(discoveredSources)
+      await this.addDiscoveredSources(qualifiedSources)
+      
+      logger.info(`Manual discovery completed: ${qualifiedSources.length} sources added`)
+      return qualifiedSources
+    } catch (error) {
+      logger.error('Manual discovery failed:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Crawl public sources to collect seed URLs for news sites
+   */
+  async crawlPublicSeedLists(): Promise<string[]> {
+    logger.info('Starting public seed list crawling')
+    const allSeedUrls: Set<string> = new Set()
+
+    // Wikipedia news sources
+    const wikipediaSources = await this.crawlWikipediaSources()
+    wikipediaSources.forEach(url => allSeedUrls.add(url))
+    logger.info(`Found ${wikipediaSources.length} URLs from Wikipedia`)
+
+    // GitHub news sources lists
+    const githubSources = await this.crawlGitHubSources()
+    githubSources.forEach(url => allSeedUrls.add(url))
+    logger.info(`Found ${githubSources.length} URLs from GitHub`)
+
+    // Curated high-quality news sources
+    const curatedSources = this.getCuratedSources()
+    curatedSources.forEach(url => allSeedUrls.add(url))
+    logger.info(`Added ${curatedSources.length} curated sources`)
+
+    const finalList = Array.from(allSeedUrls)
+    logger.info(`Total unique seed URLs collected: ${finalList.length}`)
+    return finalList
+  }
+
+  /**
+   * Crawl Wikipedia's list of news websites
+   */
+  private async crawlWikipediaSources(): Promise<string[]> {
+    const sources: string[] = []
+    
+    try {
+      // List of Wikipedia pages with news sources
+      const wikipediaPages = [
+        'https://en.wikipedia.org/wiki/List_of_news_websites',
+        'https://en.wikipedia.org/wiki/List_of_newspapers_in_the_United_States',
+        'https://en.wikipedia.org/wiki/Category:News_websites',
+        'https://en.wikipedia.org/wiki/List_of_online_newspapers'
+      ]
+
+      for (const pageUrl of wikipediaPages) {
+        try {
+          const response = await axios.get(pageUrl, {
+            timeout: 10000,
+            headers: {
+              'User-Agent': 'BabelFeed-NewsAggregator/1.0 (https://babel-feed.com; news-discovery)'
+            }
+          })
+
+          const $ = cheerio.load(response.data)
+          
+          // Extract URLs from external links in the content
+          $('a[href^="http"]').each((_, element) => {
+            const url = $(element).attr('href')
+            if (url && this.isValidNewsUrl(url)) {
+              sources.push(url)
+            }
+          })
+        } catch (error) {
+          logger.warn(`Failed to crawl Wikipedia page ${pageUrl}:`, error)
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to crawl Wikipedia sources:', error)
+    }
+
+    return [...new Set(sources)] // Remove duplicates
+  }
+
+  /**
+   * Crawl GitHub repositories with news source lists
+   */
+  private async crawlGitHubSources(): Promise<string[]> {
+    const sources: string[] = []
+    
+    try {
+      // Known GitHub repositories with news source lists
+      const githubSources = [
+        'https://raw.githubusercontent.com/opml/lists/master/lists/news.opml',
+        'https://raw.githubusercontent.com/awesome-selfhosted/awesome-selfhosted/master/README.md'
+      ]
+
+      for (const sourceUrl of githubSources) {
+        try {
+          const response = await axios.get(sourceUrl, {
+            timeout: 10000,
+            headers: {
+              'User-Agent': 'BabelFeed-NewsAggregator/1.0'
+            }
+          })
+
+          if (sourceUrl.endsWith('.opml')) {
+            // Parse OPML file
+            const opmlSources = this.parseOpmlSources(response.data)
+            sources.push(...opmlSources)
+          } else {
+            // Parse markdown/text content for URLs
+            const textSources = this.extractUrlsFromText(response.data)
+            sources.push(...textSources)
+          }
+        } catch (error) {
+          logger.warn(`Failed to crawl GitHub source ${sourceUrl}:`, error)
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to crawl GitHub sources:', error)
+    }
+
+    return [...new Set(sources)] // Remove duplicates
+  }
+
+  /**
+   * Get curated list of high-quality news sources
+   */
+  private getCuratedSources(): string[] {
+    return [
+      // Major international news
+      'https://www.bbc.com',
+      'https://www.reuters.com',
+      'https://www.ap.org',
+      'https://www.theguardian.com',
+      'https://www.cnn.com',
+      'https://www.nytimes.com',
+      'https://www.washingtonpost.com',
+      'https://www.wsj.com',
+      
+      // Technology news
+      'https://techcrunch.com',
+      'https://arstechnica.com',
+      'https://www.theverge.com',
+      'https://www.wired.com',
+      'https://www.engadget.com',
+      'https://hacker-news.firebaseio.com',
+      
+      // International sources
+      'https://www.dw.com',
+      'https://www.france24.com',
+      'https://www.aljazeera.com',
+      'https://www.scmp.com',
+      'https://www.japantimes.co.jp',
+      'https://www.thehindu.com',
+      
+      // Business and finance
+      'https://www.bloomberg.com',
+      'https://www.ft.com',
+      'https://www.economist.com',
+      'https://www.forbes.com',
+      'https://www.cnbc.com',
+      
+      // Science and health
+      'https://www.nature.com',
+      'https://www.sciencedaily.com',
+      'https://www.newscientist.com',
+      'https://www.healthline.com'
+    ]
+  }
+
+  /**
+   * Apply quality filters and diversity management
+   */
+  async applyQualityFilters(sources: DiscoveredSource[]): Promise<DiscoveredSource[]> {
+    logger.info(`Applying quality filters to ${sources.length} discovered sources`)
+    
+    // Sort by quality score (highest first)
+    const sortedSources = sources.sort((a, b) => (b.quality || 0) - (a.quality || 0))
+    
+    // Apply diversity caps per category and language
+    const categoryLimits: Record<string, number> = {
+      'news': 50,
+      'technology': 20,
+      'business': 15,
+      'politics': 15,
+      'science': 10,
+      'sports': 10,
+      'entertainment': 8
+    }
+    
+    const languageLimits: Record<string, number> = {
+      'en': 100,
+      'zh-CN': 30,
+      'ja': 20,
+      'es': 20,
+      'fr': 15,
+      'de': 15
+    }
+    
+    const categoryCounts: Record<string, number> = {}
+    const languageCounts: Record<string, number> = {}
+    const qualifiedSources: DiscoveredSource[] = []
+    
+    for (const source of sortedSources) {
+      const category = source.category || 'news'
+      const language = source.language || 'en'
+      
+      // Check quality threshold
+      if ((source.quality || 0) < 0.3) {
+        logger.debug(`Source ${source.url} rejected: quality too low (${source.quality})`)
+        continue
+      }
+      
+      // Check category limits
+      const currentCategoryCount = categoryCounts[category] || 0
+      const categoryLimit = categoryLimits[category] || 5
+      if (currentCategoryCount >= categoryLimit) {
+        logger.debug(`Source ${source.url} rejected: category ${category} limit reached`)
+        continue
+      }
+      
+      // Check language limits
+      const currentLanguageCount = languageCounts[language] || 0
+      const languageLimit = languageLimits[language] || 5
+      if (currentLanguageCount >= languageLimit) {
+        logger.debug(`Source ${source.url} rejected: language ${language} limit reached`)
+        continue
+      }
+      
+      // Source passes all filters
+      qualifiedSources.push(source)
+      categoryCounts[category] = currentCategoryCount + 1
+      languageCounts[language] = currentLanguageCount + 1
+    }
+    
+    logger.info(`Quality filtering completed: ${qualifiedSources.length}/${sources.length} sources qualified`)
+    return qualifiedSources
+  }
+
+  /**
+   * Parse OPML file for RSS sources
+   */
+  private parseOpmlSources(opmlContent: string): string[] {
+    const sources: string[] = []
+    
+    try {
+      const $ = cheerio.load(opmlContent, { xmlMode: true })
+      
+      $('outline').each((_, element) => {
+        const xmlUrl = $(element).attr('xmlUrl') || $(element).attr('xmlurl')
+        const htmlUrl = $(element).attr('htmlUrl') || $(element).attr('htmlurl')
+        
+        if (xmlUrl && this.isValidNewsUrl(xmlUrl)) {
+          sources.push(xmlUrl)
+        }
+        if (htmlUrl && this.isValidNewsUrl(htmlUrl)) {
+          sources.push(htmlUrl)
+        }
+      })
+      
+      // Also try case-insensitive parsing if no results
+      if (sources.length === 0) {
+        $('outline').each((_, element) => {
+          const attrs = element.attribs || {}
+          for (const [key, value] of Object.entries(attrs)) {
+            if (key.toLowerCase() === 'xmlurl' || key.toLowerCase() === 'htmlurl') {
+              if (value && this.isValidNewsUrl(value)) {
+                sources.push(value)
+              }
+            }
+          }
+        })
+      }
+    } catch (error) {
+      logger.warn('Failed to parse OPML content:', error)
+    }
+    
+    return sources
+  }
+
+  /**
+   * Extract URLs from text content
+   */
+  private extractUrlsFromText(text: string): string[] {
+    const sources: string[] = []
+    
+    // Regex to match URLs
+    const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g
+    const matches = text.match(urlRegex)
+    
+    if (matches) {
+      for (const url of matches) {
+        if (this.isValidNewsUrl(url)) {
+          sources.push(url)
+        }
+      }
+    }
+    
+    return sources
+  }
+
+  /**
+   * Check if URL is likely a news source
+   */
+  private isValidNewsUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url)
+      const domain = urlObj.hostname.toLowerCase()
+      
+      // Skip non-HTTP URLs
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return false
+      }
+      
+      // Skip obvious non-news domains
+      const skipDomains = [
+        'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com',
+        'linkedin.com', 'pinterest.com', 'reddit.com', 'wikipedia.org',
+        'github.com', 'stackoverflow.com', 'amazon.com', 'google.com'
+      ]
+      
+      for (const skipDomain of skipDomains) {
+        if (domain.includes(skipDomain)) {
+          return false
+        }
+      }
+      
+      // Check for news-like patterns
+      const newsPatterns = [
+        'news', 'times', 'post', 'herald', 'gazette', 'tribune', 'journal',
+        'daily', 'weekly', 'press', 'media', 'today', 'wire', 'report'
+      ]
+      
+      for (const pattern of newsPatterns) {
+        if (domain.includes(pattern)) {
+          return true
+        }
+      }
+      
+      // Check for common news TLDs and patterns
+      if (domain.endsWith('.news') || 
+          domain.includes('news') || 
+          domain.includes('media') ||
+          /\.(com|org|net|co\.uk|co\.jp|cn)$/.test(domain)) {
+        return true
+      }
+      
+      return false
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -260,10 +684,12 @@ export class SourceDiscoveryService {
     }
   }
 
-  getStatus(): { running: boolean; sourcerInitialized: boolean } {
+  getStatus(): { running: boolean; sourcerInitialized: boolean; periodicDiscovery: boolean; discoveryInterval: number } {
     return { 
       running: this.isRunning,
-      sourcerInitialized: !!this.newsSourcer
+      sourcerInitialized: !!this.newsSourcer,
+      periodicDiscovery: !!this.scheduledDiscoveryTimer,
+      discoveryInterval: this.discoveryInterval
     }
   }
 

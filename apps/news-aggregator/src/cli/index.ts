@@ -14,7 +14,10 @@ const COMMANDS = {
   'ai-providers:health': 'Show AI provider health status',
   'add-source': 'Add a new news source',
   'remove-source': 'Remove a source by ID',
-  'discover-sources': 'Run source discovery',
+  'discover-sources': 'Run one-time source discovery',
+  'discover-sources:periodic': 'Start/stop periodic source discovery',
+  'discover-sources:manual': 'Discover sources from specific URLs',
+  'discover-sources:status': 'Show source discovery status',
   'health-check': 'Check system health',
   'metrics': 'Show system metrics',
   'articles': 'Show recent articles',
@@ -71,6 +74,15 @@ export class NewsAggregatorCLI {
         case 'discover-sources':
           await this.discoverSources(commandArgs)
           break
+        case 'discover-sources:periodic':
+          await this.managePeriodicDiscovery(commandArgs)
+          break
+        case 'discover-sources:manual':
+          await this.manualDiscovery(commandArgs)
+          break
+        case 'discover-sources:status':
+          await this.discoveryStatus(commandArgs)
+          break
         case 'health-check':
           await this.healthCheck(commandArgs)
           break
@@ -109,6 +121,10 @@ export class NewsAggregatorCLI {
     console.log('  bun run cli sources')
     console.log('  bun run cli health-check')
     console.log('  bun run cli add-source https://example.com/rss')
+    console.log('  bun run cli discover-sources')
+    console.log('  bun run cli discover-sources:periodic start 4')
+    console.log('  bun run cli discover-sources:manual https://techcrunch.com https://arstechnica.com')
+    console.log('  bun run cli discover-sources:status')
   }
 
   private async showStatus(_args: string[]): Promise<void> {
@@ -336,12 +352,139 @@ export class NewsAggregatorCLI {
       if (status.running) {
         console.log('Source discovery is already running')
       } else {
-        console.log('Starting source discovery...')
+        console.log('Starting one-time source discovery...')
         await discovery.startDiscovery()
-        console.log('Source discovery started')
+        console.log('✅ Source discovery completed')
       }
     } catch (error) {
-      console.log('Error with source discovery:', error)
+      console.log('❌ Error with source discovery:', error)
+    }
+  }
+
+  private async managePeriodicDiscovery(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const action = args[0] || 'status'
+    const intervalHours = parseInt(args[1]) || 6
+    
+    try {
+      const discovery = this.service.getSourceDiscovery()
+      const status = discovery.getStatus()
+      
+      switch (action) {
+        case 'start':
+          if (status.periodicDiscovery) {
+            console.log('Periodic discovery is already running')
+          } else {
+            console.log(`Starting periodic discovery (every ${intervalHours} hours)...`)
+            await discovery.startPeriodicDiscovery(intervalHours)
+            console.log('✅ Periodic discovery started')
+          }
+          break
+          
+        case 'stop':
+          if (status.periodicDiscovery) {
+            discovery.stopPeriodicDiscovery()
+            console.log('✅ Periodic discovery stopped')
+          } else {
+            console.log('Periodic discovery is not running')
+          }
+          break
+          
+        case 'status':
+        default:
+          console.log('\n=== Periodic Discovery Status ===')
+          console.log(`Running: ${status.periodicDiscovery ? '✅' : '❌'}`)
+          console.log(`Interval: ${Math.round(status.discoveryInterval / (60 * 60 * 1000))} hours`)
+          console.log(`One-time discovery running: ${status.running ? '✅' : '❌'}`)
+          
+          if (!status.periodicDiscovery) {
+            console.log('\nTo start periodic discovery:')
+            console.log('  bun run cli discover-sources:periodic start [hours]')
+          }
+          break
+      }
+    } catch (error) {
+      console.log('❌ Error managing periodic discovery:', error)
+    }
+  }
+
+  private async manualDiscovery(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    if (args.length === 0) {
+      console.log('Usage: bun run cli discover-sources:manual <url1> [url2] [url3] ...')
+      console.log('Example: bun run cli discover-sources:manual https://example.com https://news.example.org')
+      return
+    }
+    
+    try {
+      const discovery = this.service.getSourceDiscovery()
+      
+      console.log(`Running manual discovery for ${args.length} URLs...`)
+      const discoveredSources = await discovery.discoverFromUrls(args)
+      
+      console.log('\n=== Manual Discovery Results ===')
+      console.log(`✅ Discovered and added ${discoveredSources.length} new sources`)
+      
+      if (discoveredSources.length > 0) {
+        console.log('\n=== New Sources ===')
+        for (const source of discoveredSources) {
+          console.log(`• ${source.name} (${source.category})`)
+          console.log(`  URL: ${source.url}`)
+          console.log(`  Quality: ${((source.quality || 0) * 100).toFixed(1)}%`)
+        }
+      }
+    } catch (error) {
+      console.log('❌ Error with manual discovery:', error)
+    }
+  }
+
+  private async discoveryStatus(_args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    try {
+      const discovery = this.service.getSourceDiscovery()
+      const status = discovery.getStatus()
+      
+      console.log('\n=== Source Discovery Status ===')
+      console.log(`One-time discovery running: ${status.running ? '✅' : '❌'}`)
+      console.log(`Periodic discovery running: ${status.periodicDiscovery ? '✅' : '❌'}`)
+      console.log(`NewsSourcer initialized: ${status.sourcerInitialized ? '✅' : '❌'}`)
+      console.log(`Discovery interval: ${Math.round(status.discoveryInterval / (60 * 60 * 1000))} hours`)
+      
+      // Get source counts by category
+      const sourceManager = this.service.getSourceManager()
+      const allSources = await sourceManager.getAllSources()
+      
+      const categoryCounts: Record<string, number> = {}
+      const languageCounts: Record<string, number> = {}
+      
+      for (const source of allSources) {
+        categoryCounts[source.category] = (categoryCounts[source.category] || 0) + 1
+        languageCounts[source.language] = (languageCounts[source.language] || 0) + 1
+      }
+      
+      console.log('\n=== Current Source Distribution ===')
+      console.log(`Total sources: ${allSources.length}`)
+      console.log(`Enabled sources: ${allSources.filter(s => s.enabled).length}`)
+      
+      console.log('\n=== By Category ===')
+      Object.entries(categoryCounts)
+        .sort(([,a], [,b]) => b - a)
+        .forEach(([category, count]) => {
+          console.log(`${category}: ${count}`)
+        })
+      
+      console.log('\n=== By Language ===')
+      Object.entries(languageCounts)
+        .sort(([,a], [,b]) => b - a)
+        .forEach(([language, count]) => {
+          console.log(`${language}: ${count}`)
+        })
+      
+    } catch (error) {
+      console.log('❌ Error getting discovery status:', error)
     }
   }
 

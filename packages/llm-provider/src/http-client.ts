@@ -18,14 +18,10 @@ export interface HttpClientOptions {
 
 export class LlmHttpClient {
   private readonly timeout: number
-  private readonly retryAttempts: number
-  private readonly retryDelay: number
   private readonly userAgent: string
 
   constructor(options: HttpClientOptions = {}) {
     this.timeout = options.timeout ?? 30000
-    this.retryAttempts = options.retryAttempts ?? 3
-    this.retryDelay = options.retryDelay ?? 1000
     this.userAgent = options.userAgent ?? 'BabelFeed LLM Provider/1.0'
   }
 
@@ -52,7 +48,7 @@ export class LlmHttpClient {
           ...request,
           stream: false // Ensure non-streaming for this method
         })
-      }, context)
+      })
 
       if (!response.ok) {
         throw await this.handleHttpError(response, provider, context)
@@ -101,7 +97,7 @@ export class LlmHttpClient {
           ...request,
           stream: true
         })
-      }, context)
+      })
 
       if (!response.ok) {
         throw await this.handleHttpError(response, provider, context)
@@ -175,8 +171,7 @@ export class LlmHttpClient {
 
   private async makeRequest(
     url: string,
-    options: RequestInit,
-    context: RequestContext
+    options: RequestInit
   ): Promise<Response> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
@@ -202,7 +197,7 @@ export class LlmHttpClient {
     provider: AiProvider,
     context: RequestContext
   ): Promise<LlmError> {
-    let errorBody: any = {}
+    let errorBody: Record<string, unknown> = {}
     try {
       errorBody = await response.json()
     } catch {
@@ -210,12 +205,12 @@ export class LlmHttpClient {
     }
 
     const error: LlmError = new Error(
-      errorBody.error?.message || 
-      errorBody.message || 
+      (errorBody.error as Record<string, unknown>)?.message as string || 
+      errorBody.message as string || 
       `HTTP ${response.status}: ${response.statusText}`
     ) as LlmError
 
-    error.code = errorBody.error?.code || errorBody.code || `HTTP_${response.status}`
+    error.code = (errorBody.error as Record<string, unknown>)?.code as string || errorBody.code as string || `HTTP_${response.status}`
     error.statusCode = response.status
     error.provider = provider.name
     error.requestId = context.requestId
@@ -224,8 +219,8 @@ export class LlmHttpClient {
     error.retryable = response.status >= 500 || response.status === 429
     error.rateLimited = response.status === 429
     error.quotaExceeded = response.status === 429 && 
-      (errorBody.error?.type === 'insufficient_quota' || 
-       errorBody.error?.code === 'quota_exceeded')
+      ((errorBody.error as Record<string, unknown>)?.type === 'insufficient_quota' || 
+       (errorBody.error as Record<string, unknown>)?.code === 'quota_exceeded')
 
     return error
   }

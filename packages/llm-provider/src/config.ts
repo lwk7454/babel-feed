@@ -21,7 +21,7 @@ export interface ProviderConfiguration {
   }
   transforms?: {
     removeParams?: string[]
-    defaults?: Record<string, any>
+    defaults?: Record<string, unknown>
     paramMappings?: Record<string, string>
     modelPrefix?: string
     requiresSystemMessage?: boolean
@@ -179,7 +179,7 @@ export class ConfigManager {
     return this.config
   }
 
-  getProviderConfig(providerName: string): any {
+  getProviderConfig(providerName: string): ProviderConfiguration | undefined {
     const normalizedName = providerName.toLowerCase()
     
     if (normalizedName.includes('openrouter')) {

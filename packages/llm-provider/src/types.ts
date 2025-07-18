@@ -186,7 +186,7 @@ export interface ProviderAdapter {
   streamChatCompletion(request: ChatCompletionRequest): AsyncGenerator<ChatCompletionStreamResponse>
   validateRequest(request: ChatCompletionRequest): void
   transformRequest?(request: ChatCompletionRequest): ChatCompletionRequest
-  transformResponse?(response: any): ChatCompletionResponse
+  transformResponse?(response: Record<string, unknown>): ChatCompletionResponse
 }
 
 export interface ProviderConfig {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test'
 import { OpenAIAdapter } from '../src/openai-adapter.js'
 import { LlmHttpClient } from '../src/http-client.js'
-import type { ChatCompletionRequest, AiProvider, AiProviderKey, RequestContext } from '../src/types.js'
+import type { ChatCompletionRequest, ChatCompletionResponse, AiProvider, AiProviderKey, RequestContext } from '../src/types.js'
 
 describe('OpenAIAdapter', () => {
   let adapter: OpenAIAdapter
@@ -159,7 +159,7 @@ describe('OpenAIAdapter', () => {
         ...mockProvider,
         metadata: {
           ...mockProvider.metadata,
-          features: { ...mockProvider.metadata!.features, streaming: false }
+          features: { ...(mockProvider.metadata!.features as Record<string, unknown>), streaming: false }
         }
       }
 
@@ -240,7 +240,7 @@ describe('OpenAIAdapter', () => {
         metadata: {
           ...mockProvider.metadata,
           transforms: {
-            ...mockProvider.metadata!.transforms,
+            ...(mockProvider.metadata!.transforms as Record<string, unknown>),
             requiresSystemMessage: true,
             defaultSystemMessage: 'You are a helpful assistant.'
           }
@@ -266,7 +266,7 @@ describe('OpenAIAdapter', () => {
         metadata: {
           ...mockProvider.metadata,
           transforms: {
-            ...mockProvider.metadata!.transforms,
+            ...(mockProvider.metadata!.transforms as Record<string, unknown>),
             requiresSystemMessage: true
           }
         }
@@ -292,7 +292,7 @@ describe('OpenAIAdapter', () => {
         metadata: {
           ...mockProvider.metadata,
           transforms: {
-            ...mockProvider.metadata!.transforms,
+            ...(mockProvider.metadata!.transforms as Record<string, unknown>),
             tokenLimits: {
               'gpt-3.5-turbo': 1000
             }
@@ -366,9 +366,9 @@ describe('OpenAIAdapter', () => {
       }
 
       const testCases = [
-        { input: 'end_turn', expected: 'stop' },
-        { input: 'max_tokens', expected: 'length' },
-        { input: 'unknown', expected: 'stop' }
+        { input: 'end_turn', expected: 'stop' as const },
+        { input: 'max_tokens', expected: 'length' as const },
+        { input: 'unknown', expected: 'stop' as const }
       ]
 
       testCases.forEach(({ input, expected }) => {
@@ -380,7 +380,7 @@ describe('OpenAIAdapter', () => {
 
   describe('Integration', () => {
     it('calls HTTP client for chat completion', async () => {
-      const mockResponse = {
+      const mockResponse: ChatCompletionResponse = {
         id: 'test',
         object: 'chat.completion',
         created: Date.now(),
@@ -430,7 +430,7 @@ describe('OpenAIAdapter', () => {
         transformResponse: false
       })
 
-      mockHttpClient.createChatCompletion = mock().mockResolvedValue({ test: 'response' })
+      mockHttpClient.createChatCompletion = mock().mockResolvedValue({ test: 'response' } as any)
 
       // This request would normally fail validation
       const invalidRequest = {
@@ -441,7 +441,7 @@ describe('OpenAIAdapter', () => {
 
       const result = await customAdapter.createChatCompletion(invalidRequest, mockProvider, mockKey, mockContext)
 
-      expect(result).toEqual({ test: 'response' })
+      expect(result).toEqual({ test: 'response' } as any)
       expect(mockHttpClient.createChatCompletion).toHaveBeenCalledWith(
         invalidRequest, // Should be passed unchanged
         mockProvider,
