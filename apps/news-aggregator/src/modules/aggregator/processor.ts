@@ -1,16 +1,20 @@
 import { fulltext, Configuration } from '@babel-feed/news-extractor'
 import { logger } from '@babel-feed/utils'
 import { RawArticle } from '../common/types'
+import { ContentClassifier, type ClassificationResult } from '../recommendation/content-classifier'
 
 export class ProcessorService {
   private isRunning = false
   private contentValidator: ContentValidator
+  private contentClassifier: ContentClassifier
 
   constructor() {
     this.contentValidator = new ContentValidator()
+    this.contentClassifier = new ContentClassifier()
   }
 
   async initialize(): Promise<void> {
+    await this.contentClassifier.initialize()
     logger.info('Processor service initialized')
   }
 
@@ -24,7 +28,14 @@ export class ProcessorService {
         const isValid = await this.validateContent(article)
         if (isValid) {
           const processedArticle = await this.normalizeContent(article)
-          validatedArticles.push(processedArticle)
+          
+          // Apply content classification
+          const classificationResult = await this.classifyContent(processedArticle)
+          
+          // Enhance article with classification data
+          const enhancedArticle = this.enrichWithClassification(processedArticle, classificationResult)
+          
+          validatedArticles.push(enhancedArticle)
         } else {
           logger.debug(`Article validation failed: ${article.title}`)
         }
@@ -87,6 +98,60 @@ export class ProcessorService {
 
   async normalizeContent(article: RawArticle): Promise<RawArticle> {
     return this.contentValidator.normalize(article)
+  }
+
+  async classifyContent(article: RawArticle): Promise<ClassificationResult> {
+    try {
+      const title = article.title || ''
+      const content = article.description || ''
+      const summary = article.description || ''
+      
+      return await this.contentClassifier.classifyContent(title, content, summary)
+    } catch (error) {
+      logger.warn(`Content classification failed for article: ${article.title}`, error)
+      
+      // Return default classification on failure
+      return {
+        hierarchicalTags: [],
+        sentiment: 'neutral',
+        sentimentScore: 0.5,
+        geographic: [],
+        industry: [],
+        topicScores: {}
+      }
+    }
+  }
+
+  enrichWithClassification(article: RawArticle, classification: ClassificationResult): RawArticle {
+    // Extract tags from hierarchical classification
+    const tags = classification.hierarchicalTags.map(tag => tag.label)
+    
+    // Add geographic locations as tags
+    const geoTags = classification.geographic.map(geo => `geo:${geo.name}`)
+    
+    // Add industry tags
+    const industryTags = classification.industry.map(ind => 
+      ind.subsector ? `industry:${ind.sector}:${ind.subsector}` : `industry:${ind.sector}`
+    )
+    
+    // Combine all tags
+    const allTags = [...tags, ...geoTags, ...industryTags]
+    
+    return {
+      ...article,
+      tags: allTags,
+      metadata: {
+        ...article.metadata,
+        classification: {
+          sentiment: classification.sentiment,
+          sentimentScore: classification.sentimentScore,
+          topicScores: classification.topicScores,
+          hierarchicalTags: classification.hierarchicalTags,
+          geographic: classification.geographic,
+          industry: classification.industry
+        }
+      }
+    }
   }
 
   

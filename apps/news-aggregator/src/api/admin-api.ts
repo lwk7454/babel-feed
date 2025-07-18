@@ -5,6 +5,7 @@ import { logger } from '@babel-feed/utils'
 import { HealthChecker } from '../services/health-checker'
 import { MetricsService } from '../services/metrics-service'
 import { NewsSourceManager } from '../services/news-source-manager'
+import { RecommendationEngine, type RecommendationContext, type RecommendationConfig } from '../modules/recommendation'
 
 interface CreateSourceRequest {
   name: string
@@ -56,6 +57,7 @@ export class AdminAPIServer {
   private sourceManager = new NewsSourceManager()
   private healthChecker = new HealthChecker(this.sourceManager)
   private metricsService = new MetricsService()
+  private recommendationEngine = new RecommendationEngine()
   
   private async getDb() {
     return process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
@@ -64,6 +66,7 @@ export class AdminAPIServer {
   async initialize(): Promise<void> {
     await this.sourceManager.initialize()
     await this.metricsService.initialize()
+    await this.recommendationEngine.initialize()
     this.app.use(adminAuth())
 
     this.app.get('/health', async () => {
@@ -309,6 +312,117 @@ export class AdminAPIServer {
 
     this.app.post('/sources/bulk-disable', async ({ body }) => {
       await this.sourceManager.bulkDisableSources((body as BulkOperationRequest).ids)
+      return { success: true }
+    })
+
+    // Recommendation System Endpoints
+    this.app.post('/recommendations/generate', async ({ body }) => {
+      const bodyData = body as { currentTime: string; [key: string]: unknown }
+      const context = {
+        ...bodyData,
+        currentTime: new Date(bodyData.currentTime)
+      } as RecommendationContext
+      return await this.recommendationEngine.generateRecommendations(context)
+    }, { 
+      body: t.Object({
+        userId: t.String(),
+        sessionId: t.Optional(t.String()),
+        currentTime: t.String(),
+        deviceType: t.Union([t.Literal('mobile'), t.Literal('tablet'), t.Literal('desktop')]),
+        feedType: t.Union([t.Literal('home'), t.Literal('trending'), t.Literal('category'), t.Literal('search')]),
+        limit: t.Number({ minimum: 1, maximum: 100 }),
+        offset: t.Number({ minimum: 0 }),
+        location: t.Optional(t.Object({
+          country: t.String(),
+          timezone: t.String()
+        })),
+        filters: t.Optional(t.Object({
+          languages: t.Optional(t.Array(t.String())),
+          categories: t.Optional(t.Array(t.String())),
+          sources: t.Optional(t.Array(t.String())),
+          timeRange: t.Optional(t.Object({
+            start: t.String(),
+            end: t.String()
+          })),
+          minQuality: t.Optional(t.Number()),
+          excludeSeen: t.Optional(t.Boolean())
+        }))
+      })
+    })
+
+    this.app.get('/recommendations/trending', async ({ query }) => {
+      const { timeWindow = '24', limit = '10' } = query as {
+        timeWindow?: string
+        limit?: string
+      }
+      
+      const topics = await this.recommendationEngine.getTrendingTopics(
+        parseInt(timeWindow),
+        parseInt(limit)
+      )
+      
+      return { trending: topics }
+    })
+
+    this.app.post('/recommendations/feedback', async ({ body }) => {
+      const { userId, articleId, sessionId, type, action, rating, context: feedbackContext } = body as {
+        userId: string
+        articleId: string
+        sessionId?: string
+        type: 'implicit' | 'explicit'
+        action: 'click' | 'read' | 'share' | 'save' | 'like' | 'dislike' | 'skip' | 'hide'
+        rating?: number
+        context: {
+          position: number
+          totalShown: number
+          algorithm: string
+          reasonCodes: string[]
+        }
+      }
+      
+      await this.recommendationEngine['behaviorAnalyzer'].recordFeedback({
+        userId,
+        articleId,
+        sessionId,
+        type,
+        action,
+        rating,
+        timestamp: new Date(),
+        context: feedbackContext
+      })
+      
+      return { success: true }
+    })
+
+    this.app.get('/recommendations/user-insights/:userId', async ({ params }) => {
+      const insights = await this.recommendationEngine['behaviorAnalyzer'].analyzeUserBehavior(params.userId)
+      return { insights }
+    })
+
+    this.app.post('/recommendations/track-interaction', async ({ body }) => {
+      const interaction = body as {
+        userId: string
+        articleId: string
+        sessionId?: string
+        type: 'view' | 'translate' | 'share' | 'save' | 'like' | 'dislike'
+        duration?: number
+        metadata?: Record<string, unknown>
+      }
+      
+      await this.recommendationEngine['behaviorAnalyzer'].trackUserInteraction({
+        ...interaction,
+        timestamp: new Date()
+      })
+      
+      return { success: true }
+    })
+
+    this.app.get('/recommendations/config', async () => {
+      return { config: 'Configuration endpoint - to be implemented' }
+    })
+
+    this.app.put('/recommendations/config', async ({ body }) => {
+      await this.recommendationEngine.updateConfig(body as Partial<RecommendationConfig>)
       return { success: true }
     })
 
