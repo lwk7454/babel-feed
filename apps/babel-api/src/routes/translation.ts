@@ -103,116 +103,137 @@ export const translationRoutes = new Elysia({ prefix: "/api/translation" })
     }
   })
 
-  // Streaming translation endpoint
-  .post("/stream", async ({ body, set }) => {
-    const request = body as TranslationRequest
-    
-    try {
-      // Validate request
-      if (!request.content || request.content.trim().length === 0) {
-        set.status = 400
-        return {
-          requestId: request.requestId || "unknown",
-          error: {
-            code: "CONTENT_TOO_LARGE",
-            message: "Content cannot be empty",
-            details: null
-          },
-          timestamp: new Date().toISOString()
-        } as TranslationError
-      }
-
-      if (request.content.length > 50000) {
-        set.status = 413
-        return {
-          requestId: request.requestId,
-          error: {
-            code: "CONTENT_TOO_LARGE",
-            message: `Content too large: ${request.content.length} characters (max: 50000)`,
-            details: { contentLength: request.content.length, maxLength: 50000 }
-          },
-          timestamp: new Date().toISOString()
-        } as TranslationError
-      }
-
-      if (request.fromLanguage === request.toLanguage) {
-        set.status = 400
-        return {
-          requestId: request.requestId,
-          error: {
-            code: "UNSUPPORTED_LANGUAGE",
-            message: "Source and target languages cannot be the same",
-            details: { fromLanguage: request.fromLanguage, toLanguage: request.toLanguage }
-          },
-          timestamp: new Date().toISOString()
-        } as TranslationError
-      }
-
-      // Set appropriate headers for streaming
-      set.headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS"
-      }
-
-      // Return streaming response
-      return new Stream(async (stream) => {
-        try {
-          for await (const result of translationService.streamTranslation(request)) {
-            // Format as Server-Sent Event
-            const eventData = JSON.stringify(result)
-            stream.send(`data: ${eventData}\n\n`)
-            
-            // Close stream if translation is complete
-            if (result.isComplete) {
-              stream.close()
-              break
+  /**
+   * Stream translation endpoint
+   */
+  .post("/stream", 
+    async ({ body, set }) => {
+      const request = body as TranslationRequest
+      
+      try {
+        // Set headers for streaming
+        set.headers["Content-Type"] = "text/event-stream"
+        set.headers["Cache-Control"] = "no-cache"
+        set.headers["Connection"] = "keep-alive"
+        set.headers["Access-Control-Allow-Origin"] = "*"
+        set.headers["Access-Control-Allow-Headers"] = "Cache-Control"
+        
+        // Create readable stream
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const result of translationService.streamTranslation(request)) {
+                const data = `data: ${JSON.stringify(result)}\n\n`
+                controller.enqueue(new TextEncoder().encode(data))
+              }
+              controller.close()
+            } catch (error) {
+              console.error("Streaming translation error:", error)
+              const errorData = `data: ${JSON.stringify({
+                error: {
+                  code: "TRANSLATION_ERROR",
+                  message: error instanceof Error ? error.message : "Translation failed"
+                }
+              })}\n\n`
+              controller.enqueue(new TextEncoder().encode(errorData))
+              controller.close()
             }
           }
-        } catch (error) {
-          console.error("Streaming error:", error)
-          
-          // Send error as final event
-          const errorResult: TranslationError = {
-            requestId: request.requestId,
-            error: {
-              code: "INTERNAL_ERROR",
-              message: error instanceof Error ? error.message : "Unknown error occurred",
-              details: error instanceof Error ? { name: error.name, stack: error.stack } : null
-            },
-            timestamp: new Date().toISOString()
+        })
+        
+        return stream
+      } catch (error) {
+        console.error("Translation request error:", error)
+        set.status = 500
+        return {
+          error: {
+            code: "TRANSLATION_ERROR",
+            message: error instanceof Error ? error.message : "Translation failed"
           }
-          
-          stream.send(`data: ${JSON.stringify(errorResult)}\n\n`)
-          stream.close()
         }
-      })
-
-    } catch (error) {
-      console.error("Translation request error:", error)
-      set.status = 500
-      
-      return {
-        requestId: request.requestId || "unknown",
-        error: {
-          code: "INTERNAL_ERROR",
-          message: error instanceof Error ? error.message : "Internal server error",
-          details: error instanceof Error ? { name: error.name } : null
-        },
-        timestamp: new Date().toISOString()
-      } as TranslationError
+      }
+    },
+    {
+      body: t.Object({
+        content: t.String({ minLength: 1, maxLength: 50000 }),
+        fromLanguage: t.String({ minLength: 2, maxLength: 10 }),
+        toLanguage: t.String({ minLength: 2, maxLength: 10 }),
+        complexity: t.Optional(t.Union([
+          t.Literal("simple"),
+          t.Literal("contextual"), 
+          t.Literal("creative"),
+          t.Literal("technical")
+        ])),
+        contentType: t.Optional(t.Union([
+          t.Literal("template_element"),
+          t.Literal("article_content"),
+          t.Literal("media_captions")
+        ])),
+        context: t.Optional(t.Object({
+          pageTitle: t.Optional(t.String()),
+          articleTopic: t.Optional(t.String()),
+          culturalContext: t.Optional(t.String()),
+          domainSpecific: t.Optional(t.String())
+        }))
+      }),
+      detail: {
+        tags: ['Translation'],
+        summary: 'Stream translation',
+        description: "Performs translation using LLM providers with Server-Sent Events streaming",
+        responses: {
+          200: {
+            description: 'Translation stream',
+            content: {
+              'text/event-stream': {
+                schema: {
+                  type: 'string',
+                  format: 'event-stream'
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Invalid request',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: {
+                      type: 'object',
+                      properties: {
+                        code: { type: 'string' },
+                        message: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          500: {
+            description: 'Translation error',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: {
+                      type: 'object',
+                      properties: {
+                        code: { type: 'string' },
+                        message: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
-  }, {
-    body: translationRequestSchema,
-    detail: {
-      summary: "Stream translation with progressive results",
-      description: "Performs translation using OpenRouter models with Server-Sent Events streaming",
-      tags: ["Translation"]
-    }
-  })
+  )
 
   // Batched NDJSON streaming translation endpoint
   .post("/batch", async ({ body, set }) => {

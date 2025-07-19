@@ -7,6 +7,10 @@ import { sql, eq, desc } from 'drizzle-orm'
 
 const COMMANDS = {
   'status': 'Show aggregator status',
+  'jobs': 'List all scheduled jobs',
+  'jobs:status': 'Show detailed job status',
+  'jobs:run': 'Run a specific job now',
+  'jobs:config': 'Update job configuration',
   'sources': 'List all configured sources',
   'sources:enabled': 'List enabled sources',
   'sources:health': 'Show source health status',
@@ -49,6 +53,18 @@ export class NewsAggregatorCLI {
       switch (command) {
         case 'status':
           await this.showStatus(commandArgs)
+          break
+        case 'jobs':
+          await this.listJobs(commandArgs)
+          break
+        case 'jobs:status':
+          await this.showJobStatus(commandArgs)
+          break
+        case 'jobs:run':
+          await this.runJob(commandArgs)
+          break
+        case 'jobs:config':
+          await this.updateJobConfig(commandArgs)
           break
         case 'sources':
           await this.listSources(commandArgs)
@@ -555,7 +571,7 @@ export class NewsAggregatorCLI {
     
     try {
       // Use the same database connection that the service uses
-      const db = await this.service.getDatabase()
+      const db = this.service.getDatabase()
       
       const recentArticles = await db
         .select({
@@ -600,7 +616,7 @@ export class NewsAggregatorCLI {
     
     try {
       // Use the same database connection that the service uses
-      const db = await this.service.getDatabase()
+      const db = this.service.getDatabase()
       
       // Total articles
       const [{ count: totalArticles }] = await db
@@ -655,6 +671,149 @@ export class NewsAggregatorCLI {
       case 'degraded': return '⚠️'
       case 'unhealthy': return '❌'
       default: return '❓'
+    }
+  }
+
+  // Job Management Methods
+
+  private async listJobs(_args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    try {
+      const jobScheduler = this.service.getJobScheduler()
+      const allStatus = jobScheduler.getAllJobStatus()
+      
+      console.log('\n=== Scheduled Jobs ===')
+      if (allStatus.length === 0) {
+        console.log('No jobs configured')
+        return
+      }
+      
+      for (const status of allStatus) {
+        const icon = status.running ? '🔄' : '⏸️'
+        const nextRun = status.nextRun ? status.nextRun.toLocaleString() : 'N/A'
+        console.log(`\n${icon} ${status.name}`)
+        console.log(`  Status: ${status.running ? 'Running' : 'Stopped'}`)
+        console.log(`  Total Runs: ${status.totalRuns}`)
+        console.log(`  Errors: ${status.totalErrors}`)
+        console.log(`  Avg Time: ${Math.round(status.averageProcessingTime)}ms`)
+        console.log(`  Next Run: ${nextRun}`)
+        if (status.lastError) {
+          console.log(`  Last Error: ${status.lastError}`)
+        }
+      }
+    } catch (error) {
+      console.log('Error listing jobs:', error)
+    }
+  }
+
+  private async showJobStatus(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const jobName = args[0]
+    if (!jobName) {
+      console.log('Usage: jobs:status <job-name>')
+      console.log('Available jobs: source-discovery, url-fetching, article-processing, health-monitoring, cleanup')
+      return
+    }
+    
+    try {
+      const jobScheduler = this.service.getJobScheduler()
+      const status = jobScheduler.getJobStatus(jobName)
+      
+      if (!status) {
+        console.log(`Job not found: ${jobName}`)
+        return
+      }
+      
+      console.log(`\n=== Job Status: ${jobName} ===`)
+      console.log(`Running: ${status.running ? '✅' : '❌'}`)
+      console.log(`Total Runs: ${status.totalRuns}`)
+      console.log(`Total Errors: ${status.totalErrors}`)
+      console.log(`Average Processing Time: ${Math.round(status.averageProcessingTime)}ms`)
+      
+      if (status.lastRun) {
+        console.log(`Last Run: ${status.lastRun.toLocaleString()}`)
+      }
+      if (status.lastSuccess) {
+        console.log(`Last Success: ${status.lastSuccess.toLocaleString()}`)
+      }
+      if (status.nextRun) {
+        console.log(`Next Run: ${status.nextRun.toLocaleString()}`)
+      }
+      if (status.lastError) {
+        console.log(`Last Error: ${status.lastError}`)
+      }
+    } catch (error) {
+      console.log('Error getting job status:', error)
+    }
+  }
+
+  private async runJob(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const jobName = args[0]
+    if (!jobName) {
+      console.log('Usage: jobs:run <job-name>')
+      console.log('Available jobs: source-discovery, url-fetching, article-processing, health-monitoring, cleanup')
+      return
+    }
+    
+    try {
+      const jobScheduler = this.service.getJobScheduler()
+      console.log(`Running job: ${jobName}`)
+      
+      const result = await jobScheduler.runJobNow(jobName)
+      
+      console.log(`\n=== Job Result: ${jobName} ===`)
+      console.log(`Success: ${result.success ? '✅' : '❌'}`)
+      console.log(`Processed: ${result.processed}`)
+      console.log(`Errors: ${result.errors}`)
+      console.log(`Skipped: ${result.skipped}`)
+      console.log(`Processing Time: ${result.processingTime}ms`)
+      
+    } catch (error) {
+      console.log('Error running job:', error)
+    }
+  }
+
+  private async updateJobConfig(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const jobName = args[0]
+    const configKey = args[1]
+    const configValue = args[2]
+    
+    if (!jobName || !configKey || configValue === undefined) {
+      console.log('Usage: jobs:config <job-name> <config-key> <value>')
+      console.log('Config keys: interval, enabled, maxConcurrency, retryAttempts, timeout')
+      console.log('Example: jobs:config article-extraction interval 60000')
+      return
+    }
+    
+    try {
+      const jobScheduler = this.service.getJobScheduler()
+      
+      // Parse the value based on the config key
+      let parsedValue: string | number | boolean = configValue
+      
+      if (configKey === 'interval' || configKey === 'maxConcurrency' || configKey === 'retryAttempts' || configKey === 'timeout') {
+        parsedValue = parseInt(configValue)
+        if (isNaN(parsedValue)) {
+          console.log('Error: Value must be a number for this config key')
+          return
+        }
+      } else if (configKey === 'enabled') {
+        parsedValue = configValue.toLowerCase() === 'true'
+      }
+      
+      const updates: Record<string, unknown> = { [configKey]: parsedValue }
+      jobScheduler.updateJobConfig(jobName, updates)
+      
+      console.log(`Updated job config: ${jobName}.${configKey} = ${parsedValue}`)
+      
+    } catch (error) {
+      console.log('Error updating job config:', error)
     }
   }
 }

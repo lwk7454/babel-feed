@@ -1,25 +1,26 @@
 import { logger } from '@babel-feed/utils'
-import { config } from '../modules/common/config'
 import { ModuleStatus } from '../modules/common/types'
 
 // Source Manager modules
-import { SourceCRUDService } from '../modules/source-manager/source-crud'
-import { HealthMonitorService } from '../modules/source-manager/health-monitor'
 import { SourceDiscoveryService } from '../modules/source-manager/discovery'
+import { HealthMonitorService } from '../modules/source-manager/health-monitor'
+import { SourceCRUDService } from '../modules/source-manager/source-crud'
 
 // Aggregator modules
-import { FetcherService } from '../modules/aggregator/fetcher'
-import { ProcessorService } from '../modules/aggregator/processor'
 import { AIIntegrationService } from '../modules/aggregator/ai-integration'
 import { DeduplicationService } from '../modules/aggregator/deduplication'
+import { FetcherService } from '../modules/aggregator/fetcher'
+import { ProcessorService } from '../modules/aggregator/processor'
 
 // Working service managers (for immediate functionality)
-import { NewsSourceManager } from './news-source-manager'
 import { AiProviderManager } from '@babel-feed/llm-provider'
+import { getDatabase } from '@babel-feed/pgdb'
+import { ArticleStorage } from './article-storage'
 import { CacheManager } from './cache-manager'
 import { HealthChecker } from './health-checker'
+import { JobScheduler } from './job-scheduler'
+import { NewsSourceManager } from './news-source-manager'
 import { RssProcessor } from './rss-processor'
-import { ArticleStorage } from './article-storage'
 
 export class NewsAggregatorService {
   // Future modules (placeholder implementations)
@@ -39,11 +40,10 @@ export class NewsAggregatorService {
   private healthChecker: HealthChecker
   private rssProcessor: RssProcessor
   private articleStorage: ArticleStorage
+  private jobScheduler: JobScheduler
   
   // Service state
   private isRunning = false
-  private pollingInterval?: NodeJS.Timeout
-  private healthCheckInterval?: NodeJS.Timeout
 
   constructor() {
     // Initialize future modules (placeholders)
@@ -63,6 +63,7 @@ export class NewsAggregatorService {
     this.healthChecker = new HealthChecker(this.sourceManager, this.aiProviderManager)
     this.rssProcessor = new RssProcessor(this.sourceManager)
     this.articleStorage = new ArticleStorage()
+    this.jobScheduler = new JobScheduler()
   }
 
   async initialize(): Promise<void> {
@@ -81,6 +82,7 @@ export class NewsAggregatorService {
       // Initialize working services
       await this.sourceManager.initialize()
       await this.aiProviderManager.initialize()
+      await this.jobScheduler.initialize()
       // article storage requires no explicit initialization
       // Health checker and RSS processor don't need explicit initialization
 
@@ -100,16 +102,10 @@ export class NewsAggregatorService {
     logger.info('Starting News Aggregator Service...')
 
     try {
-      // Start content processing
-      this.startContentProcessing()
-      
-      // Start health monitoring
-      this.startHealthMonitoring()
-      
-      // Start source discovery (optional)
-      await this.sourceDiscovery.startDiscovery()
+      // Start the job scheduler (replaces old monolithic processing)
+      await this.jobScheduler.start()
 
-      logger.info('News Aggregator Service started')
+      logger.info('News Aggregator Service started with job scheduler')
     } catch (error) {
       logger.error('Failed to start News Aggregator Service:', error)
       throw error
@@ -120,20 +116,8 @@ export class NewsAggregatorService {
     logger.info('Stopping News Aggregator Service...')
 
     try {
-      // Stop content processing
-      if (this.pollingInterval) {
-        clearInterval(this.pollingInterval)
-        this.pollingInterval = undefined
-      }
-
-      // Stop health monitoring
-      if (this.healthCheckInterval) {
-        clearInterval(this.healthCheckInterval)
-        this.healthCheckInterval = undefined
-      }
-
-      // Stop source discovery
-      await this.sourceDiscovery.stopDiscovery()
+      // Stop the job scheduler
+      await this.jobScheduler.stop()
 
       // Clean up cache managers
       await this.contentCache.destroy()
@@ -220,9 +204,8 @@ export class NewsAggregatorService {
     return this.healthChecker
   }
 
-  async getDatabase() {
-    // Return the same database connection used by services
-    return this.sourceManager.db
+  getDatabase() {
+    return getDatabase()
   }
 
   getRssProcessor(): RssProcessor {
@@ -237,65 +220,7 @@ export class NewsAggregatorService {
     return this.translationCache
   }
 
-  private startContentProcessing(): void {
-    const pollingInterval = config.aggregator.defaultPollingInterval
-    
-    // Run initial processing
-    this.processContent().catch(error => {
-      logger.error('Initial content processing failed:', error)
-    })
-
-    // Set up periodic processing
-    this.pollingInterval = setInterval(() => {
-      this.processContent().catch(error => {
-        logger.error('Periodic content processing failed:', error)
-      })
-    }, pollingInterval)
-
-    logger.info(`Content processing started with ${pollingInterval}ms interval`)
+  getJobScheduler(): JobScheduler {
+    return this.jobScheduler
   }
-
-  private startHealthMonitoring(): void {
-    // Check health every 30 seconds
-    const healthCheckInterval = 30000
-
-    this.healthCheckInterval = setInterval(() => {
-      this.healthMonitor.getHealthStatus().catch((error: Error) => {
-        logger.error('Health check failed:', error)
-      })
-    }, healthCheckInterval)
-
-    logger.info(`Health monitoring started with ${healthCheckInterval}ms interval`)
-  }
-
-  private async processContent(): Promise<void> {
-    try {
-      logger.debug('Starting content processing cycle')
-      
-      // 1. Fetch content from all sources
-      const fetchResult = await this.fetcher.fetchFromAllSources()
-      
-      // 2. Process articles (validation, normalization, etc.)
-      const processedArticles = await this.processor.processArticles(fetchResult.articles || [])
-      
-      // 3. Deduplicate articles
-      const deduplicatedArticles = await this.deduplication.deduplicateArticles(processedArticles)
-      
-      // 4. AI processing (summarization, translation, tagging)
-      for (const article of deduplicatedArticles) {
-        if (article.description) {
-          article.metadata = article.metadata || {}
-          article.metadata.summary = await this.aiIntegration.summarizeArticle(article.description)
-          article.metadata.tags = await this.aiIntegration.tagContent(article.description)
-        }
-      }
-
-      // 5. Store in database
-      await this.articleStorage.saveArticles(deduplicatedArticles)
-      
-      logger.info(`Content processing cycle complete: ${deduplicatedArticles.length} unique articles processed`)
-      
-    } catch (error) {
-      logger.error('Content processing cycle failed:', error)
-    }
-  }}
+}

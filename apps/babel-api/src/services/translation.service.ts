@@ -1,5 +1,4 @@
-import { OpenAI } from "openai"
-import { AiProviderManager } from '@babel-feed/llm-provider'
+import { LlmClient } from '@babel-feed/llm-provider'
 import { logger } from '@babel-feed/utils'
 import { 
   TranslationRequest, 
@@ -9,7 +8,7 @@ import {
   BatchedTranslationResult,
   BatchedStreamingResult
 } from "../types/translation.js"
-import { selectModelForComplexity, getFallbackModel, CONFIG, isLanguagePairSupported } from "../config/models.js"
+import { getPreferredModelForComplexity, getTranslationParams, CONFIG, isLanguagePairSupported } from "../config/models.js"
 
 // Helper function to get language name for prompts
 function getLanguageName(code: string): string {
@@ -31,14 +30,14 @@ function getLanguageName(code: string): string {
 }
 
 export class TranslationService {
-  private aiProviderManager: AiProviderManager
+  private llmClient: LlmClient
 
-  constructor(aiProviderManager = new AiProviderManager()) {
-    this.aiProviderManager = aiProviderManager
+  constructor(llmClient = new LlmClient()) {
+    this.llmClient = llmClient
   }
 
   async initialize(): Promise<void> {
-    await this.aiProviderManager.initialize()
+    await this.llmClient.initialize()
   }
 
   /**
@@ -97,27 +96,6 @@ export class TranslationService {
     return prompt
   }
 
-  private async withProvider<T>(operation: (client: OpenAI) => Promise<T>): Promise<T> {
-    const providers = await this.aiProviderManager.getEnabledProviders('translation')
-    for (const provider of providers) {
-      try {
-        return await this.aiProviderManager.executeWithProvider(provider.id, async (_p, key) => {
-          const client = new OpenAI({
-            apiKey: key.apiKey || key.keyValue,
-            baseURL: provider.baseUrl,
-            defaultHeaders: {
-              'HTTP-Referer': 'https://babel-feed.com',
-              'X-Title': 'Babel Feed Translation - Paid Models'
-            }
-          })
-          return await operation(client)
-        })
-      } catch (error) {
-        logger.warn(`Provider ${provider.name} failed:`, error)
-      }
-    }
-    throw new Error('All translation providers failed')
-  }
 
   /**
    * Estimate translation quality based on various factors
@@ -156,7 +134,7 @@ export class TranslationService {
   }
 
   /**
-   * Stream translation from OpenRouter with fallback support
+   * Stream translation using LLM providers with fallback support
    */
   async* streamTranslation(request: TranslationRequest): AsyncGenerator<StreamingTranslationResult> {
     const startTime = Date.now()
@@ -171,31 +149,17 @@ export class TranslationService {
       throw new Error(`Content too large: ${request.content.length} characters (max: ${CONFIG.MAX_CONTENT_LENGTH})`)
     }
     
-    // Try primary model first, then fallback if needed
-    const primaryModel = selectModelForComplexity(request.complexity)
-    const fallbackModel = getFallbackModel(request.complexity)
-    const modelsToTry = [primaryModel]
+    // Get preferred model and params for this complexity level
+    const preferredModel = getPreferredModelForComplexity(request.complexity)
+    const translationParams = getTranslationParams(request.complexity)
     
-    // Add fallback model if different from primary
-    if (fallbackModel.modelId !== primaryModel.modelId) {
-      modelsToTry.push(fallbackModel)
+    try {
+      yield* this.attemptTranslation(request, preferredModel, translationParams, startTime)
+    } catch (error) {
+      // LlmClient handles fallbacks internally, so if we get here, all providers failed
+      console.error('Translation failed:', error)
+      throw error
     }
-    
-    let lastError: Error | null = null
-    
-    for (const modelConfig of modelsToTry) {
-      try {
-        yield* this.attemptTranslation(request, modelConfig, startTime)
-        return // Success, exit the loop
-      } catch (error) {
-        console.warn(`Model ${modelConfig.name} failed:`, error)
-        lastError = error as Error
-        // Continue to next model
-      }
-    }
-    
-    // All models failed, throw the last error
-    throw lastError || new Error("All translation models failed")
   }
 
   /**
@@ -203,30 +167,29 @@ export class TranslationService {
    */
   private async* attemptTranslation(
     request: TranslationRequest, 
-    modelConfig: { name: string; modelId: string; maxTokens: number; temperature: number }, 
+    modelId: string,
+    params: { maxTokens: number; temperature: number },
     startTime: number
   ): AsyncGenerator<StreamingTranslationResult> {
     const prompt = this.generateTranslationPrompt(request)
     
-    const stream = await this.withProvider(client =>
-      client.chat.completions.create({
-        model: modelConfig.modelId,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a professional translator specializing in accurate, contextually appropriate translations. Focus on preserving meaning and cultural nuances."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: modelConfig.maxTokens,
-        temperature: modelConfig.temperature,
-        stream: true
-      })
-    )
+    const stream = this.llmClient.streamChatCompletion({
+      model: modelId,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional translator specializing in accurate, contextually appropriate translations. Focus on preserving meaning and cultural nuances."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: params.maxTokens,
+      temperature: params.temperature,
+      stream: true
+    })
 
     let accumulatedContent = ""
     let chunkNumber = 0
@@ -245,11 +208,11 @@ export class TranslationService {
         
         const processingTime = Date.now() - startTime
         
-        // Calculate confidence based on paid model capabilities
-        const baseConfidence = modelConfig.name.includes("Llama 3.1 8B") ? 0.94 :
-                             modelConfig.name.includes("Mistral 7B") ? 0.92 :
-                             modelConfig.name.includes("Gemma 2 9B") ? 0.90 :
-                             modelConfig.name.includes("Phi-3 Mini") ? 0.91 : 0.88
+        // Calculate confidence based on model type
+        const baseConfidence = modelId.includes("llama-3.1-8b") ? 0.94 :
+                             modelId.includes("mistral-7b") ? 0.92 :
+                             modelId.includes("gemma-2-9b") ? 0.90 :
+                             modelId.includes("phi-3-mini") ? 0.91 : 0.88
         
         const confidence = this.calculateQualityScore(
           accumulatedContent,
@@ -266,7 +229,7 @@ export class TranslationService {
           tokensUsed: totalTokens,
           cacheHit: false, // TODO: Implement caching
           qualityScore: confidence,
-          modelUsed: modelConfig.name,
+          modelUsed: modelId,
           backendVersion: CONFIG.BACKEND_VERSION,
           backendProcessingTime: processingTime,
           chunk: chunkNumber,
@@ -282,10 +245,10 @@ export class TranslationService {
         const processingTime = Date.now() - startTime
         
         // Calculate final confidence
-        const baseConfidence = modelConfig.name.includes("Llama 3.1 8B") ? 0.94 :
-                             modelConfig.name.includes("Mistral 7B") ? 0.92 :
-                             modelConfig.name.includes("Gemma 2 9B") ? 0.90 :
-                             modelConfig.name.includes("Phi-3 Mini") ? 0.91 : 0.88
+        const baseConfidence = modelId.includes("llama-3.1-8b") ? 0.94 :
+                             modelId.includes("mistral-7b") ? 0.92 :
+                             modelId.includes("gemma-2-9b") ? 0.90 :
+                             modelId.includes("phi-3-mini") ? 0.91 : 0.88
         
         const confidence = this.calculateQualityScore(
           accumulatedContent || request.content,
@@ -302,7 +265,7 @@ export class TranslationService {
           tokensUsed: totalTokens || 1,
           cacheHit: false,
           qualityScore: confidence,
-          modelUsed: modelConfig.name,
+          modelUsed: modelId,
           backendVersion: CONFIG.BACKEND_VERSION,
           backendProcessingTime: processingTime,
           chunk: chunkNumber || 1,
@@ -385,7 +348,7 @@ export class TranslationService {
   }
 
   /**
-   * Stream batched translation using OpenRouter API with fallback to mock
+   * Stream batched translation using LLM providers with fallback to mock
    */
   async* streamBatchedTranslation(request: BatchedTranslationRequest): AsyncGenerator<string> {
     const startTime = Date.now()
@@ -401,32 +364,16 @@ export class TranslationService {
       throw new Error(`Content too large: ${totalContentLength} characters (max: ${CONFIG.MAX_CONTENT_LENGTH})`)
     }
     
-    // Try OpenRouter API first, fallback to mock if it fails
-    const primaryModel = selectModelForComplexity(request.complexity)
-    const fallbackModel = getFallbackModel(request.complexity)
-    const modelsToTry = [primaryModel]
+    // Get preferred model and params for this complexity level
+    const preferredModel = getPreferredModelForComplexity(request.complexity)
+    const translationParams = getTranslationParams(request.complexity)
     
-    // Add fallback model if different from primary
-    if (fallbackModel.modelId !== primaryModel.modelId) {
-      modelsToTry.push(fallbackModel)
+    try {
+      yield* this.attemptBatchedTranslation(request, preferredModel, translationParams, startTime)
+    } catch (error) {
+      console.warn("LLM providers failed, using mock translation fallback:", error)
+      yield* this.generateMockBatchedTranslation(request, startTime)
     }
-    
-    let lastError: Error | null = null
-    
-    for (const modelConfig of modelsToTry) {
-      try {
-        yield* this.attemptBatchedTranslation(request, modelConfig, startTime)
-        return // Success, exit the loop
-      } catch (error) {
-        console.warn(`Batched translation with model ${modelConfig.name} failed:`, error)
-        lastError = error as Error
-        // Continue to next model
-      }
-    }
-    
-    // All OpenRouter models failed, fallback to mock translation
-    console.warn("All OpenRouter models failed, using mock translation fallback:", lastError?.message)
-    yield* this.generateMockBatchedTranslation(request, startTime)
   }
 
   /**
@@ -434,40 +381,39 @@ export class TranslationService {
    */
   private async* attemptBatchedTranslation(
     request: BatchedTranslationRequest,
-    modelConfig: { name: string; modelId: string; maxTokens: number; temperature: number },
+    modelId: string,
+    params: { maxTokens: number; temperature: number },
     startTime: number
   ): AsyncGenerator<string> {
     const prompt = this.generateBatchedTranslationPrompt(request)
     
-    const stream = await this.withProvider(client =>
-      client.chat.completions.create({
-        model: modelConfig.modelId,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a professional translator specializing in accurate, contextually appropriate translations. You must return valid JSON with the exact structure requested, preserving all element IDs."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: modelConfig.maxTokens,
-        temperature: modelConfig.temperature,
-        stream: true
-      })
-    )
+    const stream = this.llmClient.streamChatCompletion({
+      model: modelId,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional translator specializing in accurate, contextually appropriate translations. You must return valid JSON with the exact structure requested, preserving all element IDs."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: params.maxTokens,
+      temperature: params.temperature,
+      stream: true
+    })
 
     let accumulatedContent = ""
     let processedElements = 0
     const totalElements = request.elements.length
     
     // Base confidence for the model
-    const baseConfidence = modelConfig.name.includes("Llama 3.1 8B") ? 0.94 :
-                         modelConfig.name.includes("Mistral 7B") ? 0.92 :
-                         modelConfig.name.includes("Gemma 2 9B") ? 0.90 :
-                         modelConfig.name.includes("Phi-3 Mini") ? 0.91 : 0.88
+    const baseConfidence = modelId.includes("llama-3.1-8b") ? 0.94 :
+                         modelId.includes("mistral-7b") ? 0.92 :
+                         modelId.includes("gemma-2-9b") ? 0.90 :
+                         modelId.includes("phi-3-mini") ? 0.91 : 0.88
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta
@@ -548,7 +494,7 @@ export class TranslationService {
           totalElements: totalElements,
           processedElements: processedElements,
           tokensUsed: Math.ceil(accumulatedContent.length / 4),
-          modelUsed: modelConfig.name,
+          modelUsed: modelId,
           backendVersion: CONFIG.BACKEND_VERSION,
           backendProcessingTime: Date.now() - startTime
         }
@@ -742,13 +688,12 @@ export class TranslationService {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      // Simple health check - try to list models
-      if (!CONFIG.OPENROUTER_API_KEY) {
-        return false
-      }
-      
-      // Could add a simple API call to verify connectivity
-      return true
+      // Check provider health through LlmClient
+      const health = await this.llmClient.getProviderHealth()
+      return Object.values(health).some(status => 
+        typeof status === 'object' && status !== null && 
+        'healthy' in status && status.healthy === true
+      )
     } catch (error) {
       console.error("Service availability check failed:", error)
       return false

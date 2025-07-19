@@ -1,170 +1,58 @@
-import { ComplexityLevel, ModelConfig } from "../types/translation.js"
+import { ComplexityLevel } from "../types/translation.js"
 
-// Model configuration based on complexity levels - PAID MODELS WITH LOW LATENCY
-export const MODEL_CONFIGS: Record<ComplexityLevel, ModelConfig[]> = {
+// Translation model parameters by complexity - let llm-provider handle provider selection
+export const TRANSLATION_PARAMS: Record<ComplexityLevel, { maxTokens: number; temperature: number }> = {
+  simple: {
+    maxTokens: 2048,
+    temperature: 0.3
+  },
+  contextual: {
+    maxTokens: 4096,
+    temperature: 0.5
+  },
+  creative: {
+    maxTokens: 4096,
+    temperature: 0.7
+  },
+  technical: {
+    maxTokens: 4096,
+    temperature: 0.2
+  }
+}
+
+// Preferred models by complexity - these will be tried first if available
+export const PREFERRED_MODELS: Record<ComplexityLevel, string[]> = {
   simple: [
-    {
-      name: "Mistral 7B Instruct",
-      provider: "openrouter",
-      modelId: "mistralai/mistral-7b-instruct",
-      maxTokens: 2048,
-      temperature: 0.3,
-      targetLatency: 400,
-      costPer1kTokens: 0.0002,
-      complexityTypes: ["simple"]
-    },
-    {
-      name: "Llama 3.1 8B Instruct",
-      provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct",
-      maxTokens: 2048,
-      temperature: 0.3,
-      targetLatency: 300,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["simple"]
-    },
-    {
-      name: "Gemma 2 9B Instruct",
-      provider: "openrouter",
-      modelId: "google/gemma-2-9b-it",
-      maxTokens: 2048,
-      temperature: 0.3,
-      targetLatency: 350,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["simple"]
-    }
+    "meta-llama/llama-3.1-8b-instruct",
+    "mistralai/mistral-7b-instruct",
+    "google/gemma-2-9b-it"
   ],
   contextual: [
-    {
-      name: "Mistral 7B Instruct",
-      provider: "openrouter",
-      modelId: "mistralai/mistral-7b-instruct",
-      maxTokens: 4096,
-      temperature: 0.5,
-      targetLatency: 500,
-      costPer1kTokens: 0.0002,
-      complexityTypes: ["contextual"]
-    },
-    {
-      name: "Llama 3.1 8B Instruct",
-      provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct",
-      maxTokens: 4096,
-      temperature: 0.5,
-      targetLatency: 400,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["contextual"]
-    },
-    {
-      name: "Phi-3 Mini 128k Instruct",
-      provider: "openrouter",
-      modelId: "microsoft/phi-3-mini-128k-instruct",
-      maxTokens: 4096,
-      temperature: 0.5,
-      targetLatency: 300,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["contextual"]
-    }
+    "meta-llama/llama-3.1-8b-instruct",
+    "mistralai/mistral-7b-instruct",
+    "microsoft/phi-3-mini-128k-instruct"
   ],
   creative: [
-    {
-      name: "Llama 3.1 8B Instruct",
-      provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct",
-      maxTokens: 4096,
-      temperature: 0.7,
-      targetLatency: 400,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["creative"]
-    },
-    {
-      name: "Mistral 7B Instruct",
-      provider: "openrouter",
-      modelId: "mistralai/mistral-7b-instruct",
-      maxTokens: 4096,
-      temperature: 0.7,
-      targetLatency: 500,
-      costPer1kTokens: 0.0002,
-      complexityTypes: ["creative"]
-    },
-    {
-      name: "Gemma 2 9B Instruct",
-      provider: "openrouter",
-      modelId: "google/gemma-2-9b-it",
-      maxTokens: 4096,
-      temperature: 0.7,
-      targetLatency: 450,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["creative"]
-    }
+    "meta-llama/llama-3.1-8b-instruct",
+    "mistralai/mistral-7b-instruct",
+    "google/gemma-2-9b-it"
   ],
   technical: [
-    {
-      name: "Llama 3.1 8B Instruct",
-      provider: "openrouter",
-      modelId: "meta-llama/llama-3.1-8b-instruct",
-      maxTokens: 4096,
-      temperature: 0.2,
-      targetLatency: 400,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["technical"]
-    },
-    {
-      name: "Mistral 7B Instruct",
-      provider: "openrouter",
-      modelId: "mistralai/mistral-7b-instruct",
-      maxTokens: 4096,
-      temperature: 0.2,
-      targetLatency: 500,
-      costPer1kTokens: 0.0002,
-      complexityTypes: ["technical"]
-    },
-    {
-      name: "Phi-3 Mini 128k Instruct",
-      provider: "openrouter",
-      modelId: "microsoft/phi-3-mini-128k-instruct",
-      maxTokens: 4096,
-      temperature: 0.2,  
-      targetLatency: 300,
-      costPer1kTokens: 0.0001,
-      complexityTypes: ["technical"]
-    }
+    "meta-llama/llama-3.1-8b-instruct",
+    "mistralai/mistral-7b-instruct",
+    "microsoft/phi-3-mini-128k-instruct"
   ]
 }
 
-// Get optimal model for complexity level with fallback support
-export function selectModelForComplexity(complexity: ComplexityLevel): ModelConfig {
-  const availableModels = MODEL_CONFIGS[complexity]
-  if (!availableModels || availableModels.length === 0) {
-    // Fallback to simple models if no specific models available
-    return MODEL_CONFIGS.simple[0]
-  }
-  
-  // Select first available model (could be enhanced with load balancing)
-  return availableModels[0]
+// Get preferred model for complexity level
+export function getPreferredModelForComplexity(complexity: ComplexityLevel): string {
+  const preferredModels = PREFERRED_MODELS[complexity]
+  return preferredModels[0] // LlmClient will handle fallbacks if this model is unavailable
 }
 
-// Get fallback model for when primary model fails
-export function getFallbackModel(originalComplexity: ComplexityLevel): ModelConfig {
-  // Fallback hierarchy: simple -> contextual -> creative -> technical
-  const fallbackOrder: ComplexityLevel[] = ["simple", "contextual", "creative", "technical"]
-  
-  for (const complexity of fallbackOrder) {
-    if (complexity !== originalComplexity) {
-      const models = MODEL_CONFIGS[complexity]
-      if (models && models.length > 0) {
-        return models[0]
-      }
-    }
-  }
-  
-  // Ultimate fallback - return the most reliable simple model
-  return MODEL_CONFIGS.simple[0]
-}
-
-// Get all free models for load balancing/rotation
-export function getAllFreeModels(): ModelConfig[] {
-  return Object.values(MODEL_CONFIGS).flat()
+// Get translation parameters for complexity level
+export function getTranslationParams(complexity: ComplexityLevel): { maxTokens: number; temperature: number } {
+  return TRANSLATION_PARAMS[complexity]
 }
 
 // Get all supported language pairs
@@ -218,8 +106,6 @@ function normalizeLanguageCode(languageCode: string): string {
 
 // Environment configuration
 export const CONFIG = {
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
-  OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1",
   MAX_CONTENT_LENGTH: 50000,
   DEFAULT_TIMEOUT: 30000,
   BACKEND_VERSION: "1.0.0",

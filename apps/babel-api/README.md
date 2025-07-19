@@ -1,10 +1,10 @@
 # Babel Feed Translation API
 
-A robust ElysiaJS backend API for assisted translation using OpenRouter models with streaming support.
+A robust ElysiaJS backend API for assisted translation using LLM providers with streaming support.
 
 ## ✨ Features
 
-- **OpenRouter Integration**: Access to multiple LLM models (GPT-4, Claude, LLaMA, etc.)
+- **LLM Provider Integration**: Access to multiple LLM models through the unified provider system
 - **Streaming Responses**: Server-Sent Events (SSE) for progressive translation
 - **Smart Model Selection**: Automatic model selection based on content complexity
 - **Caching System**: In-memory caching with configurable TTL
@@ -135,9 +135,6 @@ curl http://localhost:3000/api/translation/languages
 ### Environment Variables
 
 ```bash
-# OpenRouter API (Required for production)
-OPENROUTER_API_KEY=your_api_key_here
-
 # Server Configuration
 PORT=3000
 HOST=0.0.0.0
@@ -224,14 +221,13 @@ The test suite validates:
 docker build -f Dockerfile . -t babel-api
 
 # Run container
-docker run -p 3000:3000 -e OPENROUTER_API_KEY=your_key babel-api
+docker run -p 3000:3000 babel-api
 ```
 
 ### Environment Requirements
 - Node.js 18+ or Bun runtime
-- OpenRouter API key for full functionality
+- LLM provider configuration (via @babel-feed/llm-provider package)
 - Redis (optional, for distributed caching)
-- PostgreSQL (optional, for persistent storage)
 
 ## 🔗 Integration
 

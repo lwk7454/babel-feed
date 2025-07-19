@@ -48,7 +48,7 @@ const app = new Elysia()
     documentation: {
       info: {
         title: "Babel Feed Translation API",
-        description: "Backend API for assisted translation using OpenRouter models",
+        description: "Backend API for assisted translation using LLM providers",
         version: "1.0.0",
         contact: {
           name: "Babel Feed",
@@ -113,7 +113,7 @@ const app = new Elysia()
         }
       },
       config: {
-        openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
+        llmProvidersConfigured: true, // Will be checked by translation service
         cachingEnabled: process.env.ENABLE_CACHING === "true",
         streamingEnabled: process.env.ENABLE_STREAMING !== "false",
         rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== "false",

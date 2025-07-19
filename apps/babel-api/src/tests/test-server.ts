@@ -69,7 +69,7 @@ export function createTestServer() {
           }
         },
         config: {
-          openrouterConfigured: false,
+          llmProvidersConfigured: false, // Test environment doesn't have providers
           cachingEnabled: false,
           streamingEnabled: false,
           rateLimitEnabled: false,

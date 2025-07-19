@@ -1,22 +1,18 @@
 import {
   getDatabase,
-  getTestDb,
   newsSources,
   type NewsSource as DbNewsSource,
   type NewNewsSource
 } from '@babel-feed/pgdb'
-import { asc, desc, eq, inArray } from 'drizzle-orm'
-import { NewsSource, AggregatorError, ValidationError } from '../modules/common/types'
 import { logger } from '@babel-feed/utils'
+import { asc, desc, eq, inArray } from 'drizzle-orm'
+import { AggregatorError, NewsSource, ValidationError } from '../modules/common/types'
 
 export class NewsSourceManager {
-  public db: Awaited<ReturnType<typeof getDatabase | typeof getTestDb>> | undefined
+  public db = getDatabase()
 
   async initialize(): Promise<void> {
     logger.info('Initializing database-based source manager...')
-    
-    // Initialize database connection
-    this.db = process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
     
     // Seed initial sources if none exist
     let existingSources: NewsSource[] = []

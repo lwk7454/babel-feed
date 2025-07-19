@@ -42,16 +42,6 @@ export interface TranslationError {
   timestamp: string;
 }
 
-export interface ModelConfig {
-  name: string;
-  provider: "openrouter" | "openai" | "anthropic";
-  modelId: string;
-  maxTokens: number;
-  temperature: number;
-  targetLatency: number;
-  costPer1kTokens: number;
-  complexityTypes: Array<"simple" | "contextual" | "creative" | "technical">;
-}
 
 export type ComplexityLevel = "simple" | "contextual" | "creative" | "technical";
 export type ContentType = "template_element" | "article_content" | "mixed_content" | "media_captions" | "interactive_element" | "raw_text";
