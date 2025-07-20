@@ -254,7 +254,7 @@ Feed → Article Summary → Full Article (WebView)
 - Database Management: Dedicated test database with full lifecycle control
 
 #### Database Lifecycle
-- Per Test Run: Initialize and migrate fresh database schema
+- Per Test Run: Initialize fresh database schema
 - Per Test: Truncate all tables to ensure test isolation
 - Cleanup: Automatic database teardown after test completion
 
@@ -267,7 +267,7 @@ Feed → Article Summary → Full Article (WebView)
 
 #### Test Database Requirements
 - Isolated test database instance (separate from development/production)
-- Automated schema migration before each test run
+- Automated schema setup before each test run
 - Table truncation between individual tests
 - Seed data management for consistent test scenarios
 - Transaction rollback support for complex test scenarios
@@ -362,7 +362,7 @@ bun run lint:android    # Code quality
 - Fresh database instance per test run
 - Table truncation between individual tests
 - No shared state between tests
-- Automated schema migration and seeding
+- Automated schema setup and seeding
 - Transaction-based cleanup where applicable
 
 **Robust Test Design:**

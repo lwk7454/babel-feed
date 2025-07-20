@@ -203,8 +203,9 @@ bun test  # Complete authentication flow testing
 ```bash
 # Database
 bun run dev:db          # Start development database
-bun run db:migrate      # Run database migrations
+bun run db:push         # Push schema changes to database
 bun run db:studio       # Open Drizzle Studio
+```
 
 # Backend
 bun run dev             # Start API server with hot reload

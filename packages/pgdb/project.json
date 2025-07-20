@@ -11,9 +11,7 @@
         "outputPath": "dist/packages/pgdb",
         "main": "packages/pgdb/src/index.ts",
         "tsConfig": "packages/pgdb/tsconfig.json",
-        "assets": [
-          "packages/pgdb/src/migrations/**/*"
-        ],
+        "assets": [],
         "bundle": false,
         "format": ["esm"],
         "platform": "node",
@@ -35,17 +33,17 @@
         "cwd": "packages/pgdb"
       }
     },
-    "migrate": {
+    "push": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "drizzle-kit migrate",
+        "command": "drizzle-kit push",
         "cwd": "packages/pgdb"
       }
     },
-    "generate": {
+    "studio": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "drizzle-kit generate",
+        "command": "drizzle-kit studio",
         "cwd": "packages/pgdb"
       }
     }

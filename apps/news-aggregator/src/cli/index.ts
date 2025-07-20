@@ -11,6 +11,9 @@ const COMMANDS = {
   'jobs:status': 'Show detailed job status',
   'jobs:run': 'Run a specific job now',
   'jobs:config': 'Update job configuration',
+  'jobs:history': 'Show job execution history',
+  'jobs:enable': 'Enable a job',
+  'jobs:disable': 'Disable a job',
   'sources': 'List all configured sources',
   'sources:enabled': 'List enabled sources',
   'sources:health': 'Show source health status',
@@ -65,6 +68,15 @@ export class NewsAggregatorCLI {
           break
         case 'jobs:config':
           await this.updateJobConfig(commandArgs)
+          break
+        case 'jobs:history':
+          await this.showJobHistory(commandArgs)
+          break
+        case 'jobs:enable':
+          await this.enableJob(commandArgs)
+          break
+        case 'jobs:disable':
+          await this.disableJob(commandArgs)
           break
         case 'sources':
           await this.listSources(commandArgs)
@@ -808,12 +820,101 @@ export class NewsAggregatorCLI {
       }
       
       const updates: Record<string, unknown> = { [configKey]: parsedValue }
-      jobScheduler.updateJobConfig(jobName, updates)
+      await jobScheduler.updateJobConfig(jobName, updates)
       
-      console.log(`Updated job config: ${jobName}.${configKey} = ${parsedValue}`)
+      console.log(`✅ Updated job config: ${jobName}.${configKey} = ${parsedValue}`)
+      console.log('Changes persisted to database.')
       
     } catch (error) {
       console.log('Error updating job config:', error)
+    }
+  }
+
+  private async showJobHistory(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const jobName = args[0]
+    const limitStr = args[1] || '10'
+    
+    if (!jobName) {
+      console.log('Usage: jobs:history <job-name> [limit]')
+      console.log('Example: jobs:history source-discovery 20')
+      return
+    }
+    
+    try {
+      const limit = parseInt(limitStr, 10) || 10
+      const jobScheduler = this.service.getJobScheduler()
+      const history = await jobScheduler.getJobHistory(jobName, limit)
+      
+      console.log(`\n=== Job Execution History: ${jobName} (last ${limit}) ===`)
+      if (history.length === 0) {
+        console.log('No execution history found')
+        return
+      }
+      
+      console.log('EXECUTION ID\t\t\t\tSTATUS\t\tSTARTED\t\t\t\tDURATION\tPROCESSED\tERRORS')
+      console.log('─'.repeat(120))
+      
+      for (const execution of history) {
+        const status = execution.status === 'success' ? '✅ Success' : 
+                     execution.status === 'failed' ? '❌ Failed' :
+                     execution.status === 'running' ? '🔄 Running' : execution.status
+        
+        const started = execution.startedAt.toISOString().replace('T', ' ').substring(0, 19)
+        const duration = execution.processingTime ? `${execution.processingTime}ms` : 'N/A'
+        const processed = execution.processed || 0
+        const errors = execution.errors || 0
+        
+        console.log(`${execution.executionId}\t${status.padEnd(12)}\t${started}\t${duration.padEnd(8)}\t${processed}\t\t${errors}`)
+        
+        if (execution.errorMessage) {
+          console.log(`  ❌ Error: ${execution.errorMessage}`)
+        }
+      }
+      
+    } catch (error) {
+      console.log('Error showing job history:', error)
+    }
+  }
+
+  private async enableJob(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const jobName = args[0]
+    if (!jobName) {
+      console.log('Usage: jobs:enable <job-name>')
+      return
+    }
+    
+    try {
+      const jobScheduler = this.service.getJobScheduler()
+      await jobScheduler.updateJobConfig(jobName, { enabled: true })
+      
+      console.log(`✅ Enabled job: ${jobName}`)
+      
+    } catch (error) {
+      console.log('Error enabling job:', error)
+    }
+  }
+
+  private async disableJob(args: string[]): Promise<void> {
+    if (!this.service) throw new Error('Service not initialized')
+    
+    const jobName = args[0]
+    if (!jobName) {
+      console.log('Usage: jobs:disable <job-name>')
+      return
+    }
+    
+    try {
+      const jobScheduler = this.service.getJobScheduler()
+      await jobScheduler.updateJobConfig(jobName, { enabled: false })
+      
+      console.log(`⏸️ Disabled job: ${jobName}`)
+      
+    } catch (error) {
+      console.log('Error disabling job:', error)
     }
   }
 }

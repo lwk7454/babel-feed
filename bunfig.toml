@@ -1,0 +1,21 @@
+# Bun configuration file for Babel Feed workspace
+# Configures Bun's behavior for this project
+
+[test]
+# Automatically load test setup before running any tests
+preload = ["./test-setup.ts", "./packages/pgdb/scripts/generate-test-migrations.ts"]
+
+# Enable coverage reporting by default
+coverage = true
+
+# Set coverage threshold to 80%
+coverageThreshold = 0.8
+
+# Use both text and lcov reporters
+coverageReporter = ["text", "lcov"]
+
+# Set coverage directory
+coverageDir = "coverage"
+
+# Root directory for tests (default is current directory)
+root = "."

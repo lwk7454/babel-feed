@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, mock } from 'bun:test'
-import { SimilarityEngine, type SimilarityVector, type SimilarityResult } from '../modules/recommendation/similarity-engine'
 import { AiProviderManager } from '@babel-feed/llm-provider'
-import { setupTestDatabase, cleanupTestDatabase } from '@babel-feed/pgdb'
+import { cleanupTestDatabase, setupTestDatabase } from '@babel-feed/pgdb'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { SimilarityEngine, type SimilarityVector } from '../modules/recommendation/similarity-engine'
 
 // Mock AI provider for testing
 const mockAiProvider = {

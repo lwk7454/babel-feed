@@ -1,13 +1,13 @@
 import { cors } from "@elysiajs/cors"
 import { swagger } from "@elysiajs/swagger"
-import { Elysia } from "elysia"
+import { Elysia, t } from "elysia"
 import { authGuard } from '../middleware/auth.middleware.js'
 import { cacheStatsRoute } from "../middleware/cache.js"
 import { statsMiddleware, statsRoute } from "../middleware/logging.js"
-import { articleRoutes } from "../routes/article.routes.js"
-import { authRoutes } from "../routes/auth.routes.js"
 import { translationRoutes } from "../routes/translation.js"
 import { getTestDb } from '@babel-feed/pgdb'
+import { UserService } from '../services/user.service.js'
+import { ArticleService } from '../services/article.service.js'
 
 /**
  * Test server setup that uses test database
@@ -15,6 +15,13 @@ import { getTestDb } from '@babel-feed/pgdb'
 export function createTestServer() {
   // Set test environment
   process.env.NODE_ENV = 'test'
+  
+  // Get test database instance
+  const testDb = getTestDb()
+  
+  // Create services with test database
+  const testUserService = new UserService(testDb)
+  const testArticleService = new ArticleService()
   
   const app = new Elysia()
     // Add CORS support
@@ -25,6 +32,7 @@ export function createTestServer() {
       credentials: true
     }))
 
+    // Create auth guard with test user service
     .use(authGuard)
     
     // Add minimal middleware for tests
@@ -79,14 +87,90 @@ export function createTestServer() {
       }
     })
 
-    // Add authentication routes
-    .use(authRoutes)
+    // Create custom auth routes with test user service
+    .group('/api/auth', (app) => 
+      app
+        .post('/guest', 
+          async ({ body, set }) => {
+            try {
+              const deviceFingerprint = (body as { deviceFingerprint?: string }).deviceFingerprint
+              const user = await testUserService.createGuestUser(deviceFingerprint)
+              
+              return {
+                success: true,
+                data: {
+                  guestId: user.guestId,
+                  userId: user.id,
+                  createdAt: user.createdAt
+                },
+                message: 'Guest profile created successfully'
+              }
+            } catch (error) {
+              console.error('Guest creation error:', error)
+              set.status = 500
+              return {
+                success: false,
+                error: {
+                  code: 'GUEST_CREATION_FAILED',
+                  message: 'Failed to create guest profile',
+                  details: error instanceof Error ? error.message : 'Unknown error'
+                }
+              }
+            }
+          },
+          {
+            body: t.Object({
+              deviceFingerprint: t.Optional(t.String())
+            })
+          }
+        )
+    )
     
     // Add translation routes
     .use(translationRoutes)
     
-    // Add article routes
-    .use(articleRoutes)
+    // Create custom article routes with test article service
+    .group('/api/articles', (app) => 
+      app
+        .get("/", async ({ query, set }) => {
+          try {
+            const { limit, offset, language, search } = query
+            
+            let result
+            if (search) {
+              result = await testArticleService.searchArticles(search, {
+                limit: limit ? Number(limit) : undefined,
+                offset: offset ? Number(offset) : undefined,
+                language: language
+              })
+            } else {
+              result = await testArticleService.getArticles({
+                limit: limit ? Number(limit) : undefined,
+                offset: offset ? Number(offset) : undefined,
+                language: language
+              })
+            }
+
+            return {
+              success: true,
+              data: result.articles,
+              pagination: {
+                total: result.total,
+                limit: limit ? Number(limit) : 20,
+                offset: offset ? Number(offset) : 0,
+                hasMore: result.total > (Number(offset) || 0) + (Number(limit) || 20)
+              }
+            }
+          } catch (error) {
+            console.error('GET /articles error:', error)
+            set.status = 500
+            return {
+              success: false,
+              error: 'Failed to fetch articles'
+            }
+          }
+        })
+    )
     
     // Add cache management routes
     .use(cacheStatsRoute)

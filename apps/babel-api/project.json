@@ -46,17 +46,10 @@
         "cwd": "apps/babel-api"
       }
     },
-    "db:generate": {
+    "db:push": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun drizzle-kit generate",
-        "cwd": "apps/babel-api"
-      }
-    },
-    "db:migrate": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "bun drizzle-kit migrate",
+        "command": "bun drizzle-kit push",
         "cwd": "apps/babel-api"
       }
     },

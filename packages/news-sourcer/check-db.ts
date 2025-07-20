@@ -39,7 +39,7 @@ async function checkDatabase() {
 
     } catch (error) {
       console.error('❌ Schema check failed:', error instanceof Error ? error.message : error)
-      console.error('💡 Make sure to run database migrations: bun run nx run pgdb:migrate')
+      console.error('💡 Make sure to run database push: bun run nx run pgdb:push')
       process.exit(1)
     }
 

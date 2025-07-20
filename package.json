@@ -24,8 +24,8 @@
     "test:api:watch": "nx test:watch babel-api",
     "test:aggregator": "nx test news-aggregator",
     "test:aggregator:watch": "nx test:watch news-aggregator",
-    "db:migrate": "bunx drizzle-kit migrate --config=packages/pgdb/drizzle.config.cjs",
-    "db:generate": "bunx drizzle-kit generate --config=packages/pgdb/drizzle.config.cjs"
+    "db:push": "nx run pgdb:push",
+    "db:studio": "nx run pgdb:studio"
   },
   "private": true,
   "dependencies": {

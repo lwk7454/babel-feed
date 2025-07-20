@@ -92,3 +92,7 @@ apps/babel-android/app/src/main/kotlin/**/*.class
 
 # Drizzle migrations - exclude snapshot files but keep SQL and journal
 packages/pgdb/migrations/meta/*_snapshot.json
+
+# Test-specific files - ignore all test migrations (auto-generated)
+packages/pgdb/test-migrations/
+packages/pgdb/src/test-schema.sql

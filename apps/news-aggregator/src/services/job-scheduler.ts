@@ -1,7 +1,8 @@
 import { Article, ExtractionResult } from '@babel-feed/news-extractor'
 import { NewsSourcer } from '@babel-feed/news-sourcer'
-import { articles, getDatabase } from '@babel-feed/pgdb'
+import { articles, getDatabase, JobConfig as DbJobConfig, JobStatus as DbJobStatus, JobExecution } from '@babel-feed/pgdb'
 import { logger } from '@babel-feed/utils'
+import { JobDatabaseService, JobDatabaseServiceImpl } from './job-db'
 
 export interface JobConfig {
   name: string
@@ -10,6 +11,18 @@ export interface JobConfig {
   maxConcurrency?: number
   retryAttempts?: number
   timeout?: number
+}
+
+// Map database job config to service job config
+function mapDbJobConfig(dbConfig: DbJobConfig): JobConfig {
+  return {
+    name: dbConfig.name,
+    interval: dbConfig.interval,
+    enabled: dbConfig.enabled,
+    maxConcurrency: dbConfig.maxConcurrency || 1,
+    retryAttempts: dbConfig.retryAttempts || 3,
+    timeout: dbConfig.timeout || 60000
+  }
 }
 
 export interface JobResult {
@@ -40,6 +53,7 @@ export class JobScheduler {
   private isRunning = false
   private db!: Awaited<ReturnType<typeof getDatabase>>
   private newsSourcer: NewsSourcer
+  private jobDb: JobDatabaseService
 
   constructor() {
     this.newsSourcer = new NewsSourcer({
@@ -53,76 +67,72 @@ export class JobScheduler {
       userAgent: 'BabelFeed-NewsAggregator/1.0'
     })
 
-    // Initialize default job configurations
-    this.initializeDefaultJobs()
+    this.jobDb = new JobDatabaseServiceImpl()
   }
 
-  private initializeDefaultJobs(): void {
-    // News Sourcer Jobs - Find article URLs from sources
-    this.addJob({
-      name: 'source-discovery',
-      interval: 6 * 60 * 60 * 1000, // 6 hours
-      enabled: true,
-      maxConcurrency: 1,
-      retryAttempts: 3,
-      timeout: 300000 // 5 minutes
-    })
-
-    this.addJob({
-      name: 'url-fetching',
-      interval: 30 * 60 * 1000, // 30 minutes
-      enabled: true,
-      maxConcurrency: 5,
-      retryAttempts: 2,
-      timeout: 60000 // 1 minute
-    })
-
-    // News Extractor Jobs - Extract and process content from article URLs
-    this.addJob({
-      name: 'article-processing',
-      interval: 30 * 60 * 1000, // 30 minutes (same as url-fetching)
-      enabled: true,
-      maxConcurrency: 8,
-      retryAttempts: 2,
-      timeout: 180000 // 3 minutes
-    })
-
-    // Maintenance Jobs
-    this.addJob({
-      name: 'health-monitoring',
-      interval: 5 * 60 * 1000, // 5 minutes
-      enabled: true,
-      maxConcurrency: 1,
-      retryAttempts: 1,
-      timeout: 30000 // 30 seconds
-    })
-
-    this.addJob({
-      name: 'cleanup',
-      interval: 24 * 60 * 60 * 1000, // 24 hours
-      enabled: true,
-      maxConcurrency: 1,
-      retryAttempts: 1,
-      timeout: 300000 // 5 minutes
-    })
+  private async loadJobsFromDatabase(): Promise<void> {
+    try {
+      // Load job configurations from database
+      const dbConfigs = await this.jobDb.getJobConfigs()
+      
+      this.jobs.clear()
+      this.status.clear()
+      
+      for (const dbConfig of dbConfigs) {
+        // Convert database config to service config
+        const config = mapDbJobConfig(dbConfig)
+        this.jobs.set(config.name, config)
+        
+        // Load job status from database
+        const dbStatus = await this.jobDb.getJobStatus(dbConfig.id)
+        if (dbStatus) {
+          // Convert database status to service status
+          const status: JobStatus = {
+            name: config.name,
+            running: dbStatus.running,
+            lastRun: dbStatus.lastRun || undefined,
+            lastSuccess: dbStatus.lastSuccess || undefined,
+            lastError: dbStatus.lastError || undefined,
+            nextRun: dbStatus.nextRun || undefined,
+            totalRuns: dbStatus.totalRuns,
+            totalErrors: dbStatus.totalErrors,
+            averageProcessingTime: dbStatus.averageProcessingTime
+          }
+          this.status.set(config.name, status)
+        } else {
+          // Create default status if not exists
+          const defaultStatus: JobStatus = {
+            name: config.name,
+            running: false,
+            totalRuns: 0,
+            totalErrors: 0,
+            averageProcessingTime: 0
+          }
+          this.status.set(config.name, defaultStatus)
+        }
+      }
+      
+      logger.info(`Loaded ${dbConfigs.length} job configurations from database`)
+    } catch (error) {
+      logger.error('Failed to load jobs from database:', error)
+      throw error
+    }
   }
 
   async initialize(): Promise<void> {
     this.db = await getDatabase()
     await this.newsSourcer.initialize()
     
-    // Initialize status for all jobs
-    for (const [name, config] of this.jobs) {
-      this.status.set(name, {
-        name,
-        running: false,
-        totalRuns: 0,
-        totalErrors: 0,
-        averageProcessingTime: 0
-      })
-    }
+    // Initialize job database service
+    await this.jobDb.initialize() 
+    
+    // Initialize default jobs in database if they don't exist
+    await this.jobDb.initializeDefaultJobs()
+    
+    // Load jobs and status from database
+    await this.loadJobsFromDatabase()
 
-    logger.info('Job scheduler initialized with default jobs')
+    logger.info('Job scheduler initialized with database-persisted jobs')
   }
 
   addJob(jobConfig: JobConfig): void {
@@ -182,27 +192,83 @@ export class JobScheduler {
     // Stop existing timer if any
     this.stopJob(jobName)
 
-    // Run initial job
-    await this.executeJob(jobName)
-
-    // Schedule recurring job
-    const timer = setInterval(async () => {
-      await this.executeJob(jobName)
-    }, config.interval)
-
-    this.timers.set(jobName, timer)
+    // Calculate next run time based on last execution
+    const nextRunTime = await this.calculateNextRunTime(jobName)
+    const now = Date.now()
     
-    const status = this.status.get(jobName)
-    if (status) {
-      status.nextRun = new Date(Date.now() + config.interval)
+    if (nextRunTime <= now) {
+      // Job should run immediately
+      await this.executeJob(jobName)
+      // Schedule next run
+      this.scheduleNextRun(jobName, config.interval)
+    } else {
+      // Schedule job to run at the calculated time
+      const delay = nextRunTime - now
+      logger.info(`Job ${jobName} scheduled to run in ${Math.round(delay / 1000)}s`)
+      
+      const timer = setTimeout(async () => {
+        await this.executeJob(jobName)
+        // Schedule recurring job after first execution
+        this.scheduleNextRun(jobName, config.interval)
+      }, delay)
+      
+      this.timers.set(jobName, timer)
+      
+      const status = this.status.get(jobName)
+      if (status) {
+        status.nextRun = new Date(nextRunTime)
+      }
     }
 
     logger.info(`Started job: ${jobName} (${config.interval}ms interval)`)
   }
 
+  private scheduleNextRun(jobName: string, interval: number): void {
+    const timer = setInterval(async () => {
+      await this.executeJob(jobName)
+    }, interval)
+    
+    this.timers.set(jobName, timer)
+    
+    const status = this.status.get(jobName)
+    if (status) {
+      status.nextRun = new Date(Date.now() + interval)
+    }
+  }
+
+  private async calculateNextRunTime(jobName: string): Promise<number> {
+    try {
+      const config = this.jobs.get(jobName)
+      if (!config) {
+        return Date.now()
+      }
+      
+      // Get the last execution from database
+      const dbConfig = await this.jobDb.getJobConfig(jobName)
+      if (!dbConfig) {
+        return Date.now() // Run immediately if no config found
+      }
+      
+      const lastExecution = await this.jobDb.getLastExecution(dbConfig.id)
+      if (!lastExecution || !lastExecution.startedAt) {
+        return Date.now() // Run immediately if never executed
+      }
+      
+      // Calculate when the job should run next based on last execution + interval
+      const lastRunTime = new Date(lastExecution.startedAt).getTime()
+      const nextRunTime = lastRunTime + config.interval
+      
+      return nextRunTime
+    } catch (error) {
+      logger.error(`Failed to calculate next run time for ${jobName}:`, error)
+      return Date.now() // Default to immediate execution on error
+    }
+  }
+
   private stopJob(jobName: string): void {
     const timer = this.timers.get(jobName)
     if (timer) {
+      clearTimeout(timer)
       clearInterval(timer)
       this.timers.delete(jobName)
       logger.debug(`Stopped job: ${jobName}`)
@@ -223,15 +289,41 @@ export class JobScheduler {
       return
     }
 
+    // Get database config for persistence
+    const dbConfig = await this.jobDb.getJobConfig(jobName)
+    if (!dbConfig) {
+      logger.error(`Database config not found for job: ${jobName}`)
+      return
+    }
+
+    // Generate unique execution ID
+    const executionId = `${jobName}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+    const startTime = Date.now()
+    
+    // Create job execution record
+    await this.jobDb.createJobExecution({
+      jobConfigId: dbConfig.id,
+      executionId,
+      status: 'running',
+      startedAt: new Date(),
+      triggeredBy: 'schedule' // TODO: Track manual vs scheduled
+    })
+
+    // Update in-memory and database status
     status.running = true
     status.lastRun = new Date()
     status.totalRuns++
+    
+    await this.jobDb.updateJobStatus(dbConfig.id, {
+      running: true,
+      lastRun: new Date(),
+      totalRuns: status.totalRuns
+    })
 
-    const startTime = Date.now()
     let result: JobResult
 
     try {
-      logger.debug(`Executing job: ${jobName}`)
+      logger.debug(`Executing job: ${jobName} (${executionId})`)
       
       switch (jobName) {
         case 'source-discovery':
@@ -254,27 +346,85 @@ export class JobScheduler {
       }
 
       // Update status on success
-      status.lastSuccess = new Date()
+      const completedAt = new Date()
+      const processingTime = Date.now() - startTime
+      
+      status.lastSuccess = completedAt
       status.lastError = undefined
       status.averageProcessingTime = this.calculateAverageProcessingTime(
         status.averageProcessingTime,
         status.totalRuns,
-        result.processingTime
+        processingTime
       )
 
-      logger.info(`Job ${jobName} completed successfully`, {
+      // Update database execution record
+      await this.jobDb.updateJobExecution(executionId, {
+        status: 'success',
+        completedAt,
+        processingTime,
         processed: result.processed,
         errors: result.errors,
         skipped: result.skipped,
-        processingTime: result.processingTime
+        result: {
+          success: result.success,
+          details: {
+            processed: result.processed,
+            errors: result.errors,
+            skipped: result.skipped,
+            processingTime
+          }
+        }
+      })
+
+      // Update database status
+      await this.jobDb.updateJobStatus(dbConfig.id, {
+        running: false,
+        lastSuccess: completedAt,
+        lastError: null,
+        averageProcessingTime: status.averageProcessingTime,
+        consecutiveFailures: 0
+      })
+
+      logger.info(`Job ${jobName} completed successfully`, {
+        executionId,
+        processed: result.processed,
+        errors: result.errors,
+        skipped: result.skipped,
+        processingTime
       })
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const completedAt = new Date()
+      const processingTime = Date.now() - startTime
+      
       status.lastError = errorMessage
       status.totalErrors++
       
-      logger.error(`Job ${jobName} failed:`, error)
+      // Update database execution record
+      await this.jobDb.updateJobExecution(executionId, {
+        status: 'failed',
+        completedAt,
+        processingTime,
+        errorMessage,
+        result: {
+          success: false,
+          error: errorMessage
+        }
+      })
+
+      // Update database status
+      const dbStatus = await this.jobDb.getJobStatus(dbConfig.id)
+      const consecutiveFailures = (dbStatus?.consecutiveFailures || 0) + 1
+      
+      await this.jobDb.updateJobStatus(dbConfig.id, {
+        running: false,
+        lastError: errorMessage,
+        totalErrors: status.totalErrors,
+        consecutiveFailures
+      })
+      
+      logger.error(`Job ${jobName} failed:`, { executionId, error: errorMessage })
     } finally {
       status.running = false
     }
@@ -494,13 +644,13 @@ export class JobScheduler {
     return text.length > 300 ? text.substring(0, 297) + '...' : text
   }
 
-  private async extractTags(text: string): Promise<string[]> {
+  private async extractTags(_text: string): Promise<string[]> {
     // This would use AI to extract relevant tags
     // For now, return empty array
     return []
   }
 
-  private async detectLanguage(text: string): Promise<string> {
+  private async detectLanguage(_text: string): Promise<string> {
     // This would use language detection
     // For now, assume English
     return 'en'
@@ -575,5 +725,33 @@ export class JobScheduler {
     }
 
     logger.info(`Updated job config: ${jobName}`, updates)
+  }
+
+  // Helper method to execute job logic without the persistence wrapper
+  private async executeJobLogic(jobName: string): Promise<JobResult> {
+    switch (jobName) {
+      case 'source-discovery':
+        return await this.executeSourceDiscovery()
+      case 'url-fetching':
+        return await this.executeUrlFetching()
+      case 'article-processing':
+        return await this.executeArticleProcessing()
+      case 'health-monitoring':
+        return await this.executeHealthMonitoring()
+      case 'cleanup':
+        return await this.executeCleanup()
+      default:
+        throw new Error(`Unknown job: ${jobName}`)
+    }
+  }
+
+  // Get job execution history
+  async getJobHistory(jobName: string, limit = 50): Promise<JobExecution[]> {
+    return await this.jobDb.getJobExecutionHistoryByName(jobName, limit)
+  }
+
+  // Get database status for a job
+  async getJobDatabaseStatus(jobName: string): Promise<DbJobStatus | null> {
+    return await this.jobDb.getJobStatusByName(jobName)
   }
 } 

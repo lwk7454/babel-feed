@@ -1,49 +1,69 @@
+#!/usr/bin/env bun
+
 /**
  * Test utilities for database operations
- * Provides utilities for test database setup, cleanup, and management
+ * Uses migration-based approach for test database setup
+ * Generates fresh migrations from dev schema and applies them to PGlite
  */
 
-import { PGlite } from '@electric-sql/pglite'
-import { drizzle as drizzlePglite, PgliteDatabase } from 'drizzle-orm/pglite'
+import { execSync } from 'child_process'
+import { sql } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/pglite'
+import { migrate } from 'drizzle-orm/pglite/migrator'
+import { existsSync } from 'fs'
+import path from 'path'
+import { getDatabase } from './connection.js'
 import * as schema from './schema.js'
-import {
-  articles,
-  articleTranslations,
-  users
-} from './schema.js'
-import { migrate } from 'drizzle-orm/pglite/migrator.js'
-import { resolve } from 'path'
 
-
-let testDb: PgliteDatabase<typeof schema> | null = null
-let pglite: PGlite | null = null
+let testDb: ReturnType<typeof drizzle<typeof schema>> | null = null
 
 /**
- * Setup test database connection and run migrations (PGlite only)
+ * Generate fresh migrations for test database
+ * This ensures test DB schema matches current dev schema exactly
  */
-export async function setupTestDatabase(): Promise<PgliteDatabase<typeof schema>> {
-  pglite = new PGlite()
-  await pglite.ready
-  testDb = drizzlePglite({ client: pglite, schema })
-
-  // Run migrations to ensure schema is up to date
-  const migrationsPath = resolve(__dirname, '../migrations')
-  console.log(`🔄 Running migrations from: ${migrationsPath}`)
-
+async function generateTestMigrations(): Promise<void> {
+  const scriptsDir = path.resolve(__dirname, '../scripts')
+  const migrationsScript = path.join(scriptsDir, 'generate-test-migrations.ts')
+  
+  if (!existsSync(migrationsScript)) {
+    throw new Error('Test migrations script not found. Please ensure scripts/generate-test-migrations.ts exists.')
+  }
+  
   try {
-    await migrate(testDb, { migrationsFolder: migrationsPath })
-    console.log('✅ Migrations completed successfully')
-  } catch (migrationError) {
-    console.log('⚠️  Migration error:', migrationError)
+    console.log('🔄 Generating fresh test migrations...')
+    execSync(`bun run ${migrationsScript}`, {
+      stdio: 'pipe', // Keep quiet during test runs
+      cwd: path.resolve(__dirname, '..')
+    })
+  } catch (error) {
+    console.error('Failed to generate test migrations:', error)
+    throw error
+  }
+}
+
+/**
+ * Setup test database connection (PGlite only)
+ * Generates fresh migrations from schema and applies them
+ * This ensures test DB perfectly matches dev DB structure
+ */
+export async function setupTestDatabase(): Promise<ReturnType<typeof drizzle<typeof schema>>> {
+  testDb = getDatabase() as ReturnType<typeof drizzle<typeof schema>>
+
+  // Apply migrations
+  const migrationsFolder = path.resolve(__dirname, '../test-migrations')
+  
+  if (!existsSync(migrationsFolder)) {
+    throw new Error('Test migrations folder not found. Migration generation may have failed.')
+  }
+  
+  try {
+    await migrate(testDb, { migrationsFolder })
+    console.log('✅ Test database migrations applied successfully')
+  } catch (error) {
+    console.error('Failed to apply test migrations:', error)
+    throw error
   }
 
-  // Verify database health
-  const health = await testDatabaseHealth()
-  if (!health.healthy) {
-    throw new Error(`Test database health check failed: ${health.error}`)
-  }
-
-  console.log('✅ Test database setup completed successfully')
   return testDb
 }
 
@@ -51,37 +71,61 @@ export async function setupTestDatabase(): Promise<PgliteDatabase<typeof schema>
  * Cleanup test database connection
  */
 export async function cleanupTestDatabase(): Promise<void> {
-  if (pglite) {
-    await pglite.close()
-    pglite = null
-    testDb = null
-  }
+  testDb = null
 }
 
 /**
- * Clear all test data from database tables (PGlite version)
+ * Clear all test data from database tables
+ * Uses schema introspection to dynamically discover and clear all tables
  */
 export async function clearTestData(): Promise<void> {
-  if (!testDb) {
-    throw new Error('Test database not initialized. Call setupTestDatabase() first.')
+  const db = getTestDb()
+  try {
+    // Get all table names using information_schema (works with PGLite)
+    const tablesResult = await db.execute(sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `)
+    
+    // Extract table names from PGLite results structure
+    const tableNames: string[] = []
+    if (tablesResult && typeof tablesResult === 'object' && 'rows' in tablesResult) {
+      const rows = (tablesResult as unknown as { rows: Array<{ table_name: string }> }).rows
+      for (const row of rows) {
+        tableNames.push(row.table_name)
+      }
+    }
+    
+    if (tableNames.length === 0) {
+      console.log('No tables found to clear')
+      return
+    }
+    
+    // Disable foreign key checks temporarily for clean truncation
+    await db.execute(sql`SET session_replication_role = replica`)
+    
+    // Truncate all tables with restart identity and cascade
+    for (const tableName of tableNames) {
+      await db.execute(sql.raw(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`))
+    }
+    
+    // Re-enable foreign key checks
+    await db.execute(sql`SET session_replication_role = DEFAULT`)
+    
+    console.log(`✅ Cleared ${tableNames.length} tables:`, tableNames.join(', '))
+  } catch (error) {
+    console.error('❌ Failed to clear test data:', error)
+    throw error
   }
-  // Dynamically fetch all user table names (excluding system tables)
-  const tablesResult = await testDb.execute(
-    `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';`
-  )
-  type TableRow = { table_name: string }
-  const tableNames = (tablesResult.rows as TableRow[]).map(row => row.table_name)
-  if (tableNames.length === 0) return
-  // Build and execute TRUNCATE statement for all tables
-  const truncateSQL =
-    'TRUNCATE TABLE ' + tableNames.map(name => `"${name}"`).join(', ') + ' RESTART IDENTITY CASCADE;'
-  await testDb.execute(truncateSQL)
 }
 
 /**
  * Get the test database instance
  */
-export function getTestDb(): PgliteDatabase<typeof schema> {
+export function getTestDb(): ReturnType<typeof drizzle<typeof schema>> {
   if (!testDb) {
     throw new Error('Test database not initialized. Call setupTestDatabase() first.')
   }
@@ -91,100 +135,36 @@ export function getTestDb(): PgliteDatabase<typeof schema> {
 /**
  * Insert test user data
  */
-export async function insertTestUser(userData: Partial<typeof users.$inferInsert> = {}) {
-  const testDb = getTestDb()
-
-  const defaultUser = {
+export async function insertTestUser(db: ReturnType<typeof drizzle<typeof schema>>, userData: Partial<typeof schema.users.$inferInsert> = {}) {
+  const [user] = await db.insert(schema.users).values({
     email: 'test@example.com',
-    emailVerified: false,
-    userStatus: 'guest' as const,
+    userStatus: 'guest',
     ...userData
-  }
-
-  const [user] = await testDb.insert(users).values(defaultUser).returning()
+  }).returning()
   return user
 }
 
 /**
- * Insert test article data with translations
+ * Insert test article data
  */
-export async function insertTestArticle(
-  articleData: Partial<typeof articles.$inferInsert> = {},
-  translationData: Partial<typeof articleTranslations.$inferInsert>[] = []
-) {
-  const testDb = getTestDb()
-
-  const defaultArticle = {
-    url: 'https://example.com/test-article',
-    source: 'test-source',
-    sourceLanguage: 'en' as const,
+export async function insertTestArticle(db: ReturnType<typeof drizzle<typeof schema>>, articleData: Partial<typeof schema.articles.$inferInsert> = {}) {
+  const [article] = await db.insert(schema.articles).values({
+    url: 'https://example.com/test',
+    source: 'test-source', 
+    sourceLanguage: 'en',
     ...articleData
-  }
-
-  const [article] = await testDb.insert(articles).values(defaultArticle).returning()
-
-  // Insert default translation if none provided
-  if (translationData.length === 0) {
-    const defaultTranslation = {
-      articleId: article.id,
-      language: 'en' as const,
-      title: 'Test Article',
-      summary: 'Test article summary'
-    }
-
-    await testDb.insert(articleTranslations).values(defaultTranslation)
-  } else {
-    // Insert provided translations
-    const translations = translationData.map(translation => ({
-      articleId: article.id,
-      language: 'en' as const,
-      title: 'Test Article',
-      summary: 'Test article summary',
-      ...translation
-    }))
-
-    await testDb.insert(articleTranslations).values(translations)
-  }
-
+  }).returning()
   return article
 }
 
 /**
- * Insert test article translation
+ * Health check for test database
  */
-export async function insertTestArticleTranslation(translationData: Partial<schema.NewArticleTranslation> = {}) {
-  const testDb = getTestDb()
-
-  const defaultTranslation = {
-    language: 'en' as const,
-    title: 'Test Translation Title',
-    summary: 'Test translation summary',
-    ...translationData
-  }
-
-  const [translation] = await testDb.insert(articleTranslations).values(defaultTranslation as schema.NewArticleTranslation).returning()
-  return translation
-}
-
-/**
- * Test database health check
- */
-export async function testDatabaseHealth(): Promise<{ healthy: boolean; error?: string }> {
+export async function testDatabaseHealth(db: ReturnType<typeof drizzle<typeof schema>>) {
   try {
-    if (!testDb) {
-      return { healthy: false, error: 'Test database not initialized' }
-    }
-
-    // Simple query to check connection
-    console.log('🔍 Testing database connection...')
-    await testDb.select().from(users).limit(1)
-    console.log('✅ Database connection successful')
+    await db.execute(sql`SELECT 1`)
     return { healthy: true }
   } catch (error) {
-    console.error('❌ Database health check failed:', error)
-    return {
-      healthy: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    return { healthy: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }

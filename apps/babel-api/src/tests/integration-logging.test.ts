@@ -6,9 +6,6 @@ let testServerUrl: string
 
 describe('Backend Integration Tests', () => {
   beforeAll(async () => {
-    // Set test environment first
-    process.env.NODE_ENV = 'test'
-    
     // Initialize test database
     await setupTestDatabase()
     

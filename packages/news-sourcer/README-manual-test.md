@@ -22,14 +22,14 @@ This guide explains how to run the news-sourcer manually to test website URL ana
    bun install
    ```
 
-3. **Database Migrations**: Run database migrations to ensure the schema is up to date:
+3. **Database Schema**: Ensure the database schema is up to date:
    ```bash
    # From the workspace root
-   bun run nx run pgdb:migrate
+   bun run nx run pgdb:push
    
    # Or manually from the pgdb package
    cd packages/pgdb
-   bun run drizzle-kit migrate --config=drizzle.config.cjs
+   bun run drizzle-kit push
    ```
 
 ## Running the Manual Test

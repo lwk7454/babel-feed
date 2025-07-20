@@ -59,6 +59,7 @@ export default [
       'no-useless-escape': 'off',
       '@typescript-eslint/adjacent-overload-signatures': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-empty-function': 'off',
     },
   },
   {

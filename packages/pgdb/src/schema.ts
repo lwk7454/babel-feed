@@ -376,6 +376,91 @@ export const articleTranslationsRelations = relations(articleTranslations, ({ on
   })
 }))
 
+/**
+ * Job scheduler tables - stores job configurations and execution history
+ */
+export const jobConfigs = pgTable('job_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 100 }).unique().notNull(),
+  interval: integer('interval').notNull(), // milliseconds
+  enabled: boolean('enabled').default(true).notNull(),
+  maxConcurrency: integer('max_concurrency').default(1),
+  retryAttempts: integer('retry_attempts').default(3),
+  timeout: integer('timeout').default(60000), // milliseconds
+  description: text('description'),
+  metadata: jsonb('metadata').default('{}'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  nameIndex: index('job_configs_name_idx').on(table.name),
+  enabledIndex: index('job_configs_enabled_idx').on(table.enabled)
+}))
+
+export const jobStatus = pgTable('job_status', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jobConfigId: uuid('job_config_id').references(() => jobConfigs.id, { onDelete: 'cascade' }).notNull(),
+  running: boolean('running').default(false).notNull(),
+  lastRun: timestamp('last_run'),
+  lastSuccess: timestamp('last_success'),
+  lastError: text('last_error'),
+  nextRun: timestamp('next_run'),
+  totalRuns: integer('total_runs').default(0).notNull(),
+  totalErrors: integer('total_errors').default(0).notNull(),
+  consecutiveFailures: integer('consecutive_failures').default(0).notNull(),
+  averageProcessingTime: integer('average_processing_time').default(0).notNull(), // milliseconds
+  metadata: jsonb('metadata').default('{}'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  jobConfigIndex: index('job_status_config_idx').on(table.jobConfigId),
+  runningIndex: index('job_status_running_idx').on(table.running),
+  nextRunIndex: index('job_status_next_run_idx').on(table.nextRun),
+  uniqueJobConfig: uniqueIndex('unique_job_status_config').on(table.jobConfigId)
+}))
+
+export const jobExecutions = pgTable('job_executions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jobConfigId: uuid('job_config_id').references(() => jobConfigs.id, { onDelete: 'cascade' }).notNull(),
+  executionId: varchar('execution_id', { length: 100 }).notNull(), // unique per execution attempt
+  status: varchar('status', { length: 20 }).notNull(), // running, success, failed, timeout
+  startedAt: timestamp('started_at').notNull(),
+  completedAt: timestamp('completed_at'),
+  processingTime: integer('processing_time'), // milliseconds
+  processed: integer('processed').default(0).notNull(),
+  errors: integer('errors').default(0).notNull(),
+  skipped: integer('skipped').default(0).notNull(),
+  errorMessage: text('error_message'),
+  result: jsonb('result').default('{}'), // execution results and metadata
+  triggeredBy: varchar('triggered_by', { length: 50 }).default('schedule').notNull(), // schedule, manual, restart
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  jobConfigIndex: index('job_executions_config_idx').on(table.jobConfigId),
+  statusIndex: index('job_executions_status_idx').on(table.status),
+  startedAtIndex: index('job_executions_started_idx').on(table.startedAt),
+  configStartedIndex: index('job_executions_config_started_idx').on(table.jobConfigId, table.startedAt),
+  executionIdIndex: index('job_executions_execution_id_idx').on(table.executionId)
+}))
+
+// Job scheduler relations
+export const jobConfigsRelations = relations(jobConfigs, ({ one, many }) => ({
+  status: one(jobStatus),
+  executions: many(jobExecutions)
+}))
+
+export const jobStatusRelations = relations(jobStatus, ({ one }) => ({
+  jobConfig: one(jobConfigs, {
+    fields: [jobStatus.jobConfigId],
+    references: [jobConfigs.id]
+  })
+}))
+
+export const jobExecutionsRelations = relations(jobExecutions, ({ one }) => ({
+  jobConfig: one(jobConfigs, {
+    fields: [jobExecutions.jobConfigId],
+    references: [jobConfigs.id]
+  })
+}))
+
 // Export types for use in the application
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -407,3 +492,11 @@ export type AiProviderKey = typeof aiProviderKeys.$inferSelect;
 export type NewAiProviderKey = typeof aiProviderKeys.$inferInsert;
 export type CircuitBreakerState = typeof circuitBreakerStates.$inferSelect;
 export type NewCircuitBreakerState = typeof circuitBreakerStates.$inferInsert;
+
+// Job Scheduler Types
+export type JobConfig = typeof jobConfigs.$inferSelect;
+export type NewJobConfig = typeof jobConfigs.$inferInsert;
+export type JobStatus = typeof jobStatus.$inferSelect;
+export type NewJobStatus = typeof jobStatus.$inferInsert;
+export type JobExecution = typeof jobExecutions.$inferSelect;
+export type NewJobExecution = typeof jobExecutions.$inferInsert;

@@ -286,7 +286,7 @@ The package integrates with `@babel-feed/pgdb` for database operations:
 
 - `aiProviders` table: Provider configuration and metadata
 - `aiProviderKeys` table: API keys with usage tracking
-- Automatic migrations and schema management
+- Automatic schema management with push mode
 
 ## Testing
 
@@ -323,7 +323,7 @@ bun test --coverage
 ## Production Deployment
 
 1. **Environment Variables**: Set all required environment variables
-2. **Database**: Ensure PostgreSQL is available and migrated
+2. **Database**: Ensure PostgreSQL is available and schema is up to date
 3. **Monitoring**: Use provider health endpoints for monitoring
 4. **Rate Limits**: Configure appropriate rate limits per provider
 5. **Circuit Breakers**: Tune thresholds based on provider reliability
