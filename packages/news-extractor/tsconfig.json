@@ -1,10 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "../../dist/packages/news-extractor",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
-  },
   "include": ["**/*.ts"],
-  "exclude": ["dist/**/*", "node_modules/**/*", "find-content.ts", "manual-test.ts"]
+  "exclude": ["manual-test.ts"]
 }

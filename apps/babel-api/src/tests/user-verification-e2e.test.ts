@@ -1,4 +1,4 @@
-import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, users, userSessions } from '@babel-feed/pgdb'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
@@ -384,24 +384,14 @@ describe('User Verification E2E Tests', () => {
   let app: AppType
   let testUserService: UserService
 
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
 
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
-
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearTestData()
     testUserService = new UserService(getTestDb())
     
     // Create test app with manually defined auth routes using test user service
     // This ensures the auth routes use the test database instead of the production one
     app = createApp(testUserService)
-  })
-
-  afterEach(async () => {
-    await clearTestData()
   })
 
   describe('Complete User Verification Flow (Mobile Screen Flow)', () => {

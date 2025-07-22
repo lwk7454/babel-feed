@@ -1,20 +1,25 @@
-import { cleanupTestDatabase, clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
+import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { NewsAggregatorService } from '../services/news-aggregator-service'
 
+// Mock fetch for HTTP requests
+const mockFetch = mock()
+global.fetch = mockFetch as any
 
 describe('News Aggregator Setup', () => {
-
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
-
+  const timer = createTestTimers()
   beforeEach(async () => {
     await clearTestData()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
+    timer.reset()
+    // Mock fetch to return empty RSS feed to prevent real network calls
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Test Feed</title></channel></rss>',
+      headers: new Headers(),
+      json: async () => ({}),
+    } as Response)
   })
 
   describe('NewsAggregatorService', () => {
@@ -64,12 +69,19 @@ describe('News Aggregator Setup', () => {
     it('should start and stop successfully', async () => {
       const service = new NewsAggregatorService()
       await service.initialize()
+      
+      // Disable the source-discovery job to prevent slow analyzeSource operations
+      const jobScheduler = service.getJobScheduler()
+      jobScheduler.updateJobConfig('source-discovery', { enabled: false })
+      
       await service.start()
+      await timer.tickAsync(100)
       
       const runningStatus = await service.getStatus()
       expect(runningStatus.running).toBe(true)
       
       await service.stop()
+      await timer.tickAsync(100)
       
       const stoppedStatus = await service.getStatus()
       expect(stoppedStatus.running).toBe(false)

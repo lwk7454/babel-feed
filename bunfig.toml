@@ -3,10 +3,10 @@
 
 [test]
 # Automatically load test setup before running any tests
-preload = ["./test-setup.ts", "./packages/pgdb/scripts/generate-test-migrations.ts"]
+preload = ["./packages/pgdb/scripts/generate-test-migrations.ts", "./packages/pgdb/scripts/test-setup.ts"]
 
 # Enable coverage reporting by default
-coverage = true
+coverage = false
 
 # Set coverage threshold to 80%
 coverageThreshold = 0.8
@@ -19,3 +19,4 @@ coverageDir = "coverage"
 
 # Root directory for tests (default is current directory)
 root = "."
+

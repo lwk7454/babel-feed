@@ -4,15 +4,16 @@ process.env.NODE_ENV = 'test'
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'bun:test'
 import { JobDatabaseServiceImpl } from '../services/job-db'
 import { JobScheduler } from '../services/job-scheduler'
-import { setupTestDatabase, cleanupTestDatabase, clearTestData, getDatabase } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb } from '@babel-feed/pgdb'
 import { jobConfigs, jobStatus, jobExecutions } from '@babel-feed/pgdb'
 
 describe('Job Scheduler Database Persistence', () => {
   let jobDb: JobDatabaseServiceImpl
   let jobScheduler: JobScheduler
+  let db: ReturnType<typeof getTestDb>
 
   beforeAll(async () => {
-    await setupTestDatabase()
+    db = getTestDb()
     
     // Initialize job database service with test database
     jobDb = new JobDatabaseServiceImpl()
@@ -23,9 +24,7 @@ describe('Job Scheduler Database Persistence', () => {
     ;(jobScheduler as any).jobDb = jobDb
   })
 
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
+
 
   beforeEach(async () => {
     await clearTestData()
@@ -215,7 +214,6 @@ describe('Job Scheduler Database Persistence', () => {
 
     it('should load jobs from database on initialization', async () => {
       // Mock the necessary methods to avoid full initialization
-      const db = getDatabase()
       ;(jobScheduler as any).db = db
       ;(jobScheduler as any).newsSourcer = { initialize: async () => {} }
       
@@ -275,6 +273,16 @@ describe('Job Scheduler Database Persistence', () => {
         name: 'persistence-test',
         interval: 30000,
         enabled: true
+      })
+
+      // Create initial job status record
+      await jobDb.upsertJobStatus({
+        jobConfigId: testJob.id,
+        running: false,
+        totalRuns: 0,
+        totalErrors: 0,
+        consecutiveFailures: 0,
+        averageProcessingTime: 0
       })
 
       // Manually create an execution record like the scheduler would

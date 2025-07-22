@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'bun:test'
-import { setupTestDatabase, cleanupTestDatabase, clearTestData, articles } from '@babel-feed/pgdb'
+import { clearTestData, articles } from '@babel-feed/pgdb'
 import { ArticleStorage } from '../services/article-storage'
 import { getTestDb } from '@babel-feed/pgdb'
 
@@ -15,13 +15,6 @@ const testArticle = {
 describe('ArticleStorage', () => {
   let storage: ArticleStorage
 
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
 
   beforeEach(async () => {
     await clearTestData()

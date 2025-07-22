@@ -1,15 +1,13 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { createTestTimers } from '@babel-feed/utils'
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { NewsSourcer } from '../src/news-sourcer'
 import type { DiscoveredEndpoint } from '../src/types'
 import {
-  cleanupNewsSourcerTestDatabase,
-  clearNewsSourcerTestData,
+  clearTestData,
   createTestNewsSource,
-  setupNewsSourcerTestDatabase
 } from './helpers/test-database.js'
-import { fakeTimers } from './helpers/fake-timers.js'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 let testSourceId: string
 
@@ -95,16 +93,10 @@ mock.module('@babel-feed/llm-provider', () => ({
 
 describe('NewsSourcer HTML Analysis & LLM Integration', () => {
   let sourcer: NewsSourcer
-
-  beforeAll(async () => {
-    await setupNewsSourcerTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupNewsSourcerTestDatabase()
-  })
-
   beforeEach(async () => {
+    await clearTestData()
+    timer.reset()
+    
     sourcer = new NewsSourcer()
     await sourcer.initialize()
 
@@ -117,10 +109,6 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
     mockAiManager.initialize.mockClear()
     mockAiManager.getEnabledProviders.mockClear()
     mockAiManager.executeWithProvider.mockClear()
-  })
-
-  afterEach(async () => {
-    await clearNewsSourcerTestData()
   })
 
   describe('HTML Content Preprocessing', () => {
@@ -477,7 +465,7 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
       const result = await sourcer.analyzeHtmlSource('https://example.com')
 
       // Advance time to ensure analysis time is recorded
-      clock.tick(100) // Advance time to allow analysis to complete
+      timer.tick(100) // Advance time to allow analysis to complete
 
       expect(result.sourceUrl).toBe('https://example.com')
       expect(result.endpoints).toHaveLength(1)
@@ -516,7 +504,7 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
       const result = await sourcer.analyzeHtmlSource('https://example.com')
 
       // Advance time to allow all iterations to complete
-      clock.tick(5000) // Advance time to allow all 5 iterations
+      timer.tick(5000) // Advance time to allow all 5 iterations
 
       expect(result.endpoints).toHaveLength(0)
       expect(result.analysisMetadata.iterations).toBe(5) // Max iterations
@@ -633,7 +621,7 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
       await sourcer.analyzeHtmlSource('https://example.com')
 
       // Advance time to allow any internal delays to complete
-      clock.tick(100)
+      timer.tick(100)
 
       // Verify OpenAI client was called correctly
       expect(mockOpenAIClient.chat.completions.create).toHaveBeenCalledTimes(1)
@@ -666,7 +654,7 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
       await sourcer.analyzeHtmlSource('https://example.com')
 
       // Advance time to allow any internal delays to complete
-      clock.tick(100)
+      timer.tick(100)
 
       // Verify provider fallback was used
       expect(mockAiManager.getEnabledProviders).toHaveBeenCalledWith('content_analysis')
@@ -700,7 +688,7 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
       await sourcer.analyzeHtmlSource('https://example.com')
 
       // Advance time to allow any internal delays to complete
-      clock.tick(100)
+      timer.tick(100)
 
       const callArgs = mockOpenAIClient.chat.completions.create.mock.calls[0][0]
       const userMessage = callArgs.messages[1].content
@@ -737,7 +725,7 @@ describe('NewsSourcer HTML Analysis & LLM Integration', () => {
       const result = await sourcer.analyzeHtmlSource('https://example.com')
 
       // Advance time to allow any internal delays to complete
-      clock.tick(100)
+      timer.tick(100)
 
       expect(result.sourceUrl).toBe('https://example.com')
       expect(result.endpoints).toHaveLength(0) // No valid endpoints found

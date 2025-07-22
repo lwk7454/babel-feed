@@ -1,13 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test"
 import { EventSystem } from '../src/event-system.js'
-import { fakeTimers, sleep } from './helpers/fake-timers.js'
+import { clearTestData } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 describe('Simplified Integration Tests', () => {
   let eventSystem: EventSystem
 
   beforeEach(async () => {
+    await clearTestData()
+    timer.reset()
+    
     eventSystem = new EventSystem()
   })
 
@@ -35,9 +39,7 @@ describe('Simplified Integration Tests', () => {
       })
 
       // Small delay to allow event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       expect(receivedEvents).toHaveLength(1)
       expect(receivedEvents[0].type).toBe('endpoint_created')
@@ -124,9 +126,7 @@ describe('Simplified Integration Tests', () => {
       })
 
       // Small delay to allow event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       expect(events1).toHaveLength(1)
       expect(events2).toHaveLength(1)
@@ -166,9 +166,7 @@ describe('Simplified Integration Tests', () => {
       })
 
       // Small delay to allow event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       expect(allEvents).toHaveLength(3)
       expect(allEvents[0].data.type).toBe('created')
@@ -207,9 +205,7 @@ describe('Simplified Integration Tests', () => {
       })
 
       // Small delay to allow event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       expect(filteredEvents).toHaveLength(2) // Only events with id > 5
       expect(filteredEvents[0].data.id).toBe(7)
@@ -291,9 +287,7 @@ describe('Simplified Integration Tests', () => {
       })
 
       // Small delay to allow event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       // The normal handler should still receive the event
       expect(receivedEvents).toHaveLength(1)

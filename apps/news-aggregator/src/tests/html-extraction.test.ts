@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
 import { FetcherService } from '../modules/aggregator/fetcher'
 import { NewsSource } from '../modules/common/types'
 import { Article } from '@babel-feed/news-extractor'
@@ -8,7 +9,8 @@ describe('HTML Content Extraction with Newspaper4k-TS', () => {
   let mockSource: NewsSource
   let mockArticleProcess: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearTestData()
     fetcherService = new FetcherService()
     mockSource = {
       id: 'test-source',

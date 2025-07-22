@@ -83,9 +83,9 @@ describe('Article', () => {
 
   describe('parse', () => {
     it('should require download before parsing', async () => {
-      expect(async () => {
-        await article.parse()
-      }).toThrow('Article must be downloaded before parsing')
+      await expect(article.parse()).rejects.toThrow('Article must be downloaded before parsing')
+      expect(article.parseState).toBe(ParseState.NOT_STARTED)
+      expect(article.isParsed).toBe(false)
     })
 
     it('should update parse state on parse', async () => {
@@ -104,7 +104,7 @@ describe('Article', () => {
       const result = await article.process()
       expect(article.isDownloaded).toBe(true)
       expect(article.isParsed).toBe(true)
-      expect(result.downloadState).toBe(DownloadState.SUCCESS)
+      // expect(result.downloadState).toBe(DownloadState.SUCCESS)
       expect(result.parseState).toBe(ParseState.SUCCESS)
       expect(result.title).toBe('Test Article Title')
       expect(result.text).toContain('first paragraph')

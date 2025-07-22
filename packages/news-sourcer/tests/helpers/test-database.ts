@@ -1,53 +1,11 @@
 /**
  * Test database setup for news-sourcer tests
- * Provides utilities for setting up test database with required tables
+ * Provides utilities for creating test news sources and endpoints
  */
 
-import { setupTestDatabase, cleanupTestDatabase, clearTestData, getTestDb } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb } from '@babel-feed/pgdb'
 import { newsSources, sourceEndpoints } from '@babel-feed/pgdb'
 import type { NewNewsSource, NewSourceEndpoint } from '@babel-feed/pgdb'
-
-let isInitialized = false
-
-/**
- * Setup test database for news-sourcer tests
- */
-export async function setupNewsSourcerTestDatabase(): Promise<void> {
-  if (isInitialized) {
-    return
-  }
-
-  // Set test environment
-  process.env.NODE_ENV = 'test'
-  
-  // Initialize test database
-  await setupTestDatabase()
-  
-  isInitialized = true
-}
-
-/**
- * Cleanup test database
- */
-export async function cleanupNewsSourcerTestDatabase(): Promise<void> {
-  if (!isInitialized) {
-    return
-  }
-
-  await cleanupTestDatabase()
-  isInitialized = false
-}
-
-/**
- * Clear test data between tests
- */
-export async function clearNewsSourcerTestData(): Promise<void> {
-  if (!isInitialized) {
-    throw new Error('Test database not initialized. Call setupNewsSourcerTestDatabase() first.')
-  }
-  
-  await clearTestData()
-}
 
 /**
  * Create a test news source
@@ -93,9 +51,5 @@ export async function createTestSourceEndpoint(
   return endpoint
 }
 
-/**
- * Get test database instance
- */
-export function getNewsSourcerTestDb() {
-  return getTestDb()
-} 
+// Re-export global test utilities for convenience
+export { clearTestData, getTestDb } 

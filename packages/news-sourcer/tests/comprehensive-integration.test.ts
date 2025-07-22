@@ -8,15 +8,14 @@ import { EventSystem } from '../src/event-system.js'
 import { NewsSourcer } from '../src/news-sourcer.js'
 import { NewsSourcerApiServer } from '../src/api-server.js'
 import type { StoredEndpoint, SourceAnalysisResult, NewsSourcerConfig } from '../src/types.js'
-import { fakeTimers, sleep } from './helpers/fake-timers.js'
-import { 
-  setupNewsSourcerTestDatabase, 
-  cleanupNewsSourcerTestDatabase, 
-  clearNewsSourcerTestData, 
-  createTestNewsSource 
+import { createTestTimers } from '@babel-feed/utils'
+import {
+ 
+  clearTestData,
+  createTestNewsSource
 } from './helpers/test-database.js'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 // Mock axios for Bun tests
 const mockedAxios = {
@@ -91,14 +90,13 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
     process.env.NODE_ENV = 'test'
     
     // Initialize test database
-    await setupNewsSourcerTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupNewsSourcerTestDatabase()
   })
 
   beforeEach(async () => {
+    // Clear test database and reset timers
+    await clearTestData()
+    timer.reset()
+    
     // Reset axios mocks
     mockedAxios.get.mockClear()
     mockedAxios.post.mockClear()
@@ -312,12 +310,14 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
       // Ignore errors if server wasn't started
     }
     
-    newsSourcer.stopHealthMonitoring()
-    newsSourcer.stopAdaptiveReanalysis()
-    eventSystem.stopWebhookProcessing()
+    if (newsSourcer) {
+      newsSourcer.stopHealthMonitoring()
+      newsSourcer.stopAdaptiveReanalysis()
+    }
+    if (eventSystem) {
+      eventSystem.stopWebhookProcessing()
+    }
     
-    // Clear test data between tests
-    await clearNewsSourcerTestData()
   })
 
   describe('Adaptive Analyzer Integration', () => {
@@ -496,7 +496,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
       expect(circuitBreaker.getMetrics().state).toBe(CircuitState.OPEN)
 
       // Fast forward past reset timeout
-      clock.tick(70000) // 70 seconds, past 60 second reset timeout
+      timer.tick(70000) // 70 seconds, past 60 second reset timeout
 
       // Should now be in HALF_OPEN state and allow one test
       const result = await circuitBreaker.execute(successfulOperation)
@@ -523,7 +523,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
       expect(rejected).toBe(5)
 
       // Wait for refill
-      clock.tick(1000) // 1 second
+      timer.tick(1000) // 1 second
 
       // Should be able to acquire more tokens
       const canAcquire = await Promise.resolve(rateLimiter.tryAcquire(1))
@@ -590,9 +590,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
       })
 
       // Small delay to allow event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       expect(receivedEvents).toHaveLength(1)
       expect(receivedEvents[0].type).toBe('endpoint_created')
@@ -629,9 +627,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
       })
 
       // Wait for event processing
-      const sleepPromise = sleep(10)
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10)
 
       expect(events).toHaveLength(1)
       expect(events[0].type).toBe('endpoint_failed')
@@ -665,7 +661,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
 
       // Wait for webhook processing to complete using fake timers
       const waitPromise = eventSystem.waitForWebhookProcessing(1000)
-      clock.tick(1000) // Advance time by 1 second
+      timer.tick(1000) // Advance time by 1 second
       await waitPromise
 
       // Verify webhook was called
@@ -691,7 +687,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
 
       const timerResult = await metricsCollector.time('endpoint.analysis_time', async () => {
         // Simulate some work
-        clock.tick(100)
+        timer.tick(100)
         return 'completed'
       }, { endpoint: 'test-endpoint' })
 
@@ -819,7 +815,7 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
       }
 
       // Advance time to allow rate limiting to process all requests
-      clock.tick(5000) // Advance 5 seconds to allow all requests to complete
+      timer.tick(5000) // Advance 5 seconds to allow all requests to complete
 
       const results = await Promise.allSettled(promises)
       

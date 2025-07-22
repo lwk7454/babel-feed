@@ -1,24 +1,16 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'bun:test'
-import { setupTestDatabase, cleanupTestDatabase, clearTestData } from '@babel-feed/pgdb'
+import { clearTestData } from '@babel-feed/pgdb'
 import { AdminAPIServer } from '../api/admin-api'
 
 let server: AdminAPIServer
 
-beforeAll(async () => {
-  await setupTestDatabase()
-})
-
-afterAll(async () => {
-  await cleanupTestDatabase()
-})
-
-beforeEach(async () => {
-  await clearTestData()
-  server = new AdminAPIServer()
-  await server.initialize()
-})
-
 describe('Admin API', () => {
+  beforeEach(async () => {
+    await clearTestData()
+    server = new AdminAPIServer()
+    await server.initialize()
+  })
+
   it('creates, retrieves and deletes a source', async () => {
     const body = {
       name: 'Source One', slug: 'source-one', url: 'https://ex.com/rss',

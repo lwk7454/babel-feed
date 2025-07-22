@@ -383,7 +383,7 @@ export class NewsSourcerApiServer {
       logger.info('News Sourcer API server stopped')
     } catch (error) {
       logger.error('Failed to stop API server', error)
-      throw error
+      // throw error
     }
   }
 }

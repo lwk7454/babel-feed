@@ -3,9 +3,9 @@ import { HealthMonitor } from '../src/health-monitor.js'
 import type { StoredEndpoint } from '../src/types.js'
 import { CircuitState, type CircuitBreakerMetrics } from '../src/circuit-breaker.js'
 import type { RateLimiterMetrics } from '../src/rate-limiter.js'
-import { fakeTimers, sleep } from './helpers/fake-timers.js'
+import { createTestTimers } from '@babel-feed/utils'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 describe('HealthMonitor', () => {
   let healthMonitor: HealthMonitor
@@ -399,9 +399,7 @@ describe('HealthMonitor', () => {
 
       const firstCheck = healthMonitor.getLastHealthCheck()
       
-      const sleepPromise = sleep(10) // Small delay
-      clock.tick(10)
-      await sleepPromise
+      await timer.tickAsync(10) // Small delay
       
       await healthMonitor.performHealthCheck(
         () => Promise.resolve([]),

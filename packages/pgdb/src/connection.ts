@@ -55,7 +55,7 @@ function createPostgresConnection() {
  */
 function createPgLiteTestConnection() {
   const pglite = new PGlite()
-  return drizzlePglite({ client: pglite, schema })
+  return drizzlePglite(pglite, { schema })
 }
 
 export function getDatabase() {

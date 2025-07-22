@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
-import { setupTestDatabase, cleanupTestDatabase, clearTestData, insertTestArticle, insertTestArticleTranslation } from '@babel-feed/pgdb'
+import { clearTestData, insertTestArticleWithTranslations, getTestDb } from '@babel-feed/pgdb'
 import { AdminAPIServer } from '../api/admin-api'
 
 // Ensure test environment is set before any imports
@@ -10,7 +10,6 @@ describe('Content Delivery API', () => {
   let baseUrl: string
 
   beforeAll(async () => {
-    await setupTestDatabase()
     // Wait a moment to ensure database is ready
     await new Promise(resolve => setTimeout(resolve, 100))
     apiServer = new AdminAPIServer()
@@ -25,13 +24,12 @@ describe('Content Delivery API', () => {
 
   afterAll(async () => {
     await apiServer.stop()
-    await cleanupTestDatabase()
   })
 
   describe('GET /articles', () => {
     it('should return paginated articles', async () => {
       // Insert test articles
-      const article1 = await insertTestArticle({
+      const article1 = await insertTestArticleWithTranslations({
         url: 'https://example.com/article1',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -41,7 +39,7 @@ describe('Content Delivery API', () => {
         summary: 'Test summary 1'
       }])
 
-      const article2 = await insertTestArticle({
+      const article2 = await insertTestArticleWithTranslations({
         url: 'https://example.com/article2',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -62,7 +60,7 @@ describe('Content Delivery API', () => {
     })
 
     it('should filter articles by language', async () => {
-      const article = await insertTestArticle({
+      const article = await insertTestArticleWithTranslations({
         url: 'https://example.com/article',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -82,7 +80,7 @@ describe('Content Delivery API', () => {
     })
 
     it('should search articles by title and summary', async () => {
-      const article = await insertTestArticle({
+      const article = await insertTestArticleWithTranslations({
         url: 'https://example.com/article',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -103,7 +101,7 @@ describe('Content Delivery API', () => {
 
   describe('GET /articles/:id', () => {
     it('should return article with translations', async () => {
-      const article = await insertTestArticle({
+      const article = await insertTestArticleWithTranslations({
         url: 'https://example.com/article',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -135,7 +133,7 @@ describe('Content Delivery API', () => {
 
   describe('GET /articles/search', () => {
     it('should perform full-text search', async () => {
-      const article = await insertTestArticle({
+      const article = await insertTestArticleWithTranslations({
         url: 'https://example.com/article',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -162,7 +160,7 @@ describe('Content Delivery API', () => {
 
   describe('GET /feed', () => {
     it('should return personalized feed', async () => {
-      const article1 = await insertTestArticle({
+      const article1 = await insertTestArticleWithTranslations({
         url: 'https://example.com/article1',
         source: 'test-source',
         sourceLanguage: 'en'
@@ -172,7 +170,7 @@ describe('Content Delivery API', () => {
         summary: 'Breaking news summary'
       }])
 
-      const article2 = await insertTestArticle({
+      const article2 = await insertTestArticleWithTranslations({
         url: 'https://example.com/article2',
         source: 'test-source',
         sourceLanguage: 'en'

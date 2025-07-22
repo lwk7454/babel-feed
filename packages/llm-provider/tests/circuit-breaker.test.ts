@@ -1,22 +1,16 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'bun:test'
 import { CircuitBreaker } from '../src/circuit-breaker.js'
-import { install } from '@sinonjs/fake-timers'
+import { createTestTimers } from '@babel-feed/utils'
+import { clearTestData } from '@babel-feed/pgdb'
 
-let clock: ReturnType<typeof install> | undefined
+const timer = createTestTimers({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
 
 describe('CircuitBreaker', () => {
-  beforeAll(() => {
-    clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
+  beforeEach(async () => {
+    await clearTestData()
+    timer.reset()
   })
 
-  afterAll(() => {
-    clock?.uninstall()
-    clock = undefined
-  })
-
-  beforeEach(() => {
-    clock?.reset()
-  })
 
   it('executes operation when closed', async () => {
     const breaker = new CircuitBreaker('test', { threshold: 2, timeout: 1000, resetTimeout: 1000 })
@@ -38,7 +32,7 @@ describe('CircuitBreaker', () => {
     await expect(breaker.execute(operation)).rejects.toThrow('Circuit breaker test is open')
     
     // Advance time past timeout
-    clock!.tick(1100)
+    timer.tick(1100)
     
     // Should be half-open and succeed
     const successOp = () => Promise.resolve('success')

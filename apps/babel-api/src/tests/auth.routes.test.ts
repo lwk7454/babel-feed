@@ -1,5 +1,5 @@
-import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users } from '@babel-feed/pgdb'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { clearTestData, getTestDb, users } from '@babel-feed/pgdb'
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { Elysia, t } from 'elysia'
 import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
@@ -7,16 +7,7 @@ import { UserService } from '../services/user.service'
 describe('Auth Routes', () => {
   let app: any
   let testUserService: UserService
-
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
-
-  afterEach(async () => {
+  beforeEach(async () => {
     await clearTestData()
   })
 
@@ -403,7 +394,8 @@ describe('Auth Routes', () => {
       )
 
       // Get verification token from database
-      const [user] = await getTestDb().select().from(users).limit(1)
+      const result = await getTestDb().select().from(users).limit(10)
+      const user = result[0]
       const verificationToken = user.verificationToken!
 
       const response = await app.handle(

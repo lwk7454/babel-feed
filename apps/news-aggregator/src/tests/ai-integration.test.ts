@@ -1,4 +1,5 @@
-import { describe, it, expect, mock } from 'bun:test'
+import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
 import { AIIntegrationService } from '../modules/aggregator/ai-integration'
 
 class StubProviderManager {
@@ -20,6 +21,10 @@ const mockOpenAI = {
 mock.module('openai', () => ({ OpenAI: function(){ return mockOpenAI } }))
 
 describe('AIIntegrationService', () => {
+  beforeEach(async () => {
+    await clearTestData()
+  })
+
   it('translates using provider manager and caches result', async () => {
     const manager = new StubProviderManager()
     const service = new AIIntegrationService(manager as any)

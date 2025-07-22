@@ -4,6 +4,7 @@
     "strict": true,
     "rootDir": ".",
     "sourceMap": true,
+    "inlineSources": true,
     "declaration": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,

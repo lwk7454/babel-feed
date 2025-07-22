@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { LlmHttpClient } from '../src/http-client.js'
+import { clearTestData } from '@babel-feed/pgdb'
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -19,7 +20,8 @@ describe('LlmHttpClient', () => {
   let mockKey: AiProviderKey
   let mockContext: RequestContext
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearTestData()
     httpClient = new LlmHttpClient({
       timeout: 5000,
       retryAttempts: 3,

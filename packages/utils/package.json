@@ -10,6 +10,9 @@
       "types": "../../dist/packages/utils/src/index.d.ts"
     }
   },
+  "dependencies": {
+    "@sinonjs/fake-timers": "^13.1.0"
+  },
   "devDependencies": {
     "@types/node": "~18.16.9",
     "typescript": "~5.8.3"

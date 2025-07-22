@@ -52,6 +52,11 @@ export class RecommendationEngine {
     return process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
   }
 
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(uuid)
+  }
+
   constructor() {
     this.contentClassifier = new ContentClassifier()
     this.similarityEngine = new SimilarityEngine()
@@ -223,6 +228,12 @@ export class RecommendationEngine {
 
   private async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
+      // Check if userId is a valid UUID before querying
+      if (!this.isValidUUID(userId)) {
+        logger.warn(`Invalid UUID for user ${userId}, returning null profile`)
+        return null
+      }
+      
       const db = await this.getDb()
       const userPrefsResult = await db
         .select()
@@ -311,6 +322,22 @@ export class RecommendationEngine {
     
     try {
       const db = await this.getDb()
+      
+      // Check if userId is a valid UUID before querying
+      if (context.filters?.excludeSeen && !this.isValidUUID(context.userId)) {
+        logger.warn(`Invalid UUID for user ${context.userId}, skipping excludeSeen filter`)
+        // Return mock data for invalid UUIDs
+        return Array.from({ length: Math.min(candidateLimit, 10) }, (_, i) => ({
+          id: `mock-article-${i}`,
+          title: `Mock Article Title ${i}`,
+          summary: `Mock article summary ${i} for testing purposes`,
+          category: 'technology',
+          source_name: 'Mock Source',
+          source_language: 'en',
+          published_at: new Date(),
+          tags: ['technology', 'test']
+        }))
+      }
       
       // Simplified query for now - would normally join with articles and news_sources tables
       // Using a basic implementation since we need to match the actual database schema

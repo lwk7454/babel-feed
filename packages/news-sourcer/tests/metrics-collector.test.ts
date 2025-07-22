@@ -1,13 +1,17 @@
 import { describe, it, expect, beforeEach } from "bun:test"
 import { MetricsCollector } from '../src/metrics-collector.js'
-import { fakeTimers, sleep } from './helpers/fake-timers.js'
+import { clearTestData } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 describe('MetricsCollector', () => {
   let metricsCollector: MetricsCollector
   
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearTestData()
+    timer.reset()
+    
     metricsCollector = new MetricsCollector()
   })
 
@@ -118,28 +122,31 @@ describe('MetricsCollector', () => {
       metricsCollector.recordTimer('operation.duration', 100)
       
       const metrics = metricsCollector.getMetrics()
-      const timer = metrics.timers['operation.duration']
+      const timerMetric = metrics.timers['operation.duration']
       
-      expect(timer.count).toBe(3)
-      expect(timer.avg).toBe(150)
-      expect(timer.min).toBe(100)
-      expect(timer.max).toBe(200)
+      expect(timerMetric.count).toBe(3)
+      expect(timerMetric.avg).toBe(150)
+      expect(timerMetric.min).toBe(100)
+      expect(timerMetric.max).toBe(200)
     })
 
     it('should time function execution', async () => {
-      const slowOperation = () => sleep(100)
+      const slowOperation = async () => {
+        await timer.tickAsync(100)
+        return 'completed'
+      }
       
       const operationPromise = metricsCollector.time('slow.operation', slowOperation)
-      clock.tick(100)
+      await timer.tickAsync(100)
       const result = await operationPromise
       
-      expect(result).toBeUndefined()
+      expect(result).toBe('completed')
       
       const metrics = metricsCollector.getMetrics()
-      const timer = metrics.timers['slow.operation']
+      const timerMetric = metrics.timers['slow.operation']
       
-      expect(timer.count).toBe(1)
-      expect(timer.avg).toBeGreaterThan(95) // Should be around 100ms
+      expect(timerMetric.count).toBe(1)
+      expect(timerMetric.avg).toBeGreaterThanOrEqual(95) // Should be around 100ms
     })
 
     it('should time function execution with errors', async () => {

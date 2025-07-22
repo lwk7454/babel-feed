@@ -1,4 +1,4 @@
-import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, userPreferences, users, userSessions } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, userPreferences, users, userSessions } from '@babel-feed/pgdb'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { Elysia, t } from 'elysia'
 import { createAuthGuard } from '../middleware/auth.middleware'
@@ -8,19 +8,8 @@ describe('User Flow Integration Tests', () => {
   let app: Elysia // Use proper Elysia type
   let testUserService: UserService
 
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
-
-  afterEach(async () => {
+  beforeEach(async () => {
     await clearTestData()
-  })
-
-  beforeEach(() => {
     testUserService = new UserService(getTestDb())
     
     // Create auth guard with test user service
@@ -247,13 +236,6 @@ describe('User Flow Integration Tests', () => {
           }
         }
       )
-  })
-
-  afterEach(async () => {
-    // Clean up test data in correct order
-    await getTestDb().delete(userPreferences)
-    await getTestDb().delete(userSessions)
-    await getTestDb().delete(users)
   })
 
   describe('Complete User Onboarding Flow', () => {

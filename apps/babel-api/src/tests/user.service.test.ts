@@ -1,26 +1,17 @@
-import { cleanupTestDatabase, clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, users, userSessions } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { UserService } from '../services/user.service'
 
 describe('UserService', () => {
   let userService: UserService
+  const timer = createTestTimers()
 
-
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
-
-  beforeEach(() => {
-    userService = new UserService(getTestDb())
-  })
-  
-  afterEach(async () => {
+  beforeEach(async () => {
     await clearTestData()
+    timer.reset()
+    userService = new UserService(getTestDb())
   })
 
   describe('createGuestUser', () => {
@@ -166,7 +157,7 @@ describe('UserService', () => {
       const { tokens: initialTokens } = await userService.verifyEmail(verificationToken)
 
       // Wait a moment to ensure timestamp difference
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await timer.tickAsync(100)
 
       const newTokens = await userService.refreshToken(initialTokens.refreshToken)
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test'
 import { OpenAIAdapter } from '../src/openai-adapter.js'
 import { LlmHttpClient } from '../src/http-client.js'
+import { clearTestData } from '@babel-feed/pgdb'
 import type { ChatCompletionRequest, ChatCompletionResponse, AiProvider, AiProviderKey, RequestContext } from '../src/types.js'
 
 describe('OpenAIAdapter', () => {
@@ -10,7 +11,8 @@ describe('OpenAIAdapter', () => {
   let mockKey: AiProviderKey
   let mockContext: RequestContext
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearTestData()
     mockHttpClient = {
       createChatCompletion: mock(),
       streamChatCompletion: mock()

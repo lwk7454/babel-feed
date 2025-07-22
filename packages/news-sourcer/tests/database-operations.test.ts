@@ -10,15 +10,13 @@ import type {
   EndpointMetrics 
 } from '../src/types.js'
 import { 
-  setupNewsSourcerTestDatabase, 
-  cleanupNewsSourcerTestDatabase, 
-  clearNewsSourcerTestData,
+  clearTestData,
   createTestNewsSource,
   createTestSourceEndpoint
 } from './helpers/test-database.js'
-import { fakeTimers } from './helpers/fake-timers.js'
+import { createTestTimers } from '@babel-feed/utils'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 // Mock LLM provider
 mock.module('@babel-feed/llm-provider', () => ({
@@ -71,15 +69,10 @@ mock.module('axios', () => ({
 describe('NewsSourcer Database Operations & Endpoint Validation', () => {
   let sourcer: NewsSourcer
 
-  beforeAll(async () => {
-    await setupNewsSourcerTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupNewsSourcerTestDatabase()
-  })
-
   beforeEach(async () => {
+    await clearTestData()
+    timer.reset()
+    
     // Create fresh test data for each test
     const testSource = await createTestNewsSource({
       name: 'Test Source',
@@ -99,7 +92,6 @@ describe('NewsSourcer Database Operations & Endpoint Validation', () => {
   })
 
   afterEach(async () => {
-    await clearNewsSourcerTestData()
     mock.restore()
   })
 
@@ -138,7 +130,7 @@ describe('NewsSourcer Database Operations & Endpoint Validation', () => {
       })
       
       // Advance time to allow retries to complete
-      clock.tick(500) // Advance time to allow retry delays
+      timer.tick(500) // Advance time to allow retry delays
       
       expect(result).toBeDefined()
       expect(result.valid).toBe(false)
@@ -153,7 +145,7 @@ describe('NewsSourcer Database Operations & Endpoint Validation', () => {
       })
       
       // Advance time to allow retry to complete
-      clock.tick(200) // Advance time to allow retry delay
+      timer.tick(200) // Advance time to allow retry delay
       
       expect(result).toBeDefined()
       expect(result.valid).toBe(false)

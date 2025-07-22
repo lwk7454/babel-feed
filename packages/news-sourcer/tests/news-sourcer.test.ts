@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach, mock } from 'bun:test'
 import { NewsSourcer } from '../src/news-sourcer'
-import { 
-  setupNewsSourcerTestDatabase, 
-  cleanupNewsSourcerTestDatabase, 
-  clearNewsSourcerTestData 
+import {
+ 
+  clearTestData
 } from './helpers/test-database.js'
 
 // Mock axios to avoid real HTTP calls in tests
@@ -32,23 +31,13 @@ mock.module('@babel-feed/llm-provider', () => ({
 describe('NewsSourcer RSS/Atom Feed Discovery', () => {
   let sourcer: NewsSourcer
 
-  beforeAll(async () => {
-    await setupNewsSourcerTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupNewsSourcerTestDatabase()
-  })
-
   beforeEach(async () => {
+    await clearTestData()
+    
     sourcer = new NewsSourcer()
     await sourcer.initialize()
     mockAxiosGet.mockClear()
     mockAxiosHead.mockClear()
-  })
-
-  afterEach(async () => {
-    await clearNewsSourcerTestData()
   })
 
   describe('Initialization', () => {

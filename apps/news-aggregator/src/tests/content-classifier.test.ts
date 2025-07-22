@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, mock, spyOn } from 'bun:test'
-import { ContentClassifier, type ClassificationResult, type ContentTag } from '../modules/recommendation/content-classifier'
 import { AiProviderManager } from '@babel-feed/llm-provider'
-import { setupTestDatabase, cleanupTestDatabase } from '@babel-feed/pgdb'
+import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
+import { ContentClassifier } from '../modules/recommendation/content-classifier'
 
 // Mock AI provider for testing
 const mockAiProvider = {
@@ -19,12 +19,8 @@ const mockAiProvider = {
 
 describe('ContentClassifier - Comprehensive Tests', () => {
   let classifier: ContentClassifier
-
-  beforeAll(async () => {
-    await setupTestDatabase()
-  })
-
   beforeEach(async () => {
+    await clearTestData()
     // Reset mocks
     mockAiProvider.executeWithProvider.mockClear()
     
@@ -33,9 +29,7 @@ describe('ContentClassifier - Comprehensive Tests', () => {
     await classifier.initialize()
   })
 
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
+
 
   describe('Hierarchical Tag Extraction', () => {
     it('should extract technology tags from tech content', async () => {

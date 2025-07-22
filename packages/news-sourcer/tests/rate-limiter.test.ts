@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { TokenBucketRateLimiter, RateLimiterRegistry } from '../src/rate-limiter.js'
-import { fakeTimers, sleep } from './helpers/fake-timers.js'
+import { createTestTimers } from '@babel-feed/utils'
 
-const clock = fakeTimers()
+const timer = createTestTimers()
 
 describe('TokenBucketRateLimiter', () => {
   let rateLimiter: TokenBucketRateLimiter
@@ -37,9 +37,7 @@ describe('TokenBucketRateLimiter', () => {
       expect(rateLimiter.getMetrics().currentTokens).toBe(0)
       
       // Wait for refill (500ms for 1 token at 2 tokens/sec)
-      const sleepPromise = sleep(1500)
-      clock.tick(1500)
-      await sleepPromise
+      await timer.tickAsync(1500)
       
       expect(rateLimiter.getMetrics().currentTokens).toBeGreaterThan(0)
     })
@@ -49,9 +47,7 @@ describe('TokenBucketRateLimiter', () => {
       await rateLimiter.acquire(2)
       
       // Wait longer than needed to fill bucket
-      const sleepPromise = sleep(2000)
-      clock.tick(2000)
-      await sleepPromise
+      await timer.tickAsync(2000)
       
       const metrics = rateLimiter.getMetrics()
       expect(metrics.currentTokens).toBeLessThanOrEqual(5) // Should not exceed burst size
@@ -77,7 +73,7 @@ describe('TokenBucketRateLimiter', () => {
       const acquirePromise = rateLimiter.acquire(2)
       
       // Advance time to allow token refill (1 second for 2 tokens at 2 tokens/sec)
-      clock.tick(1000)
+      timer.tick(1000)
       
       await acquirePromise
       
@@ -95,7 +91,7 @@ describe('TokenBucketRateLimiter', () => {
       
       // The backoff should be: waitTime * 1.5 = (3/2) * 1000 * 1.5 = 2250ms
       // But capped at maxBackoffDelay (10000ms)
-      clock.tick(2250)
+      timer.tick(2250)
       
       await acquirePromise
       
@@ -118,7 +114,7 @@ describe('TokenBucketRateLimiter', () => {
       ]
       
       // Advance time to allow all requests to complete
-      clock.tick(3000)
+      timer.tick(3000)
       
       await Promise.all(promises)
       
@@ -170,7 +166,7 @@ describe('TokenBucketRateLimiter', () => {
       const acquirePromise = rateLimiter.acquire(2)
       
       // Advance time to allow token refill
-      clock.tick(1000)
+      timer.tick(1000)
       
       await acquirePromise
       
@@ -235,7 +231,7 @@ describe('TokenBucketRateLimiter', () => {
       ]
       
       // Advance time to allow all requests to complete
-      clock.tick(3000)
+      timer.tick(3000)
       
       await Promise.all(promises)
       
@@ -343,7 +339,7 @@ describe('RateLimiterRegistry', () => {
       ]
       
       // Advance time to allow tokens to refill
-      clock.tick(2000)
+      timer.tick(2000)
       
       await Promise.all(promises)
       

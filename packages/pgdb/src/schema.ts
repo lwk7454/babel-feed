@@ -44,6 +44,7 @@ export const userPreferences = pgTable('user_preferences', {
   themePreference: varchar('theme_preference', { length: 20 }).default('system'), // light, dark, system
   notificationSettings: jsonb('notification_settings').default('{}'),
   privacySettings: jsonb('privacy_settings').default('{}'),
+  readingPatterns: jsonb('reading_patterns').default('[]'), // User reading behavior patterns
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 })
 

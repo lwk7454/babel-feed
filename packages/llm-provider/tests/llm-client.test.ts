@@ -1,5 +1,5 @@
-import { cleanupTestDatabase, clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
-import { install } from '@sinonjs/fake-timers'
+import { clearTestData } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { LlmClient } from '../src/llm-client.js'
 import type {
@@ -13,22 +13,11 @@ const mockFetch = mock()
 ;(mockFetch as any).preconnect = mock()
 global.fetch = mockFetch as any
 
-let clock: ReturnType<typeof install> | undefined
+const timer = createTestTimers({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
 
 describe('LlmClient', () => {
   let client: LlmClient
-
-  beforeAll(() => {
-    clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
-  })
-
-  afterAll(() => {
-    clock?.uninstall()
-    clock = undefined
-  })
-
   beforeEach(async () => {
-    await setupTestDatabase()
     await clearTestData()
     client = new LlmClient({
       timeout: 5000,
@@ -37,7 +26,7 @@ describe('LlmClient', () => {
     })
     await client.initialize()
     mockFetch.mockClear()
-    clock?.reset()
+    timer.reset()
     
     // Mock the delay function to be instant for tests
     const originalDelay = global.setTimeout
@@ -52,7 +41,6 @@ describe('LlmClient', () => {
   })
 
   afterEach(async () => {
-    await cleanupTestDatabase()
     mockFetch.mockClear()
     // Restore original setTimeout
     global.setTimeout = setTimeout
@@ -376,7 +364,7 @@ describe('LlmClient', () => {
       mockFetch.mockImplementation(() => 
         new Promise((_, reject) => {
           // Use fake timer instead of real setTimeout
-          clock!.setTimeout(() => reject(new Error('Request timeout')), 100)
+          timer.clock.setTimeout(() => reject(new Error('Request timeout')), 100)
         })
       )
 

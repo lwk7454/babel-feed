@@ -288,23 +288,6 @@ The package integrates with `@babel-feed/pgdb` for database operations:
 - `aiProviderKeys` table: API keys with usage tracking
 - Automatic schema management with push mode
 
-## Testing
-
-The package includes comprehensive test utilities:
-
-```typescript
-import { setupTestDatabase, cleanupTestDatabase } from '@babel-feed/pgdb'
-
-// In your tests
-beforeEach(async () => {
-  await setupTestDatabase()
-  // Mock fetch for HTTP requests
-  global.fetch = mockFetch
-})
-
-afterEach(async () => {
-  await cleanupTestDatabase()
-})
 ```
 
 ### Running Tests

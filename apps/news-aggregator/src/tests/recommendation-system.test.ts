@@ -8,7 +8,7 @@ import {
   type RecommendationConfig
 } from '../modules/recommendation'
 import { AiProviderManager } from '@babel-feed/llm-provider'
-import { setupTestDatabase, cleanupTestDatabase, clearTestData } from '@babel-feed/pgdb'
+import { clearTestData } from '@babel-feed/pgdb'
 
 describe('Recommendation System - Phase 5', () => {
   let contentClassifier: ContentClassifier
@@ -19,7 +19,6 @@ describe('Recommendation System - Phase 5', () => {
 
   beforeAll(async () => {
     // Set up test database
-    await setupTestDatabase()
     
     // Initialize components
     mockAiProvider = new AiProviderManager()
@@ -30,7 +29,6 @@ describe('Recommendation System - Phase 5', () => {
   })
 
   beforeEach(async () => {
-    // Clear test data between tests
     await clearTestData()
   })
 
@@ -419,6 +417,5 @@ describe('Recommendation System - Phase 5', () => {
   afterAll(async () => {
     // Cleanup
     similarityEngine.clearCache()
-    await cleanupTestDatabase()
   })
 })

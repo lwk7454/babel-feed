@@ -1,19 +1,10 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll, mock } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import { CircuitBreaker, CircuitBreakerRegistry, CircuitState } from '../src/circuit-breaker.js'
-import { fakeTimers, sleep } from './helpers/fake-timers.js'
-import { install } from '@sinonjs/fake-timers'
+import { createTestTimers } from '@babel-feed/utils'
 
-let clock: ReturnType<typeof install> | undefined
+const timer = createTestTimers()
 
 describe('Circuit Breaker (with fake timers)', () => {
-  beforeAll(() => {
-    clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
-  })
-  afterAll(() => {
-    clock?.uninstall()
-    clock = undefined
-  })
-
   let circuitBreaker: CircuitBreaker
   
   beforeEach(() => {
@@ -23,7 +14,6 @@ describe('Circuit Breaker (with fake timers)', () => {
       timeout: 500,
       monitoringPeriod: 5000
     })
-    clock?.reset()
   })
 
   describe('Normal Operation', () => {
@@ -99,7 +89,7 @@ describe('Circuit Breaker (with fake timers)', () => {
       expect(circuitBreaker.getMetrics().state).toBe(CircuitState.OPEN)
       
       // Advance time past reset timeout
-      clock!.tick(1100)
+      timer.tick(1100)
       
       // Next operation should transition to HALF_OPEN
       const successOperation = mock().mockResolvedValue('success')
@@ -118,7 +108,7 @@ describe('Circuit Breaker (with fake timers)', () => {
       }
       
       // Advance time past reset timeout
-      clock!.tick(1100)
+      timer.tick(1100)
       
       // Failing operation should return to OPEN
       await expect(circuitBreaker.execute(operation)).rejects.toThrow('Operation failed')
@@ -128,7 +118,7 @@ describe('Circuit Breaker (with fake timers)', () => {
 
   describe('Timeout Handling', () => {
     it('should timeout long-running operations', async () => {
-      const operation = mock(() => sleep(1000))
+      const operation = mock(() => timer.tickAsync(1000))
       
       await expect(circuitBreaker.execute(operation)).rejects.toThrow('Operation timeout')
       
@@ -163,7 +153,7 @@ describe('Circuit Breaker (with fake timers)', () => {
         timeout: 500,
         monitoringPeriod: 100 // Very short for testing
       })
-      clock!.reset()
+      timer.reset()
       
       const failOperation = mock().mockRejectedValue(new Error('fail'))
       
@@ -171,8 +161,8 @@ describe('Circuit Breaker (with fake timers)', () => {
       expect(testCircuitBreaker.getMetrics().failureCount).toBe(1)
       
       // Advance time past the monitoring period
-      clock!.tick(200)
-      clock!.runAll()
+      timer.tick(200)
+      timer.clock.runAll()
       testCircuitBreaker._forceResetCheck()
       expect(testCircuitBreaker.getMetrics().failureCount).toBe(0)
       

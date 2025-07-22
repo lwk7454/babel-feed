@@ -1,34 +1,25 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
 import { AiProviderManager } from '../src/ai-provider-manager'
-import { setupTestDatabase, cleanupTestDatabase, getTestDb, aiProviderKeys } from '@babel-feed/pgdb'
-import { install } from '@sinonjs/fake-timers'
+import { getTestDb, aiProviderKeys, clearTestData } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
 
-let clock: ReturnType<typeof install> | undefined
+const timer = createTestTimers({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
 
 const manager = new AiProviderManager()
 let providerId: string
 
-beforeAll(async () => {
-  clock = install({ now: 0, shouldAdvanceTime: true, advanceTimeDelta: 20 })
-  await setupTestDatabase()
+beforeEach(async () => {
+  await clearTestData()
+  timer.reset()
+  
+  // Initialize manager and get provider ID for each test
   await manager.initialize()
   const [provider] = await manager.getAllProviders()
   providerId = provider.id
-  await getTestDb()
   await getTestDb().insert(aiProviderKeys).values([
     { providerId, keyName: 'key1', apiKey: 'k1', priority: 5 },
     { providerId, keyName: 'key2', apiKey: 'k2', priority: 5 }
   ])
-})
-
-afterAll(async () => {
-  await cleanupTestDatabase()
-  clock?.uninstall()
-  clock = undefined
-})
-
-beforeEach(() => {
-  clock?.reset()
   
   // Mock the delay function to be instant for tests
   const originalDelay = global.setTimeout
@@ -43,7 +34,6 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  clock?.reset()
   // Restore original setTimeout
   global.setTimeout = setTimeout
 })

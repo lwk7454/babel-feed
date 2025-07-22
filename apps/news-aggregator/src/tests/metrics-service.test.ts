@@ -1,4 +1,4 @@
-import { cleanupTestDatabase, clearTestData, insertTestArticle, setupTestDatabase } from '@babel-feed/pgdb'
+import { clearTestData, insertTestArticleWithTranslations, getTestDb } from '@babel-feed/pgdb'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { MetricsService } from '../services/metrics-service'
 
@@ -6,7 +6,6 @@ describe('MetricsService', () => {
   let metricsService: MetricsService
 
   beforeAll(async () => {
-    await setupTestDatabase()
     metricsService = new MetricsService()
     await metricsService.initialize()
   })
@@ -17,13 +16,12 @@ describe('MetricsService', () => {
 
   afterAll(async () => {
     await metricsService.stop()
-    await cleanupTestDatabase()
   })
 
   describe('collectMetrics', () => {
     it('should collect system metrics', async () => {
       // Insert test data
-      await insertTestArticle({
+      await insertTestArticleWithTranslations({
         url: 'https://example.com/article',
         source: 'test-source',
         sourceLanguage: 'en'

@@ -1,12 +1,19 @@
-import { initializeDatabase } from '@babel-feed/pgdb'
+import { getDatabase, checkDatabaseHealth } from '@babel-feed/pgdb'
 import { logger } from '@babel-feed/utils'
 
-export { initializeDatabase } from '@babel-feed/pgdb'
 export * from '@babel-feed/pgdb'
 
 export async function ensureDbConnection(): Promise<void> {
   try {
-    await initializeDatabase()
+    // Get the database instance (this will initialize it if needed)
+    getDatabase()
+    
+    // Check if the connection is healthy
+    const health = await checkDatabaseHealth()
+    if (!health.healthy) {
+      throw new Error(`Database health check failed: ${health.error}`)
+    }
+    
     logger.info('Database connection established')
   } catch (error) {
     logger.error('Database connection failed:', error)

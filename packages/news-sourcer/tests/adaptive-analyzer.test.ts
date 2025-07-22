@@ -1,13 +1,20 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test"
 import { AdaptiveAnalyzer } from '../src/adaptive-analyzer.js'
 import type { StoredEndpoint, SourceAnalysisResult } from '../src/types.js'
+import { clearTestData } from '@babel-feed/pgdb'
+import { createTestTimers } from '@babel-feed/utils'
+
+const timer = createTestTimers()
 
 describe('AdaptiveAnalyzer', () => {
   let adaptiveAnalyzer: AdaptiveAnalyzer
   let mockEndpoints: StoredEndpoint[]
   let mockAnalysisResult: SourceAnalysisResult
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearTestData()
+    timer.reset()
+    
     adaptiveAnalyzer = new AdaptiveAnalyzer({
       failureThreshold: 0.5,
       maxConsecutiveFailures: 3,
