@@ -1,11 +1,17 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, mock, beforeAll } from 'bun:test'
 import { HealthMonitor } from '../src/health-monitor.js'
 import type { StoredEndpoint } from '../src/types.js'
 import { CircuitState, type CircuitBreakerMetrics } from '../src/circuit-breaker.js'
 import type { RateLimiterMetrics } from '../src/rate-limiter.js'
 import { createTestTimers } from '@babel-feed/utils'
+import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
+
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('HealthMonitor', () => {
   let healthMonitor: HealthMonitor

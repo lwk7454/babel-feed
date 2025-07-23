@@ -3,9 +3,8 @@
  * Provides utilities for creating test news sources and endpoints
  */
 
-import { clearTestData, getTestDb } from '@babel-feed/pgdb'
-import { newsSources, sourceEndpoints } from '@babel-feed/pgdb'
 import type { NewNewsSource, NewSourceEndpoint } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, newsSources, sourceEndpoints } from '@babel-feed/pgdb'
 
 /**
  * Create a test news source
@@ -52,4 +51,4 @@ export async function createTestSourceEndpoint(
 }
 
 // Re-export global test utilities for convenience
-export { clearTestData, getTestDb } 
+export { clearTestData, getTestDb }

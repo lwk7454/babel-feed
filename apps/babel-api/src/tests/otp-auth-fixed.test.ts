@@ -1,8 +1,12 @@
-import { clearTestData, getTestDb, users } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, setupTestDatabase, users } from '@babel-feed/pgdb'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { UserService } from '../services/user.service'
 import { EmailService } from '../services/email.service'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('OTP Authentication Flow - Fixed', () => {
   const testUsers: string[] = []

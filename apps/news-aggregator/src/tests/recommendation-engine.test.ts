@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, mock } from 'bun:test'
 import { RecommendationEngine } from '../modules/recommendation/recommendation-engine'
 import { type RecommendationContext, type RecommendationConfig } from '../modules/recommendation/types'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { createTestTimers, createPerformanceTestHelpers } from '@babel-feed/utils'
 
 // Mock AiProviderManager to avoid database initialization issues
@@ -30,6 +30,10 @@ const generateTestUUID = (): string => {
     Math.floor(Math.random() * 16).toString(16)
   )
 }
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('RecommendationEngine - Comprehensive Tests', () => {
   let recommendationEngine: RecommendationEngine

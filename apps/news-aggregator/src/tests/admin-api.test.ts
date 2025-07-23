@@ -1,8 +1,12 @@
-import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'bun:test'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
+import { beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { AdminAPIServer } from '../api/admin-api'
 
 let server: AdminAPIServer
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})  
 
 describe('Admin API', () => {
   beforeEach(async () => {

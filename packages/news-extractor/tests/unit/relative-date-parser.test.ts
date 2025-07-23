@@ -2,8 +2,13 @@
  * RelativeDateParser tests
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll } from 'bun:test'
 import { RelativeDateParser } from '../../src/extractors/relative-date-parser.js'
+import { setupTestDatabase } from '@babel-feed/pgdb'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('RelativeDateParser', () => {
   let parser: RelativeDateParser

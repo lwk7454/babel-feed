@@ -1,5 +1,5 @@
 import { logger } from '@babel-feed/utils'
-import { NewsSourcer } from '@babel-feed/news-sourcer'
+import { NewsSourcer, type FeedValidationResult } from '@babel-feed/news-sourcer'
 import { DiscoveredSource } from '../common/types'
 import { newsSources, getDatabase } from '@babel-feed/pgdb'
 import { eq } from 'drizzle-orm'
@@ -733,7 +733,7 @@ export class SourceDiscoveryService {
   /**
    * Calculate reliability score from validation result
    */
-  private calculateReliabilityFromValidation(validation: any): number {
+  private calculateReliabilityFromValidation(validation: FeedValidationResult): number {
     if (!validation?.valid) return 0
     
     let reliability = 0.5 // Base score for valid feed
@@ -744,11 +744,6 @@ export class SourceDiscoveryService {
     
     if (validation.sampleUrls && validation.sampleUrls.length > 0) {
       reliability += 0.1
-    }
-    
-    // Add reliability from URL validation if available
-    if (typeof validation.reliability === 'number') {
-      reliability = Math.max(reliability, validation.reliability)
     }
     
     return Math.min(reliability, 1.0)

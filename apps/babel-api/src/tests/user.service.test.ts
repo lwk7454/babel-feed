@@ -1,8 +1,12 @@
-import { clearTestData, getTestDb, users, userSessions } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb'
 import { createTestTimers } from '@babel-feed/utils'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { UserService } from '../services/user.service'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('UserService', () => {
   let userService: UserService

@@ -10,12 +10,16 @@ import { NewsSourcerApiServer } from '../src/api-server.js'
 import type { StoredEndpoint, SourceAnalysisResult, NewsSourcerConfig } from '../src/types.js'
 import { createTestTimers } from '@babel-feed/utils'
 import {
- 
   clearTestData,
-  createTestNewsSource
+  createTestNewsSource,
 } from './helpers/test-database.js'
+import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 // Mock axios for Bun tests
 const mockedAxios = {

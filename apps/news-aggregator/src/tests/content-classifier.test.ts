@@ -1,6 +1,6 @@
 import { AiProviderManager } from '@babel-feed/llm-provider'
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { ContentClassifier } from '../modules/recommendation/content-classifier'
 
 // Mock AI provider for testing
@@ -16,6 +16,10 @@ const mockAiProvider = {
   ])),
   executeWithProvider: mock()
 }
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('ContentClassifier - Comprehensive Tests', () => {
   let classifier: ContentClassifier

@@ -3,7 +3,7 @@
 
 [test]
 # Automatically load test setup before running any tests
-preload = ["./packages/pgdb/scripts/generate-test-migrations.ts", "./packages/pgdb/scripts/test-setup.ts"]
+preload = ["./packages/pgdb/scripts/generate-test-migrations.ts"]
 
 # Enable coverage reporting by default
 coverage = false

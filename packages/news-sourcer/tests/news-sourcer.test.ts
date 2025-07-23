@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach, mock } from 'bun:test'
 import { NewsSourcer } from '../src/news-sourcer'
 import {
- 
-  clearTestData
+  clearTestData,
 } from './helpers/test-database.js'
+import { setupTestDatabase } from '@babel-feed/pgdb'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})  
 
 // Mock axios to avoid real HTTP calls in tests
 const mockAxiosGet = mock()

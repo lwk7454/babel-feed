@@ -5,6 +5,13 @@
   "projectType": "application",
   "tags": [],
   "targets": {
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint .",
+        "cwd": "apps/news-aggregator"
+      }
+    },
     "build": {
       "executor": "@nx/esbuild:esbuild",
       "outputs": ["{options.outputPath}"],
@@ -90,6 +97,34 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "bun src/cli/index.ts",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "cli:status": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/cli/index.ts status",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "cli:health": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/cli/index.ts health-check",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "cli:sources": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/cli/index.ts sources",
+        "cwd": "apps/news-aggregator"
+      }
+    },
+    "cli:jobs": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun src/cli/index.ts jobs",
         "cwd": "apps/news-aggregator"
       }
     },

@@ -1,4 +1,4 @@
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { createTestTimers } from '@babel-feed/utils'
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { NewsAggregatorService } from '../services/news-aggregator-service'
@@ -6,6 +6,10 @@ import { NewsAggregatorService } from '../services/news-aggregator-service'
 // Mock fetch for HTTP requests
 const mockFetch = mock()
 global.fetch = mockFetch as any
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('News Aggregator Setup', () => {
   const timer = createTestTimers()

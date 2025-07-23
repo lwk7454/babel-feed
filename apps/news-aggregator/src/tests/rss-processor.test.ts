@@ -1,7 +1,11 @@
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { NewsAggregatorService } from '../services/news-aggregator-service'
 import { NewsSource, RawArticle } from '../modules/common/types'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 // Mock RSS Parser
 const mockRSSParser = {

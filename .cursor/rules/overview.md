@@ -54,73 +54,11 @@ Create a mobile application that enables users to discover, consume, and underst
 
 ## Testing Strategy
 - Three-tier: Android unit tests, backend API tests, mobile E2E (Appium)
-- Automated, self-contained test environments
-- **See `babel-android-features.md` for detailed testing strategy and requirements.**
-
-### Test Database Architecture
-The project uses a sophisticated test database setup that ensures tests run in isolation with fresh, consistent data:
-
-#### Key Principles
-- **All tests must be run from project root** to leverage `bunfig.toml` preload configuration
-- **Test migrations are generated fresh** for each test run and never committed to git
-- **Individual test files never handle DB connections** - all abstraction is in `@babel-feed/pgdb/test-utils.ts`
-- **Development/production environments use `drizzle-kit push`** - only tests use migrations
-
-#### Test Database Flow
-1. **Preload Setup** (`bunfig.toml`):
-   - `test-setup.ts` sets `NODE_ENV=test` and disables DB debugging
-   - `generate-test-migrations.ts` creates fresh migrations from current schema
-
-2. **Migration Generation** (`packages/pgdb/scripts/generate-test-migrations.ts`):
-   - Cleans existing test migrations from `packages/pgdb/test-migrations/`
-   - Uses `drizzle-test.config.ts` to generate new migrations against empty DB
-   - Migrations are timestamped and gitignored
-
-3. **Test Database Connection** (`packages/pgdb/src/connection.ts`):
-   - Detects `NODE_ENV=test` and uses PGlite (in-memory PostgreSQL WASM)
-   - Production/development uses real PostgreSQL connections
-   - Connection is singleton and environment-aware
-
-4. **Test Utilities** (`packages/pgdb/src/test-utils.ts`):
-   - `clearTestData()`: Truncates all tables between tests
-   - Helper functions for inserting test data
-
-#### Test File Pattern
-```typescript
-import { clearTestData } from '@babel-feed/pgdb'
-import { createTestTimers } from '@babel-feed/utils'
-
-describe('My Test Suite', () => {
-  const timer = createTestTimers()
-
-  beforeEach(async () => {
-    await clearTestData()
-    timer.reset()
-  })
-
-  // Tests here...
-})
-```
-
-#### Fake Timer Requirements
-**All tests must use fake timers from `@babel-feed/utils` - never use real timings:**
-
-- **Import**: `import { createTestTimers } from '@babel-feed/utils'`
-- **Setup**: `const timer = createTestTimers()` at describe level
-- **Reset**: `timer.reset()` in beforeEach for clean state
-- **Time Control**: Use `timer.tick()`, `timer.tickAsync()`, `timer.setTime()` for deterministic timing
-- **Performance Testing**: Use `createPerformanceTestHelpers(timer)` for timing assertions
-
-**Why Fake Timers:**
-- **Deterministic**: Tests run consistently regardless of system load
-- **Fast**: No real waiting during timeouts, delays, or intervals
-- **Controllable**: Precise control over time progression for edge cases
-- **Reliable**: Eliminates flaky tests caused by timing variations
-
-#### Environment Separation
-- **Test**: PGlite in-memory DB with fresh migrations
-- **Development**: PostgreSQL with `drizzle-kit push` schema updates
-- **Production**: PostgreSQL with `drizzle-kit push` schema updates
+- **All tests must run from project root** to leverage `bunfig.toml` preload
+- **Use fake timers only** - import `createTestTimers` from `@babel-feed/utils`
+- **Test DB**: PGlite in-memory with fresh migrations, never committed
+- **Dev/Prod**: PostgreSQL with `drizzle-kit push` schema updates
+- **Test pattern**: `clearTestData()` + `timer.reset()` in beforeEach
 
 # Development & Infrastructure
 - Monorepo managed by Nx (21.1.2), Bun as package manager. DO NOT use NPM. 

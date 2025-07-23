@@ -31,6 +31,7 @@ If the user wants to generate something, use the following flow:
 - use the information provided in the log file to answer the user's question or continue with what they were doing
 
 # Running Tasks Guidelines
+When running nx commands, always use a tmux session in a detached process so you can check it's running status on your main process. This prevents long-running commands not returning and break your workflow.  
 If the user wants help with tasks or commands (which include keywords like "test", "build", "lint", or other similar actions), use the following flow:
 - Use the 'nx_current_running_tasks_details' tool to get the list of tasks (this can include tasks that were completed, stopped or failed).
 - If there are any tasks, ask the user if they would like help with a specific task then use the 'nx_current_running_task_output' tool to get the terminal output for that task/command

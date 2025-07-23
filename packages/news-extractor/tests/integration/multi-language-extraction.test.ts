@@ -3,9 +3,14 @@
  * Tests extraction with different languages and content types
  */
 
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect, beforeAll } from 'bun:test'
 import { Article } from '../../src/article.js'
 import { Configuration } from '../../src/configuration.js'
+import { setupTestDatabase } from '@babel-feed/pgdb'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('Multi-language Content Extraction', () => {
   

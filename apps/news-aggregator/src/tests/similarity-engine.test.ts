@@ -1,6 +1,6 @@
 import { AiProviderManager } from '@babel-feed/llm-provider'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { SimilarityEngine, type SimilarityVector } from '../modules/recommendation/similarity-engine'
 
 // Mock AI provider for testing
@@ -16,6 +16,10 @@ const mockAiProvider = {
   ])),
   executeWithProvider: mock()
 }
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('SimilarityEngine - Comprehensive Tests', () => {
   let similarityEngine: SimilarityEngine

@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "bun:test"
 import { EventSystem } from '../src/event-system.js'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { createTestTimers } from '@babel-feed/utils'
 
 const timer = createTestTimers()
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('Simplified Integration Tests', () => {
   let eventSystem: EventSystem

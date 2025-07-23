@@ -1,4 +1,4 @@
-import { clearTestData, insertTestUser } from '@babel-feed/pgdb'
+import { clearTestData, insertTestUser, setupTestDatabase } from '@babel-feed/pgdb'
 import { createTestTimers, createPerformanceTestHelpers, TIME_CONSTANTS } from '@babel-feed/utils'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { BehaviorAnalyzer } from '../modules/recommendation/behavior-analyzer'
@@ -22,6 +22,10 @@ async function createTestUser(userId: string): Promise<void> {
     userStatus: 'guest'
   })
 }
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('BehaviorAnalyzer - Comprehensive Tests', () => {
   let behaviorAnalyzer: BehaviorAnalyzer

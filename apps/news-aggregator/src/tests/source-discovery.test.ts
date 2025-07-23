@@ -1,7 +1,11 @@
 import axios from 'axios'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { SourceDiscoveryService } from '../modules/source-manager/discovery'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('SourceDiscoveryService', () => {
   let discoveryService: SourceDiscoveryService

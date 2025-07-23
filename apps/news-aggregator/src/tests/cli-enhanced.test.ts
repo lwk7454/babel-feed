@@ -1,6 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
-import { clearTestData, insertTestArticleWithTranslations, getTestDb } from '@babel-feed/pgdb'
+import { clearTestData, insertTestArticleWithTranslations, setupTestDatabase } from '@babel-feed/pgdb'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { NewsAggregatorCLI } from '../cli/index'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 // SKIP: CLI tests require proper database connection integration
 // TODO: Fix CLI tests to use test database instead of global connection

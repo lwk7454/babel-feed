@@ -1,8 +1,12 @@
-import { clearTestData, getTestDb, users } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, setupTestDatabase, users } from '@babel-feed/pgdb'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { Elysia, t } from 'elysia'
 import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('Auth Routes', () => {
   let app: any

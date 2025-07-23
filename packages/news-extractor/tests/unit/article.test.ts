@@ -3,10 +3,15 @@
  * Port of newspaper4k article tests
  */
 
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, mock, beforeAll } from 'bun:test'
 import { Article } from '../../src/article'
 import { Configuration } from '../../src/configuration'
 import { DownloadState, ParseState } from '../../src/types'
+import { setupTestDatabase } from '@babel-feed/pgdb'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 // Mock the network module
 const mockGetHtml = mock(async (url: string, config: Configuration) => {

@@ -1,8 +1,13 @@
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll } from 'bun:test'
 import { TokenBucketRateLimiter, RateLimiterRegistry } from '../src/rate-limiter.js'
 import { createTestTimers } from '@babel-feed/utils'
+import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('TokenBucketRateLimiter', () => {
   let rateLimiter: TokenBucketRateLimiter

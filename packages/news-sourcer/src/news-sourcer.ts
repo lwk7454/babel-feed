@@ -1,4 +1,4 @@
-import { AiProviderManager, type AiProvider, type AiProviderKey } from '@babel-feed/llm-provider'
+import { AiProviderManager, LlmClient } from '@babel-feed/llm-provider'
 import { getDatabase, getTestDb, sourceEndpoints, type DatabaseInstance, type NewSourceEndpoint, type SourceEndpoint } from '@babel-feed/pgdb'
 import { logger } from '@babel-feed/utils'
 import axios from 'axios'
@@ -34,6 +34,7 @@ export class NewsSourcer {
   private config: NewsSourcerConfig
   private db!: DatabaseInstance
   private aiManager!: AiProviderManager
+  private llmClient!: LlmClient
   private htmlCrawlingConfig: HtmlCrawlingConfig
   private circuitBreakers: CircuitBreakerRegistry
   private rateLimiters: RateLimiterRegistry
@@ -118,8 +119,15 @@ export class NewsSourcer {
     }
     
     this.aiManager = new AiProviderManager()
+    this.llmClient = new LlmClient({
+      timeout: 30000,
+      retryAttempts: 3,
+      retryDelay: 1000
+    })
+    
     await this.aiManager.initialize()
-    logger.info('NewsSourcer initialized with database connection and AI provider manager')
+    await this.llmClient.initialize()
+    logger.info('NewsSourcer initialized with database connection, AI provider manager, and LLM client')
   }
 
   /**
@@ -1082,26 +1090,32 @@ export class NewsSourcer {
    * Perform LLM analysis to extract CSS selectors
    */
   private async performLlmAnalysis(htmlContent: string, sourceUrl: string, previousResult?: LlmAnalysisResult | null): Promise<LlmAnalysisResult> {
-    // Try content analysis providers first, fallback to translation providers
-    let providers = await this.aiManager.getEnabledProviders('content_analysis')
-    if (providers.length === 0) {
-      providers = await this.aiManager.getEnabledProviders('translation')
-    }
-    if (providers.length === 0) {
-      providers = await this.aiManager.getEnabledProviders()
-    }
-    if (providers.length === 0) {
-      throw new Error('No AI providers available for HTML analysis')
-    }
-
     const prompt = this.buildLlmPrompt(htmlContent, sourceUrl, previousResult)
     
-    return await this.aiManager.executeWithProvider(providers[0].id, async (provider, key) => {
-      // This is a simplified implementation - in practice you'd need to implement
-      // actual API calls to the LLM provider based on their specific APIs
-      const response = await this.makeLlmRequest(provider, key, prompt)
-      return this.parseLlmResponse(response, sourceUrl)
-    })
+    try {
+      // Use LlmClient to make the request with proper provider selection and error handling
+      const response = await this.llmClient.createChatCompletionWithProviderType({
+        model: '*', // Use wildcard to let provider choose the best model for content analysis
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are an expert at analyzing HTML content and extracting CSS selectors for news article links. Always respond with valid JSON only.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 1500,
+        response_format: { type: 'json_object' }
+      }, 'content_analysis')
+      
+      const content = response.choices[0]?.message?.content?.trim() || ''
+      logger.debug(`LLM response received: ${content.length} characters`)
+      
+      return this.parseLlmResponse(content, sourceUrl)
+    } catch (error) {
+      logger.error('LLM analysis failed:', error)
+      throw error
+    }
   }
 
   private buildLlmPrompt(htmlContent: string, sourceUrl: string, previousResult?: LlmAnalysisResult | null): string {
@@ -1144,38 +1158,6 @@ ${JSON.stringify(previousResult, null, 2)}`
     }
 
     return prompt
-  }
-
-  private async makeLlmRequest(provider: AiProvider, key: AiProviderKey, prompt: string): Promise<string> {
-    logger.debug(`Making LLM request to ${provider.name}`)
-    
-    try {
-      const { OpenAI } = await import('openai')
-      const client = new OpenAI({ 
-        apiKey: key.apiKey || key.keyValue, 
-        baseURL: provider.baseUrl 
-      })
-      
-      const response = await client.chat.completions.create({
-        model: provider.metadata?.models?.[0] || 'gpt-3.5-turbo',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are an expert at analyzing HTML content and extracting CSS selectors for news article links. Always respond with valid JSON only.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.1,
-        max_tokens: 1500
-      })
-      
-      const content = response.choices[0]?.message?.content?.trim() || ''
-      logger.debug(`LLM response received: ${content.length} characters`)
-      return content
-    } catch (error) {
-      logger.error(`LLM request failed for provider ${provider.name}:`, error)
-      throw error
-    }
   }
 
   private parseLlmResponse(response: string, sourceUrl: string): LlmAnalysisResult {

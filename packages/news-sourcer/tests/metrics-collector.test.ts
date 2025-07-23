@@ -1,9 +1,14 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect, beforeEach, beforeAll } from "bun:test"
 import { MetricsCollector } from '../src/metrics-collector.js'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
 import { createTestTimers } from '@babel-feed/utils'
 
 const timer = createTestTimers()
+
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('MetricsCollector', () => {
   let metricsCollector: MetricsCollector

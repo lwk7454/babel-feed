@@ -1,8 +1,12 @@
-import { clearTestData, getTestDb, userPreferences, users, userSessions } from '@babel-feed/pgdb'
+import { clearTestData, getTestDb, setupTestDatabase, userPreferences, users, userSessions } from '@babel-feed/pgdb'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { Elysia, t } from 'elysia'
 import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('User Flow Integration Tests', () => {
   let app: Elysia // Use proper Elysia type
@@ -15,6 +19,7 @@ describe('User Flow Integration Tests', () => {
     // Create auth guard with test user service
     const testAuthGuard = createAuthGuard(testUserService)
 
+    //@ts-expect-error Elysia is not typed
     app = new Elysia()
       
       .post('/guest', 

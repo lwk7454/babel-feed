@@ -8,7 +8,11 @@ import {
   type RecommendationConfig
 } from '../modules/recommendation'
 import { AiProviderManager } from '@babel-feed/llm-provider'
-import { clearTestData } from '@babel-feed/pgdb'
+import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('Recommendation System - Phase 5', () => {
   let contentClassifier: ContentClassifier

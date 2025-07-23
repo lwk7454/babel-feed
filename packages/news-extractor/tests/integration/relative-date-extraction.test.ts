@@ -2,10 +2,15 @@
  * Integration tests for relative date extraction in DateExtractor
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll } from 'bun:test'
 import { DateExtractor } from '../../src/extractors/date-extractor.js'
 import { Configuration } from '../../src/configuration.js'
 import { load } from 'cheerio'
+import { setupTestDatabase } from '@babel-feed/pgdb'
+
+beforeAll(async () => {
+  await setupTestDatabase()
+})
 
 describe('DateExtractor with Relative Date Support', () => {
   let extractor: DateExtractor
