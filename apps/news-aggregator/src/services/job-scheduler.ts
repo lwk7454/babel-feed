@@ -676,7 +676,7 @@ export class JobScheduler {
     totalRuns: number,
     newProcessingTime: number
   ): number {
-    return (currentAverage * (totalRuns - 1) + newProcessingTime) / totalRuns
+    return Math.round((currentAverage * (totalRuns - 1) + newProcessingTime) / totalRuns)
   }
 
   // Public API

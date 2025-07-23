@@ -23,6 +23,7 @@ describe('ArticleStorage', () => {
   beforeEach(async () => {
     await clearTestData()
     storage = new ArticleStorage()
+    await storage.initialize()
   })
 
   it('should store new articles', async () => {

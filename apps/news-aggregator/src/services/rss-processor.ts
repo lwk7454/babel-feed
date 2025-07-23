@@ -4,11 +4,13 @@ import * as cheerio from 'cheerio'
 import { NewsSource, RawArticle, AggregatorError, RSSItem } from '../modules/common/types'
 import { logger } from '@babel-feed/utils'
 import { NewsSourceManager } from './news-source-manager'
+import { articles, getDatabase, getTestDb } from '@babel-feed/pgdb'
+import { eq } from 'drizzle-orm'
 
 export class RssProcessor {
   private sourceManager: NewsSourceManager
-  private processingQueue = new Map<string, Promise<RawArticle[]>>()
   private rssParser: RSSParser
+  private db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()
 
   constructor(sourceManager: NewsSourceManager) {
     this.sourceManager = sourceManager
@@ -38,9 +40,9 @@ export class RssProcessor {
     skipped: number
   }> {
     const enabledSources = await this.sourceManager.getEnabledSources()
-    const sourcesToProcess = enabledSources.filter(source => this.shouldProcessSource(source))
+    const sourcesToProcess = enabledSources // Process all enabled sources without filtering
 
-    logger.info(`Processing ${sourcesToProcess.length} of ${enabledSources.length} enabled sources (${enabledSources.length - sourcesToProcess.length} skipped due to polling intervals)`)
+    logger.info(`Processing ${sourcesToProcess.length} enabled sources`)
 
     const results = await Promise.allSettled(
       sourcesToProcess.map(source => this.processSource(source))
@@ -60,50 +62,13 @@ export class RssProcessor {
       }
     }
 
-    const skipped = enabledSources.length - sourcesToProcess.length
-    logger.info(`RSS processing complete: ${processed} sources processed, ${errors} errors, ${skipped} skipped, ${totalArticles.length} articles`)
-    return { processed, errors, articles: totalArticles, skipped }
+    logger.info(`RSS processing complete: ${processed} sources processed, ${errors} errors, ${totalArticles.length} articles`)
+    return { processed, errors, articles: totalArticles, skipped: 0 }
   }
 
-  private shouldProcessSource(source: NewsSource): boolean {
-    if (!source.lastFetched) {
-      // Never fetched before, should process
-      return true
-    }
-
-    const now = new Date()
-    const lastFetched = new Date(source.lastFetched)
-    const intervalMs = source.pollingInterval // Already in milliseconds
-    const nextFetchTime = new Date(lastFetched.getTime() + intervalMs)
-
-    const shouldProcess = now >= nextFetchTime
-
-    if (!shouldProcess) {
-      const remainingMinutes = Math.ceil((nextFetchTime.getTime() - now.getTime()) / (60 * 1000))
-      const intervalMinutes = Math.ceil(source.pollingInterval / (60 * 1000))
-      logger.debug(`Skipping ${source.name}: next fetch in ${remainingMinutes} minutes (interval: ${intervalMinutes}min)`)
-    }
-
-    return shouldProcess
-  }
 
   async processSource(source: NewsSource): Promise<RawArticle[]> {
-    // Prevent duplicate processing
-    const existingProcess = this.processingQueue.get(source.id || '')
-    if (existingProcess) {
-      logger.debug(`Source ${source.name} already being processed, waiting...`)
-      return existingProcess
-    }
-
-    const processingPromise = this.doProcessSource(source)
-    this.processingQueue.set(source.id || '', processingPromise)
-
-    try {
-      const result = await processingPromise
-      return result
-    } finally {
-      this.processingQueue.delete(source.id || '')
-    }
+    return this.doProcessSource(source)
   }
 
   private async doProcessSource(source: NewsSource): Promise<RawArticle[]> {
@@ -168,6 +133,24 @@ export class RssProcessor {
     if (!item.link || !item.title) {
       logger.debug(`Skipping item missing required fields (link or title) from ${source.name}`)
       return null
+    }
+
+    // Check if article already exists in database to avoid reprocessing
+    const normalizedUrl = item.link.trim()
+    try {
+      const existing = await this.db
+        .select({ id: articles.id })
+        .from(articles)
+        .where(eq(articles.url, normalizedUrl))
+        .limit(1)
+      
+      if (existing.length > 0) {
+        logger.debug(`Skipping existing article from ${source.name}: ${item.title}`)
+        return null
+      }
+    } catch (error) {
+      logger.warn(`Failed to check existing article in database for ${source.name}: ${item.title}`, error)
+      // Continue with extraction if database check fails
     }
 
     try {
@@ -410,8 +393,8 @@ export class RssProcessor {
     const enabledSources = await this.sourceManager.getEnabledSources()
 
     return {
-      activeSources: this.processingQueue.size,
-      queueLength: this.processingQueue.size,
+      activeSources: 0,
+      queueLength: 0,
       totalSources: allSources.length,
       enabledSources: enabledSources.length,
     }

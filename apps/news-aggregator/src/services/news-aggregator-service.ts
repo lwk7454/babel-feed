@@ -83,7 +83,7 @@ export class NewsAggregatorService {
       await this.sourceManager.initialize()
       await this.aiProviderManager.initialize()
       await this.jobScheduler.initialize()
-      // article storage requires no explicit initialization
+      await this.articleStorage.initialize()
       // Health checker and RSS processor don't need explicit initialization
 
       this.isRunning = true

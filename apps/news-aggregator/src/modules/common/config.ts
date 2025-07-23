@@ -8,6 +8,10 @@ interface Config {
     contentCacheMaxAge: number;
     translationCacheMaxAge: number;
   };
+  translation: {
+    targetLanguages: string[];
+    enabled: boolean;
+  };
 }
 
 const config: Config = {
@@ -18,6 +22,10 @@ const config: Config = {
     maxConcurrentSources: parseInt(process.env.MAX_CONCURRENT_SOURCES || '10'),
     contentCacheMaxAge: parseInt(process.env.CONTENT_CACHE_MAX_AGE || '3600000'), // 1 hour
     translationCacheMaxAge: parseInt(process.env.TRANSLATION_CACHE_MAX_AGE || '86400000'), // 24 hours
+  },
+  translation: {
+    targetLanguages: process.env.TRANSLATION_TARGET_LANGUAGES?.split(',') || ['en', 'zh-cn'],
+    enabled: process.env.TRANSLATION_ENABLED !== 'false',
   },
 }
 

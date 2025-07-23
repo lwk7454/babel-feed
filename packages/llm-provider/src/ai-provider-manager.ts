@@ -20,7 +20,7 @@ export class AiProviderManager {
 
   async initialize(): Promise<void> {
     logger.info('Initializing AI provider manager...')
-    this.db = process.env.NODE_ENV === 'test' ? getTestDb() : await getDatabase()
+    this.db = getDatabase()
 
     let existingProviders: AiProvider[] = []
     try {
