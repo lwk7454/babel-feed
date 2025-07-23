@@ -69,7 +69,6 @@ export class RecommendationEngine {
       this.contentClassifier.initialize(),
       this.similarityEngine.initialize()
     ])
-    logger.info('Recommendation engine initialized')
   }
 
   async generateRecommendations(context: RecommendationContext): Promise<RecommendationResult> {

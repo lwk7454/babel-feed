@@ -108,7 +108,6 @@ export OPENROUTER_API_KEY="your-api-key"
 export OPENAI_API_KEY="your-api-key"
 
 # Optional: For debugging
-export DB_DEBUG="true"
 export NODE_ENV="development"
 ```
 

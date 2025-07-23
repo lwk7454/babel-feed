@@ -44,10 +44,9 @@ function createPostgresConnection() {
     max_lifetime: 60 * 30, // 30 minutes
     connect_timeout: 10,
     prepare: false, // Disable prepared statements for better compatibility
-    debug: isDevelopment && process.env.DB_DEBUG === 'true',
-    onnotice: isDevelopment && !isTest ? console.log : undefined
+    debug: false
   })
-  return drizzlePostgres(sql, { schema, logger: isDevelopment })
+  return drizzlePostgres(sql, { schema, logger: false })
 }
 
 /**

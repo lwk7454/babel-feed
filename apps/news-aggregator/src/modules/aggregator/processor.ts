@@ -15,7 +15,6 @@ export class ProcessorService {
 
   async initialize(): Promise<void> {
     await this.contentClassifier.initialize()
-    logger.info('Processor service initialized')
   }
 
   async processArticles(articles: RawArticle[]): Promise<RawArticle[]> {

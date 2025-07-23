@@ -32,7 +32,6 @@ export class LlmClient {
 
   async initialize(): Promise<void> {
     await this.providerManager.initialize()
-    logger.info('LLM client initialized')
   }
 
   /**

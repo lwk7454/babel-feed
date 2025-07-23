@@ -43,7 +43,6 @@ export class SimilarityEngine {
 
   async initialize(): Promise<void> {
     await this.aiProviders.initialize()
-    logger.info('Similarity engine initialized')
   }
 
   async computeContentVector(

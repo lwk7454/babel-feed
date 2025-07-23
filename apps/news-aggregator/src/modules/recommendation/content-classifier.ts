@@ -71,7 +71,6 @@ export class ContentClassifier {
 
   async initialize(): Promise<void> {
     await this.aiProviders.initialize()
-    logger.info('Content classifier initialized')
   }
 
   async classifyContent(title: string, content: string, summary?: string): Promise<ClassificationResult> {

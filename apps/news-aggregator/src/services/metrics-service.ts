@@ -62,8 +62,6 @@ export class MetricsService {
   }
 
   async initialize(): Promise<void> {
-    logger.info('Initializing metrics service...')
-    
     // Collect initial metrics
     await this.collectMetrics()
     
@@ -79,7 +77,6 @@ export class MetricsService {
       }, this.alertConfig.healthCheckInterval)
     }
     
-    logger.info('Metrics service initialized')
   }
 
   async collectMetrics(): Promise<SystemMetrics> {

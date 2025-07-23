@@ -12,8 +12,6 @@ export class NewsSourceManager {
   public db = getDatabase()
 
   async initialize(): Promise<void> {
-    logger.info('Initializing database-based source manager...')
-    
     // Seed initial sources if none exist
     let existingSources: NewsSource[] = []
     try {

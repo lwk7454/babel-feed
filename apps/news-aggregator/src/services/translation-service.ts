@@ -22,7 +22,6 @@ export class TranslationService {
 
   async initialize(): Promise<void> {
     await this.aiIntegration.initialize()
-    logger.info('Translation service initialized')
   }
 
   async translateAndStoreArticle(article: ArticleContent): Promise<void> {

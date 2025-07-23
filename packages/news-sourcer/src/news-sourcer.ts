@@ -127,7 +127,6 @@ export class NewsSourcer {
     
     await this.aiManager.initialize()
     await this.llmClient.initialize()
-    logger.info('NewsSourcer initialized with database connection, AI provider manager, and LLM client')
   }
 
   /**

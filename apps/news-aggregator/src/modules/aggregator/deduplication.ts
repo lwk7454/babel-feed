@@ -11,7 +11,6 @@ export class DeduplicationService {
   private contentHashes = new Map<string, ContentHashEntry>()
 
   async initialize(): Promise<void> {
-    logger.info('Deduplication service initialized')
   }
 
   async deduplicateArticles(articles: RawArticle[]): Promise<RawArticle[]> {

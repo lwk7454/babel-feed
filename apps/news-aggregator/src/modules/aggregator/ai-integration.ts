@@ -9,7 +9,6 @@ export class AIIntegrationService {
 
   async initialize(): Promise<void> {
     await this.aiProviders.initialize()
-    logger.info('AI integration service initialized')
   }
 
   async translateContent(content: string, targetLanguage: string): Promise<string> {

@@ -13,7 +13,7 @@ await manager.initialize()
 const [newProvider] = await manager['db']!.insert(aiProviders).values({
   name: 'openrouter-kimi-k2',
   displayName: 'OpenRouter - Kimi K2',
-  providerType: 'content_analysis',
+  providerType: 'translation',
   baseUrl: 'https://openrouter.ai/api/v1',
   enabled: true,
   priority: 8,
@@ -55,3 +55,4 @@ await manager['db']!.insert(aiProviderKeys).values({
 
 console.log(`✅ Added provider: ${newProvider.displayName} (${newProvider.id})`)
 console.log(`✅ Added API key for provider: ${newProvider.id}`)
+process.exit(0)

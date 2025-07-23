@@ -14,7 +14,6 @@ export class ArticleStorage {
 
   async initialize(): Promise<void> {
     await this.translationService.initialize()
-    logger.info('Article storage initialized with translation service')
   }
 
   async saveArticles(rawArticles: RawArticle[]): Promise<void> {

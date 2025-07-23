@@ -478,7 +478,6 @@ export class AdminAPIServer {
       }
     })
 
-    logger.info('Admin API server initialized')
   }
 
   async start(): Promise<void> {

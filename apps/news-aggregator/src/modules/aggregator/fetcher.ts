@@ -10,7 +10,6 @@ export class FetcherService {
   }
 
   async initialize(): Promise<void> {
-    logger.info('Fetcher service initialized')
   }
 
   async fetchFromAllSources(): Promise<ProcessingResult> {

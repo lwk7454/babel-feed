@@ -19,25 +19,12 @@ export class AiProviderManager {
   private rateLimitTracking = new Map<string, { count: number; resetTime: number }>()
 
   async initialize(): Promise<void> {
-    logger.info('Initializing AI provider manager...')
     this.db = getDatabase()
 
-    let existingProviders: AiProvider[] = []
-    try {
-      existingProviders = await this.getAllProviders()
-    } catch (error) {
-      logger.debug('No providers found, will seed initial providers')
-    }
-
-    if (existingProviders.length === 0) {
-      await this.seedInitialProviders()
-      logger.info('Seeded initial AI providers')
-      existingProviders = await this.getAllProviders()
-    }
+    const existingProviders = await this.getAllProviders()
 
     await this.initializeCircuitBreakers()
     this.startPeriodicTasks()
-    logger.info(`AI provider manager initialized with ${existingProviders.length} providers`)
   }
 
   async getAllProviders(): Promise<AiProvider[]> {
@@ -46,6 +33,10 @@ export class AiProviderManager {
         .select()
         .from(aiProviders)
         .orderBy(desc(aiProviders.priority), asc(aiProviders.name))
+      
+      if (providers.length === 0) {
+        throw new Error('No providers found, please seed initial providers')
+      }
 
       return providers.map(this.mapDbProviderToAiProvider)
     } catch (error) {
@@ -343,64 +334,6 @@ export class AiProviderManager {
       createdAt: dbKey.createdAt,
       updatedAt: dbKey.updatedAt,
     }
-  }
-
-  private async seedInitialProviders(): Promise<void> {
-    const initialProviders = [
-      {
-        name: 'openrouter',
-        displayName: 'OpenRouter',
-        providerType: 'content_analysis',
-        baseUrl: 'https://openrouter.ai/api/v1',
-        enabled: true,
-        priority: 9,
-        maxRequestsPerMinute: 60,
-        maxRequestsPerHour: 1000,
-        maxRequestsPerDay: 10000,
-        circuitBreakerThreshold: 5,
-        circuitBreakerTimeout: 60000,
-        healthCheckInterval: 30000,
-        metadata: { models: ['gpt-3.5-turbo', 'gpt-4', 'claude-3-haiku'] }
-      },
-      {
-        name: 'huggingface',
-        displayName: 'Hugging Face',
-        providerType: 'translation',
-        baseUrl: 'https://api-inference.huggingface.co',
-        enabled: true,
-        priority: 7,
-        maxRequestsPerMinute: 30,
-        maxRequestsPerHour: 500,
-        maxRequestsPerDay: 5000,
-        circuitBreakerThreshold: 3,
-        circuitBreakerTimeout: 120000,
-        healthCheckInterval: 60000,
-        metadata: { models: ['Helsinki-NLP/opus-mt-en-zh'] }
-      }
-    ]
-    
-    for (const providerData of initialProviders) {
-      const [created] = await this.db!
-        .insert(aiProviders)
-        .values(providerData as NewAiProvider)
-        .returning()
-      
-      // Seed a test API key for each provider
-      await this.db!
-        .insert(aiProviderKeys)
-        .values({
-          providerId: created.id,
-          keyName: 'test-key',
-          apiKey: 'test-api-key',
-          enabled: true,
-          priority: 5,
-          successCount: 0,
-          errorCount: 0
-        })
-      
-      logger.info(`Seeded AI provider: ${created.displayName} (${created.id})`)
-    }
-    logger.info(`Seeded ${initialProviders.length} initial AI providers`)
   }
 
   async bulkEnableProviders(providerIds: string[]): Promise<void> {

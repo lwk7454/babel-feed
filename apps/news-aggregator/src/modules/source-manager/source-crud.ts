@@ -24,7 +24,6 @@ export class SourceCRUDService {
   private db = getDatabase()
 
   async initialize(): Promise<void> {
-    logger.info('Source CRUD service initialized with database operations')
   }
 
   async createSource(sourceData: Omit<NewsSource, 'id' | 'createdAt' | 'updatedAt' | 'errorCount' | 'successCount'>): Promise<NewsSource> {

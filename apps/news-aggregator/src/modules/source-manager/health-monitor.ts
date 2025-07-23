@@ -3,7 +3,6 @@ import { HealthStatusResponse } from '../common/types'
 
 export class HealthMonitorService {
   async initialize(): Promise<void> {
-    logger.info('Health monitor service initialized')
   }
 
   async getHealthStatus(): Promise<HealthStatusResponse> {

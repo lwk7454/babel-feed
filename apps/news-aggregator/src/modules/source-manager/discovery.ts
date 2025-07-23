@@ -29,7 +29,6 @@ export class SourceDiscoveryService {
   async initialize(): Promise<void> {
     this.db = await getDatabase()
     await this.newsSourcer.initialize()
-    logger.info('Source discovery service initialized with enhanced NewsSourcer')
   }
 
   async startDiscovery(): Promise<void> {

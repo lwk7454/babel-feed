@@ -39,7 +39,6 @@ export async function setupTestDatabase(){
   }
   
   await migrate(testDb, { migrationsFolder })
-  console.log('✅ Test database migrations applied successfully')
 }
 
 /**
