@@ -52,6 +52,7 @@ export interface AiProviderKey {
   keyValue: string
   apiKey?: string
   enabled: boolean
+  priority: number
   successCount: number
   errorCount: number
   currentUsage?: number

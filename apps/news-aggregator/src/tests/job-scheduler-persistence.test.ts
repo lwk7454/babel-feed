@@ -1,13 +1,10 @@
 // Set test environment before any imports
 process.env.NODE_ENV = 'test'
 
-import { clearTestData, getTestDb, setupTestDatabase } from '@babel-feed/pgdb'
-import { beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { clearTestData, getTestDb } from '@babel-feed/pgdb'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import { JobDatabaseServiceImpl } from '../services/job-db'
 import { JobScheduler } from '../services/job-scheduler'
-
-beforeAll(async () => {
-  await setupTestDatabase()
 })
 
 describe('Job Scheduler Database Persistence', () => {

@@ -1,12 +1,9 @@
-import { describe, it, beforeEach, expect, beforeAll } from 'bun:test'
-import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
+import { describe, it, beforeEach, expect } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
 import { createTestTimers } from '@babel-feed/utils'
 import { SourceCRUDService, type SourceQueryOptions, type BulkSourceOperation } from '../modules/source-manager/source-crud'
 import { AggregatorError, ValidationError } from '../modules/common/types'
 
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('SourceCRUDService', () => {
   const timer = createTestTimers()

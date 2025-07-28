@@ -11,7 +11,7 @@
   1. Never Block on Interactive Processes
 
   - Problem: Long-running commands and interactive sessions block the agent indefinitely
-  - Solution: Use tmux for all server processes and CLI commands
+  - Solution: Use tmux for CLI commands, especially those starting with `nx`
   - Key Learning: Always assume any command might run longer than expected
 
   2. Systematic Information Gathering

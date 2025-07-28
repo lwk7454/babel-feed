@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'bun:test'
 import { mock } from 'bun:test'
 import { NewsSourcer } from '../src/news-sourcer.js'
 import type { 
@@ -15,14 +15,8 @@ import {
   createTestSourceEndpoint
 } from './helpers/test-database.js'
 import { createTestTimers } from '@babel-feed/utils'
-import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
-
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 // Mock LLM provider
 mock.module('@babel-feed/llm-provider', () => ({

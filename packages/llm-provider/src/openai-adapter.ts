@@ -166,14 +166,17 @@ export class OpenAIAdapter {
     // Model name transformation (after token limits check)
     const modelPrefix = transforms.modelPrefix as string
     if (modelPrefix && !transformed.model.includes('/')) {
-      // Auto-detect and add appropriate prefix
-      if (transformed.model.startsWith('gpt-')) {
-        transformed.model = `openai/${transformed.model}`
-      } else if (transformed.model.startsWith('claude-')) {
-        transformed.model = `anthropic/${transformed.model}`
-      } else if (transformed.model.startsWith('gemini-')) {
-        transformed.model = `google/${transformed.model}`
-      } else if (modelPrefix !== 'auto') {
+      if (modelPrefix === 'auto') {
+        // Auto-detect and add appropriate prefix
+        if (transformed.model.startsWith('gpt-')) {
+          transformed.model = `openai/${transformed.model}`
+        } else if (transformed.model.startsWith('claude-')) {
+          transformed.model = `anthropic/${transformed.model}`
+        } else if (transformed.model.startsWith('gemini-')) {
+          transformed.model = `google/${transformed.model}`
+        }
+      } else {
+        // Use the specified prefix
         transformed.model = `${modelPrefix}/${transformed.model}`
       }
     }

@@ -1,12 +1,8 @@
-import { describe, it, expect, beforeEach, mock, beforeAll } from 'bun:test'
-import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
+import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
 import { FetcherService } from '../modules/aggregator/fetcher'
 import { NewsSource } from '../modules/common/types'
 import { Article } from '@babel-feed/news-extractor'
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('HTML Content Extraction with Newspaper4k-TS', () => {
   let fetcherService: FetcherService

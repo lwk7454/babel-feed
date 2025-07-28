@@ -1,6 +1,6 @@
-import { clearTestData, insertTestUser, setupTestDatabase } from '@babel-feed/pgdb'
+import { clearTestData, insertTestUser } from '@babel-feed/pgdb'
 import { createTestTimers, createPerformanceTestHelpers, TIME_CONSTANTS } from '@babel-feed/utils'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { BehaviorAnalyzer } from '../modules/recommendation/behavior-analyzer'
 import { type ReadingPattern, type RecommendationFeedback, type UserInteraction } from '../modules/recommendation/types'
 

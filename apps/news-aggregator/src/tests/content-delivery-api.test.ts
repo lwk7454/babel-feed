@@ -1,13 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test'
-import { clearTestData, insertTestArticleWithTranslations, getTestDb, setupTestDatabase } from '@babel-feed/pgdb'
+import { describe, it, expect, afterAll, beforeEach } from 'bun:test'
+import { clearTestData, insertTestArticleWithTranslations, getTestDb } from '@babel-feed/pgdb'
 import { AdminAPIServer } from '../api/admin-api'
 
 // Ensure test environment is set before any imports
 process.env.NODE_ENV = 'test'
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('Content Delivery API', () => {
   let apiServer: AdminAPIServer

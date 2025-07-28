@@ -1,8 +1,12 @@
 import { Article, ExtractionResult } from '@babel-feed/news-extractor'
 import { NewsSourcer } from '@babel-feed/news-sourcer'
-import { articles, getDatabase, JobConfig as DbJobConfig, JobStatus as DbJobStatus, JobExecution } from '@babel-feed/pgdb'
+import { articles, sourceEndpoints, newsSources, articleTranslations, getDatabase, JobConfig as DbJobConfig, JobStatus as DbJobStatus, JobExecution } from '@babel-feed/pgdb'
+import { eq, and } from 'drizzle-orm'
+import RSSParser from 'rss-parser'
 import { logger } from '@babel-feed/utils'
 import { JobDatabaseService, JobDatabaseServiceImpl } from './job-db'
+import { TranslationService } from './translation-service'
+import { AIIntegrationService } from '../modules/aggregator/ai-integration'
 
 export interface JobConfig {
   name: string
@@ -466,10 +470,106 @@ export class JobScheduler {
     const skipped = 0
 
     try {
-      // Fetch article URLs from configured sources
-      // This would use news-sourcer to get article URLs without extracting content
-      const sources = await this.db.select().from(articles).limit(10) // Placeholder
-      processed = sources.length
+      // Get all source endpoints
+      const endpoints = await this.db.select().from(sourceEndpoints)
+      logger.info(`Processing ${endpoints.length} source endpoints`)
+      
+      const rssParser = new RSSParser({
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'BabelFeed-NewsAggregator/1.0',
+          'Accept': 'application/rss+xml, application/xml, text/xml',
+        }
+      })
+
+      for (const endpoint of endpoints) {
+        try {
+          // Get the source info
+          const [source] = await this.db
+            .select()
+            .from(newsSources)
+            .where(eq(newsSources.id, endpoint.sourceId))
+            .limit(1)
+          
+          if (!source) {
+            logger.warn(`Source not found for endpoint ${endpoint.id}`)
+            continue
+          }
+
+          // Fetch RSS feed
+          const feed = await rssParser.parseURL(endpoint.endpointUrl)
+          
+          if (!feed.items || feed.items.length === 0) {
+            logger.debug(`No items found in RSS feed for ${source.name}`)
+            continue
+          }
+
+          let articlesFromThisEndpoint = 0
+
+          // Process RSS items - just collect URLs for later extraction
+          for (const item of feed.items) {
+            if (!item.link || !item.title) {
+              continue
+            }
+
+            // Check if article already exists
+            const existing = await this.db
+              .select({ id: articles.id })
+              .from(articles)
+              .where(eq(articles.url, item.link.trim()))
+              .limit(1)
+            
+            if (existing.length > 0) {
+              continue // Skip existing articles
+            }
+
+            // Parse publication date
+            const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date()
+            
+            // Insert basic article record (will be filled with extracted content later)
+            await this.db.insert(articles).values({
+              url: item.link.trim(),
+              sourceId: source.id,
+              source: source.name,
+              sourceLanguage: source.language,
+              imageUrl: null, // Will be extracted later
+              publishedAt,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            })
+            
+            articlesFromThisEndpoint++
+          }
+
+          processed++
+          
+          // Update endpoint success metrics
+          await this.db
+            .update(sourceEndpoints)
+            .set({ 
+              lastFetchAt: new Date(),
+              lastSuccessAt: new Date(),
+              successCount: endpoint.successCount + 1
+            })
+            .where(eq(sourceEndpoints.id, endpoint.id))
+          
+          logger.info(`Processed ${articlesFromThisEndpoint} articles from ${source.name}`)
+
+        } catch (error) {
+          errors++
+          logger.error(`Failed to process endpoint ${endpoint.endpointUrl}:`, error)
+          
+          // Update endpoint error metrics
+          await this.db
+            .update(sourceEndpoints)
+            .set({ 
+              lastFetchAt: new Date(),
+              errorCount: endpoint.errorCount + 1,
+              consecutiveFailureCount: endpoint.consecutiveFailureCount + 1
+            })
+            .where(eq(sourceEndpoints.id, endpoint.id))
+        }
+      }
 
     } catch (error) {
       errors++
@@ -494,29 +594,120 @@ export class JobScheduler {
     let skipped = 0
 
     try {
-      // Get URLs that need content extraction
-      const pendingUrls = await this.getPendingArticleUrls()
+      // Initialize translation service
+      const translationService = new TranslationService()
+      await translationService.initialize()
       
-      for (const url of pendingUrls) {
+      if (!translationService.isEnabled()) {
+        logger.info('Translation is disabled, skipping article processing')
+        return {
+          success: true,
+          processed: 0,
+          errors: 0,
+          skipped: 0,
+          processingTime: Date.now() - startTime
+        }
+      }
+      
+      const targetLanguages = translationService.getTargetLanguages()
+      
+      // Get articles that need content extraction (articles without translations indicate they haven't been processed)
+      const articlesNeedingProcessing = await this.db
+        .select()
+        .from(articles)
+        .leftJoin(articleTranslations, eq(articles.id, articleTranslations.articleId))
+        .where(eq(articleTranslations.articleId, null))
+        .limit(10) // Process fewer articles at a time since extraction takes longer
+      
+      for (const { articles: article } of articlesNeedingProcessing) {
+        if (!article) continue
+        
         try {
-          // Use news-extractor to extract full article content
-          const article = new Article(url)
-          const result = await article.process()
+          logger.info(`Extracting content from: ${article.url}`)
           
-          if (result.title && result.text) {
-            // Process the extracted content immediately (AI summarization, translation, etc.)
-            const processedArticle = await this.processAndStoreArticle(url, result)
-            if (processedArticle) {
-              processed++
-            } else {
-              skipped++
-            }
-          } else {
+          // Extract full article content using news-extractor
+          const newsArticle = new Article(article.url)
+          const extractionResult = await newsArticle.process()
+          
+          if (!extractionResult.title || !extractionResult.text) {
+            logger.warn(`Failed to extract content from ${article.url} - missing title or text`)
             skipped++
+            continue
           }
+          
+          logger.info(`Extracted article: "${extractionResult.title}" (${extractionResult.text.length} chars)`)
+          
+          // Update article with extracted content metadata
+          await this.db
+            .update(articles)
+            .set({
+              imageUrl: extractionResult.images?.[0] || null,
+              updatedAt: new Date()
+            })
+            .where(eq(articles.id, article.id))
+          
+          // Create translations for all target languages AND original language
+          const languagesToProcess = [...targetLanguages]
+          
+          // Add source language if it's not already in target languages
+          if (!languagesToProcess.includes(article.sourceLanguage)) {
+            languagesToProcess.push(article.sourceLanguage)
+          }
+          
+          for (const language of languagesToProcess) {
+            try {
+              let title = extractionResult.title
+              let summary = extractionResult.metadata?.description as string || ''
+              
+              // If this is not the source language, translate it
+              if (language !== article.sourceLanguage) {
+                logger.debug(`Translating to ${language}`)
+                
+                // Translate title
+                title = await this.translateContent(extractionResult.title, language)
+                
+                // Generate and translate summary from the full text
+                if (!summary && extractionResult.text.length > 200) {
+                  // Generate summary from first 2-3 sentences
+                  const sentences = extractionResult.text.split(/[.!?]+/).filter(s => s.trim().length > 20)
+                  const summaryText = sentences.slice(0, 3).join('. ').trim()
+                  if (summaryText) {
+                    summary = await this.translateContent(summaryText, language)
+                  }
+                }
+              } else {
+                // For source language, generate summary if not available
+                if (!summary && extractionResult.text.length > 200) {
+                  const sentences = extractionResult.text.split(/[.!?]+/).filter(s => s.trim().length > 20)
+                  summary = sentences.slice(0, 3).join('. ').trim()
+                }
+              }
+              
+              // Store the translation/summary
+              await this.db.insert(articleTranslations).values({
+                articleId: article.id,
+                language: language,
+                title: title,
+                summary: summary || `Article from ${article.source}`,
+                content: null, // We don't store full content to save space
+                createdAt: new Date(),
+                updatedAt: new Date()
+              })
+              
+              logger.debug(`Stored ${language} translation for article ${article.id}`)
+              
+            } catch (translationError) {
+              logger.error(`Failed to create ${language} version for article ${article.id}:`, translationError)
+              // Continue with other languages
+            }
+          }
+          
+          processed++
+          logger.info(`Successfully processed article: ${extractionResult.title}`)
+          
         } catch (error) {
           errors++
-          logger.error(`Failed to process article from ${url}:`, error)
+          logger.error(`Failed to extract/process article ${article.id} (${article.url}):`, error)
         }
       }
 
@@ -531,6 +722,20 @@ export class JobScheduler {
       errors,
       skipped,
       processingTime: Date.now() - startTime
+    }
+  }
+  
+  private async translateContent(text: string, targetLanguage: string): Promise<string> {
+    try {
+      // Use the existing AI integration service from the aggregator module
+      const aiService = new AIIntegrationService()
+      await aiService.initialize()
+      
+      const translated = await aiService.translateContent(text, targetLanguage)
+      return translated
+    } catch (error) {
+      logger.error(`Translation failed for language ${targetLanguage}:`, error)
+      return text // Return original text if translation fails
     }
   }
 

@@ -14,7 +14,7 @@
       "watchMode": false,
       "internalConsoleOptions": "openOnSessionStart",
       "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "test"
       }
     }
   ]

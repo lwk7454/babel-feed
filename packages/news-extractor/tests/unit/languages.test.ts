@@ -2,7 +2,7 @@
  * Language Detection and Processing Tests
  */
 
-import { describe, it, expect, beforeAll } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 import * as cheerio from 'cheerio'
 import { LanguageDetector } from '../../src/languages/language-detector.js'
 import { TokenizerFactory } from '../../src/languages/tokenizers/tokenizer-factory.js'
@@ -12,11 +12,7 @@ import { DefaultTokenizer } from '../../src/languages/tokenizers/default-tokeniz
 import { getLanguageFromIso6391, isValidLanguage, normalizeLanguageCode } from '../../src/languages/index.js'
 import { getMostLikelyLanguage, detectLanguageByCharacters } from '../../src/languages/unicode-ranges.js'
 import { getTextStats, getWords, getSentences } from '../../src/text.js'
-import { setupTestDatabase } from '@babel-feed/pgdb'
 
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('Language Detection', () => {
   describe('HTML Meta Language Detection', () => {

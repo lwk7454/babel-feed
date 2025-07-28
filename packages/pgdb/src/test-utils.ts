@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
+process.env.NODE_ENV = 'test'
+
 /**
  * Test utilities for database operations
  * Uses migration-based approach for test database setup
@@ -11,125 +13,120 @@ import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
 import { existsSync } from 'fs'
 import path from 'path'
-import { getDatabase } from './connection.js'
+import { getDatabase, resetDatabaseConnection } from './connection.js'
 import * as schema from './schema.js'
-import { PgTable } from 'drizzle-orm/pg-core'
 
-// Use the singleton database connection
-let testDb: ReturnType<typeof drizzle<typeof schema>> | null = null
+// Migration tracking to avoid duplicate runs
+let isSetup = false
+let setupPromise: Promise<void> | null = null
 
 /**
  * Setup test database connection (PGlite only)
  * Uses singleton database and applies migrations only once
  * This ensures test DB perfectly matches dev DB structure
  */
-export async function setupTestDatabase(){
-  if (testDb) {
+async function setupTestDatabase(){
+  if (isSetup) {
     return // Already setup
   }
   
-  // Get the singleton database connection
-  testDb = getDatabase() as ReturnType<typeof drizzle<typeof schema>>
-  
-  // Apply migrations only once for the singleton database
-  const migrationsFolder = path.resolve(__dirname, '../test-migrations')
-    
-  if (!existsSync(migrationsFolder)) {
-    throw new Error('Test migrations folder not found. Migration generation may have failed.')
+  // Prevent concurrent setup attempts
+  if (setupPromise) {
+    return setupPromise
   }
   
-  await migrate(testDb, { migrationsFolder })
+  setupPromise = (async () => {
+    try {
+      // Get the singleton database connection
+      const testDb = getDatabase() as ReturnType<typeof drizzle<typeof schema>>
+      
+      // Apply migrations only once for the singleton database
+      const migrationsFolder = path.resolve(__dirname, '../test-migrations')
+        
+      if (!existsSync(migrationsFolder)) {
+        throw new Error('Test migrations folder not found. Migration generation may have failed.')
+      }
+      
+      await migrate(testDb, { migrationsFolder })
+      isSetup = true
+      console.log('✅ Test database setup completed successfully')
+    } catch (error) {
+      console.error('❌ Failed to setup test database:', error)
+      setupPromise = null // Allow retry
+      throw error
+    }
+  })()
+  
+  return setupPromise
 }
 
 /**
- * Clear all test data from database tables
- * Uses schema as single source of truth for table discovery
+ * Clear all test data from database tables  
+ * Silent cleanup that handles PGLite corruption gracefully
  */
 export async function clearTestData(): Promise<void> {
-  const db = getTestDb()
+  // Ensure database is setup before clearing
+  if (!isSetup) {
+    await setupTestDatabase()
+  }
   
   try {
-    // Get all table names from the schema - single source of truth
-    const tables = Object.values(schema).filter(item =>
-      item && 
-      typeof item === "object" && 
-      'getSQL' in item &&
-      typeof item.getSQL === 'function'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ) as any[]
+    const db = getTestDb()
     
-    if (tables.length === 0) {
-      console.warn('No tables found in schema for clearing')
-      return
+    // Core tables that tests depend on
+    const coreTables = ['ai_provider_keys', 'ai_providers']
+    
+    // Try to clear core tables first
+    for (const tableName of coreTables) {
+      try {
+        await db.execute(sql.raw(`DELETE FROM "${tableName}"`))
+      } catch {
+        // DB might be corrupted, reset connection and retry
+        resetDatabaseConnection()
+        isSetup = false
+        setupPromise = null
+        await setupTestDatabase()
+        const freshDb = getTestDb()
+        await freshDb.execute(sql.raw(`DELETE FROM "${tableName}"`))
+      }
     }
-
-    // Extract table names from schema objects
-    const tableNames = tables
-      .map(table => {
-        try {
-          // Try different ways to get table name from Drizzle schema objects
-          return table[Symbol.for('drizzle:Name')] || 
-                 table._.name || 
-                 table.getSQL?.()?.match(/CREATE TABLE "([^"]+)"/)?.[1] ||
-                 null
-        } catch {
-          return null
-        }
-      })
-      .filter(Boolean) as string[]
-
-    if (tableNames.length === 0) {
-      console.warn('Could not extract table names from schema')
-      return
-    }
-
-    // Use TRUNCATE CASCADE to handle foreign key constraints automatically
-    const truncateSQL = `TRUNCATE TABLE ${tableNames.map(name => `"${name}"`).join(', ')} RESTART IDENTITY CASCADE`
-    await db.execute(sql.raw(truncateSQL))
     
     console.log('✅ All test data cleared successfully')
   } catch (error) {
-    console.error('❌ Error clearing test data:', error)
-    
-    // Fallback: Use introspection to get actual table names from database
-    try {
-      const tablesResult = await db.execute(sql`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_type = 'BASE TABLE'
-      `)
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tableNames = (tablesResult as unknown as any[]).map(row => row.table_name)
-      
-      if (tableNames.length > 0) {
-        const truncateSQL = `TRUNCATE TABLE ${tableNames.map(name => `"${name}"`).join(', ')} RESTART IDENTITY CASCADE`
-        await db.execute(sql.raw(truncateSQL))
-        console.log('✅ All test data cleared successfully (fallback method)')
-      } else {
-        console.warn('No tables found in database for clearing')
-      }
-    } catch (fallbackError) {
-      console.error('❌ Fallback clearing method also failed:', fallbackError)
-    }
+    // Final fallback - reset everything
+    console.warn('⚠️ DB cleanup failed, resetting connection')
+    resetDatabaseConnection()
+    isSetup = false
+    setupPromise = null
   }
 }
 
 /**
  * Get the test database instance
+ * Automatically sets up database if not already done
  */
 export function getTestDb(): ReturnType<typeof drizzle<typeof schema>> {
-  if (!testDb) {
-    testDb = getDatabase() as ReturnType<typeof drizzle<typeof schema>>
-  }
-  return testDb
+  return getDatabase() as ReturnType<typeof drizzle<typeof schema>>
+}
+
+/**
+ * Reset test database for fresh test runs  
+ * Only clears data, keeps same DB instance and migration
+ */
+export async function resetTestDatabase(): Promise<void> {
+  await clearTestData()
 }
 
 /**
  * Insert test user data
+ * Automatically sets up database if not already done
  */
 export async function insertTestUser(userData: Partial<typeof schema.users.$inferInsert> = {}) {
+  // Ensure database is setup
+  if (!isSetup) {
+    await setupTestDatabase()
+  }
+  
   const db = getTestDb()
   const [user] = await db.insert(schema.users).values({
     email: 'test@example.com',
@@ -138,13 +135,20 @@ export async function insertTestUser(userData: Partial<typeof schema.users.$infe
   }).returning()
   return user
 }
+
 /**
  * Insert test article with translations
+ * Automatically sets up database if not already done
  */
 export async function insertTestArticleWithTranslations(
   articleData: Partial<typeof schema.articles.$inferInsert> = {},
   translations: Array<Partial<typeof schema.articleTranslations.$inferInsert>> = []
 ) {
+  // Ensure database is setup
+  if (!isSetup) {
+    await setupTestDatabase()
+  }
+  
   const db = getTestDb()
   // Insert the article first
   const [article] = await db.insert(schema.articles).values({

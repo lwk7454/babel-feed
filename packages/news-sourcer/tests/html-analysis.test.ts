@@ -1,12 +1,11 @@
 import { createTestTimers } from '@babel-feed/utils'
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { NewsSourcer } from '../src/news-sourcer'
 import type { DiscoveredEndpoint } from '../src/types'
 import {
   clearTestData,
   createTestNewsSource,
 } from './helpers/test-database.js'
-import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
 
@@ -22,10 +21,6 @@ mock.module('axios', () => ({
   }
 }))
 
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 // Mock LLM provider manager and client
 const mockAiManager = {

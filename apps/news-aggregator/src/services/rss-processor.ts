@@ -40,12 +40,11 @@ export class RssProcessor {
     skipped: number
   }> {
     const enabledSources = await this.sourceManager.getEnabledSources()
-    const sourcesToProcess = enabledSources // Process all enabled sources without filtering
-
-    logger.info(`Processing ${sourcesToProcess.length} enabled sources`)
+    
+    logger.info(`Processing ${enabledSources.length} enabled sources`)
 
     const results = await Promise.allSettled(
-      sourcesToProcess.map(source => this.processSource(source))
+      enabledSources.map(source => this.processSource(source))
     )
 
     let totalArticles: RawArticle[] = []

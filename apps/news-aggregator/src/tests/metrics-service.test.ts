@@ -1,10 +1,6 @@
-import { clearTestData, insertTestArticleWithTranslations, getTestDb, setupTestDatabase } from '@babel-feed/pgdb'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { clearTestData, insertTestArticleWithTranslations, getTestDb } from '@babel-feed/pgdb'
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { MetricsService } from '../services/metrics-service'
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('MetricsService', () => {
   let metricsService: MetricsService

@@ -1,5 +1,5 @@
-import { describe, it, expect, mock, beforeEach, beforeAll } from 'bun:test'
-import { clearTestData, setupTestDatabase } from '@babel-feed/pgdb'
+import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { clearTestData } from '@babel-feed/pgdb'
 import { AIIntegrationService } from '../modules/aggregator/ai-integration'
 
 class StubProviderManager {
@@ -20,9 +20,6 @@ const mockOpenAI = {
 
 mock.module('openai', () => ({ OpenAI: function(){ return mockOpenAI } }))
 
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('AIIntegrationService', () => {
   beforeEach(async () => {

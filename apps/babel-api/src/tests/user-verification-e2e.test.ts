@@ -1,13 +1,10 @@
-import { clearTestData, getTestDb, setupTestDatabase, users, userSessions } from '@babel-feed/pgdb'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { clearTestData, getTestDb, users, userSessions } from '@babel-feed/pgdb'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { createAuthGuard } from '../middleware/auth.middleware'
 import { UserService } from '../services/user.service'
 
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 const createApp = (testUserService: UserService) => {
   const testAuthGuard = createAuthGuard(testUserService)

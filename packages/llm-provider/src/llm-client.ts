@@ -57,9 +57,10 @@ export class LlmClient {
 
         const response = await this.providerManager.executeWithProvider(
           provider.id,
-          async () => {
-            return await this.adapter.createChatCompletion(request, provider, key, context)
-          }
+          async (provider, providerKey) => {
+            return await this.adapter.createChatCompletion(request, provider, providerKey, context)
+          },
+          1 // Use only 1 retry attempt for faster failover
         )
 
         logger.debug('Chat completion successful', {
@@ -247,8 +248,14 @@ export class LlmClient {
         selectedProviders.push({ provider, key: keys[0] })
       }
 
-      if (selectedProviders.length > 0) break // Found providers for this type
+      // If we found providers of any type, stop looking at other types
+      // This ensures we get all providers of the same type
+      if (selectedProviders.length > 0) {
+        break
+      }
     }
+
+
 
     if (selectedProviders.length === 0) {
       throw new Error('No available providers found')

@@ -2,13 +2,8 @@
  * Tests for time-related text processing utilities
  */
 
-import { describe, it, expect, beforeAll } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 import { extractTimePhrases, normalizeTimeExpression, hasRelativeTimeExpression } from '../../src/text.js'
-import { setupTestDatabase } from '@babel-feed/pgdb'
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('Time text processing utilities', () => {
   describe('extractTimePhrases', () => {

@@ -39,16 +39,21 @@ export class CircuitBreaker {
   private onFailure(error: unknown): void {
     this.failureCount++
     this.lastFailure = new Date()
-    logger.warn(`Circuit breaker ${this.name} failure ${this.failureCount}/${this.options.failureThreshold}:`, error)
-    if (this.failureCount >= (this.options.failureThreshold || this.options.threshold)) {
+    logger.warn(`Circuit breaker ${this.name} failure ${this.failureCount}/${this.options.threshold}:`, error)
+    if (this.failureCount >= this.options.threshold) {
       this.state = 'open'
-      this.nextAttempt = new Date(Date.now() + this.options.timeout)
+      // Use globalThis.Date to work with fake timers in tests
+      const DateConstructor = globalThis.Date || Date
+      this.nextAttempt = new DateConstructor(DateConstructor.now() + this.options.timeout)
       logger.error(`Circuit breaker ${this.name} opened due to ${this.failureCount} failures`)
     }
   }
 
   private shouldAttemptReset(): boolean {
-    return this.nextAttempt ? Date.now() >= this.nextAttempt.getTime() : false
+    if (!this.nextAttempt) return false
+    // Use globalThis.Date to work with fake timers in tests
+    const DateConstructor = globalThis.Date || Date
+    return DateConstructor.now() >= this.nextAttempt.getTime()
   }
 
   getState(): CircuitBreakerState {
@@ -59,7 +64,7 @@ export class CircuitBreaker {
       successCount: 0,
       lastFailureTime: this.lastFailure,
       nextAttemptTime: this.nextAttempt,
-      threshold: this.options.failureThreshold || this.options.threshold,
+      threshold: this.options.threshold,
       timeout: this.options.timeout,
     }
   }
@@ -75,7 +80,9 @@ export class CircuitBreaker {
   }
   forceOpen(): void {
     this.state = 'open'
-    this.nextAttempt = new Date(Date.now() + this.options.timeout)
+    // Use globalThis.Date to work with fake timers in tests
+    const DateConstructor = globalThis.Date || Date
+    this.nextAttempt = new DateConstructor(DateConstructor.now() + this.options.timeout)
     logger.warn(`Circuit breaker ${this.name} manually opened`)
   }
 }

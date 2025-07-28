@@ -1,13 +1,8 @@
-import { describe, it, expect, beforeEach, mock, beforeAll } from "bun:test"
+import { describe, it, expect, beforeEach, mock } from "bun:test"
 import { CircuitBreaker, CircuitBreakerRegistry, CircuitState } from '../src/circuit-breaker.js'
 import { createTestTimers } from '@babel-feed/utils'
-import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 describe('Circuit Breaker (with fake timers)', () => {
   let circuitBreaker: CircuitBreaker

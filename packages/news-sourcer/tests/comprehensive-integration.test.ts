@@ -1,25 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, mock } from 'bun:test'
+import { createTestTimers } from '@babel-feed/utils'
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { AdaptiveAnalyzer } from '../src/adaptive-analyzer.js'
+import { NewsSourcerApiServer } from '../src/api-server.js'
 import { CircuitBreaker, CircuitState } from '../src/circuit-breaker.js'
-import { TokenBucketRateLimiter } from '../src/rate-limiter.js'
+import { EventSystem } from '../src/event-system.js'
 import { HealthMonitor } from '../src/health-monitor.js'
 import { MetricsCollector } from '../src/metrics-collector.js'
-import { EventSystem } from '../src/event-system.js'
 import { NewsSourcer } from '../src/news-sourcer.js'
-import { NewsSourcerApiServer } from '../src/api-server.js'
-import type { StoredEndpoint, SourceAnalysisResult, NewsSourcerConfig } from '../src/types.js'
-import { createTestTimers } from '@babel-feed/utils'
+import { TokenBucketRateLimiter } from '../src/rate-limiter.js'
+import type { NewsSourcerConfig, SourceAnalysisResult, StoredEndpoint } from '../src/types.js'
 import {
   clearTestData,
   createTestNewsSource,
 } from './helpers/test-database.js'
-import { setupTestDatabase } from '@babel-feed/pgdb'
 
 const timer = createTestTimers()
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 // Mock axios for Bun tests
 const mockedAxios = {
@@ -89,12 +84,6 @@ describe('Comprehensive News Sourcer Integration Tests', () => {
   let mockEndpoints: StoredEndpoint[]
   let mockAnalysisResult: SourceAnalysisResult
 
-  beforeAll(async () => {
-    // Set test environment first
-    process.env.NODE_ENV = 'test'
-    
-    // Initialize test database
-  })
 
   beforeEach(async () => {
     // Clear test database and reset timers

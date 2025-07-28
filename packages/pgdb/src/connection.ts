@@ -31,7 +31,7 @@ const isTest = process.env.NODE_ENV === 'test'
 /**
  * Database connection singleton
  */
-const dbInstance = isTest ? createPgLiteTestConnection() : createPostgresConnection()
+let dbInstance: DatabaseInstance | null = null
 
 /**
  * Create a Postgres connection (for dev/prod)
@@ -51,6 +51,7 @@ function createPostgresConnection() {
 
 /**
  * Create an in-memory PGlite (Postgres in WASM) connection for tests
+ * Returns a fresh instance to avoid memory corruption issues
  */
 function createPgLiteTestConnection() {
   const pglite = new PGlite()
@@ -59,9 +60,32 @@ function createPgLiteTestConnection() {
 
 export function getDatabase() {
   if (!dbInstance) {
-    throw new Error('Database connection not initialized')
+    dbInstance = isTest ? createPgLiteTestConnection() : createPostgresConnection()
   }
   return dbInstance
+}
+
+/**
+ * Close and cleanup database connection
+ * Essential for PGLite to prevent memory leaks
+ */
+export async function closeDatabaseConnection() {
+  if (dbInstance) {
+    if (isTest && '$client' in dbInstance && typeof dbInstance.$client.close === 'function') {
+      await dbInstance.$client.close()
+    }
+    dbInstance = null
+  }
+}
+
+/**
+ * Reset database connection (for tests)
+ * Creates fresh PGLite instance to avoid corruption
+ */
+export function resetDatabaseConnection() {
+  if (isTest) {
+    dbInstance = null // Will create fresh instance on next getDatabase() call
+  }
 }
 
 /**

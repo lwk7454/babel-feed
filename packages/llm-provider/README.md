@@ -46,30 +46,37 @@ console.log(response.choices[0].message.content)
 ## Environment Configuration
 
 ```bash
-# OpenRouter Configuration
-OPENROUTER_ENABLED=true
-OPENROUTER_API_KEY=your-openrouter-key-1,your-openrouter-key-2
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODELS=openai/gpt-4o-mini,anthropic/claude-3-haiku
-OPENROUTER_RPM=60
-OPENROUTER_RPH=3600
-OPENROUTER_RPD=86400
-
-# Kimi/Moonshot Configuration  
-KIMI_ENABLED=true
-KIMI_API_KEY=your-kimi-key-1,your-kimi-key-2
-KIMI_BASE_URL=https://api.moonshot.cn/v1
-KIMI_MODELS=moonshot-v1-8k,moonshot-v1-32k,moonshot-v1-128k
-KIMI_RPM=30
-KIMI_RPH=1800
-KIMI_RPD=43200
-
-# General Settings
+# Global Settings (only these are needed)
 LLM_TIMEOUT=30000
 LLM_RETRY_ATTEMPTS=3
 LLM_RETRY_DELAY=1000
 LLM_CB_THRESHOLD=5
 LLM_CB_TIMEOUT=60000
+```
+
+## Database Configuration
+
+All LLM providers are configured through the database. Use the `add-provider.ts` script to add new providers:
+
+```bash
+# Create a .env file with your API key
+echo "OPENROUTER_API_KEY=your-api-key-here" > packages/llm-provider/.env
+
+# Run the script to add a provider
+cd packages/llm-provider
+bun run add-provider.ts
+```
+
+Or manually insert providers and keys into the database using the `AiProviderManager`:
+
+```typescript
+import { AiProviderManager } from '@babel-feed/llm-provider'
+
+const manager = new AiProviderManager()
+await manager.initialize()
+
+// Add providers and keys programmatically
+// See add-provider.ts for example implementation
 ```
 
 ## Usage Examples
@@ -185,51 +192,62 @@ const result = await manager.executeWithProvider('openrouter-provider-id', async
 
 ### Provider Configuration
 
-All providers use the same OpenAI-compatible interface with configuration-based customization:
+All providers use the same OpenAI-compatible interface. Provider configurations are stored in the database and can be managed through the `AiProviderManager`:
 
 ```typescript
-import { OpenAIAdapter } from '@babel-feed/llm-provider'
+import { AiProviderManager } from '@babel-feed/llm-provider'
 
-const adapter = new OpenAIAdapter(httpClient, {
-  validateRequest: true,    // Validate requests against provider capabilities
-  transformRequest: true,   // Apply provider-specific transformations
-  transformResponse: true   // Normalize responses to OpenAI format
-})
+const manager = new AiProviderManager()
+await manager.initialize()
 
-// All providers work the same way - differences are in configuration
-const response = await adapter.createChatCompletion(request, provider, key, context)
-```
+// Get all enabled providers
+const providers = await manager.getEnabledProviders()
 
-### Provider Configuration Examples
-
-**OpenRouter Configuration** (from environment):
-```bash
-OPENROUTER_ENABLED=true
-OPENROUTER_API_KEY=your-key-1,your-key-2
-OPENROUTER_MODELS=openai/gpt-4o-mini,anthropic/claude-3-haiku
-```
-
-**Kimi Configuration** (from environment):
-```bash
-KIMI_ENABLED=true
-KIMI_API_KEY=your-kimi-key
-KIMI_MODELS=moonshot-v1-8k,moonshot-v1-32k
+// Get providers by type
+const translationProviders = await manager.getEnabledProviders('translation')
+const contentProviders = await manager.getEnabledProviders('content_analysis')
 ```
 
 ### Adding New Providers
 
-To add a new OpenAI-compatible provider, simply add its configuration:
+To add a new OpenAI-compatible provider, use the database:
 
-```bash
-# New provider configuration
-MY_PROVIDER_ENABLED=true
-MY_PROVIDER_API_KEY=your-api-key
-MY_PROVIDER_BASE_URL=https://api.myprovider.com/v1
-MY_PROVIDER_MODELS=my-model-1,my-model-2
-MY_PROVIDER_MAX_TOKENS=4096
+```typescript
+// Add provider to database
+const [provider] = await manager['db']!.insert(aiProviders).values({
+  name: 'my-provider',
+  displayName: 'My Provider',
+  providerType: 'translation',
+  baseUrl: 'https://api.myprovider.com/v1',
+  enabled: true,
+  priority: 5,
+  maxRequestsPerMinute: 60,
+  maxRequestsPerHour: 3600,
+  maxRequestsPerDay: 86400,
+  circuitBreakerThreshold: 5,
+  circuitBreakerTimeout: 60000,
+  metadata: {
+    models: ['my-model-1', 'my-model-2'],
+    maxTokens: 4096,
+    features: {
+      streaming: true,
+      tools: true,
+      jsonMode: true
+    }
+  }
+}).returning()
+
+// Add API keys
+await manager['db']!.insert(aiProviderKeys).values({
+  providerId: provider.id,
+  keyName: 'my-provider-key',
+  apiKey: 'your-api-key',
+  enabled: true,
+  priority: 10
+})
 ```
 
-The system will automatically detect and configure the new provider.
+Or use the `add-provider.ts` script for quick setup.
 
 ## Error Handling
 

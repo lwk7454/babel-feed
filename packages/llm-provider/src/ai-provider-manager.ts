@@ -8,7 +8,7 @@ import {
   type NewAiProvider
 } from '@babel-feed/pgdb'
 import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm'
-import { AiProvider, AiProviderKey, ProviderHealthStatus, LlmProviderError, CircuitBreakerOptions } from './types'
+import { AiProvider, AiProviderKey, ProviderHealthStatus, LlmProviderError, CircuitBreakerOptions, LlmError } from './types'
 import { logger } from '@babel-feed/utils'
 import { CircuitBreaker } from './circuit-breaker'
 
@@ -19,7 +19,8 @@ export class AiProviderManager {
   private rateLimitTracking = new Map<string, { count: number; resetTime: number }>()
 
   async initialize(): Promise<void> {
-    this.db = getDatabase()
+    // Use test database in test environment, otherwise use regular database
+    this.db = process.env.NODE_ENV === 'test' ? getTestDb() : getDatabase()
 
     const existingProviders = await this.getAllProviders()
 
@@ -35,11 +36,14 @@ export class AiProviderManager {
         .orderBy(desc(aiProviders.priority), asc(aiProviders.name))
       
       if (providers.length === 0) {
-        throw new Error('No providers found, please seed initial providers')
+        throw new LlmProviderError('No providers found', 'NO_PROVIDERS')
       }
 
       return providers.map(this.mapDbProviderToAiProvider)
     } catch (error) {
+      if (error instanceof LlmProviderError) {
+        throw error
+      }
       logger.error('Failed to fetch AI providers:', error)
       throw new LlmProviderError('Failed to fetch AI providers from database', 'DATABASE_ERROR')
     }
@@ -82,7 +86,9 @@ export class AiProviderManager {
     if (keys.length === 0) return null
     const availableKeys = keys.filter(key => {
       const circuitBreaker = this.circuitBreakers.get(`${providerId}:${key.id}`)
-      return !circuitBreaker || !circuitBreaker.isOpen()
+      const hasOpenCircuitBreaker = circuitBreaker && circuitBreaker.isOpen()
+      const isQuotaExceeded = key.dailyQuota !== null && (key.currentUsage || 0) >= (key.dailyQuota || 0)
+      return !hasOpenCircuitBreaker && !isQuotaExceeded
     })
     if (availableKeys.length === 0) return null
     const currentIndex = this.keyRotationIndex.get(providerId) || 0
@@ -106,13 +112,25 @@ export class AiProviderManager {
       const key = await this.getAvailableKey(providerId)
       if (!key) {
         logger.warn(`No available keys for provider ${providerId} on attempt ${attempt + 1}`)
+        // Check if all keys are circuit breaker blocked (should fail immediately)
+        const keys = await this.getProviderKeys(providerId)
+        const hasOpenCircuitBreakers = keys.some(k => {
+          const breaker = this.circuitBreakers.get(`${providerId}:${k.id}`)
+          return breaker && breaker.isOpen()
+        })
+        
+        if (hasOpenCircuitBreakers) {
+          // Don't retry if circuit breakers are open
+          throw new LlmProviderError(`No available keys for provider ${providerId} (circuit breakers open)`, 'NO_AVAILABLE_KEYS')
+        }
+        
         if (attempt < retries - 1) {
           await this.delay(Math.pow(2, attempt) * 1000)
           continue
         }
         throw new LlmProviderError(`No available keys for provider ${providerId}`, 'NO_AVAILABLE_KEYS')
       }
-      const circuitBreaker = this.getOrCreateCircuitBreaker(providerId, key.id)
+      const circuitBreaker = await this.getOrCreateCircuitBreaker(providerId, key.id)
       try {
         const result = await circuitBreaker.execute(async () => {
           this.trackRateLimit(key)
@@ -146,13 +164,15 @@ export class AiProviderManager {
         }
       }
     }
-    throw new LlmProviderError(`All retries exhausted for provider ${providerId}`, 'OPERATION_FAILED', 500)
+    const error = new LlmProviderError(`All retries exhausted for provider ${providerId}`, 'OPERATION_FAILED', 500)
+    ;(error as LlmError).retryable = true // Mark as retryable so LlmClient can try next provider
+    throw error
   }
 
   async getProviderHealth(providerId: string): Promise<ProviderHealthStatus> {
     const provider = await this.getProviderById(providerId)
-    const keys = await this.getProviderKeys(providerId)
     if (!provider) throw new LlmProviderError(`Provider ${providerId} not found`, 'NOT_FOUND', 404)
+    const keys = await this.getProviderKeys(providerId)
     const availableKeys = keys.filter(key => {
       const circuitBreaker = this.circuitBreakers.get(`${providerId}:${key.id}`)
       return !circuitBreaker || !circuitBreaker.isOpen()
@@ -167,7 +187,7 @@ export class AiProviderManager {
       else if (breaker?.isHalfOpen()) circuitState = 'half-open'
     }
     return {
-      healthy: provider.enabled && availableKeys.length > 0 && errorRate < 50,
+      healthy: provider.enabled && availableKeys.length > 0 && errorRate < 50 && circuitState !== 'open',
       circuitState,
       availableKeys: availableKeys.length,
       totalKeys: keys.length,
@@ -190,21 +210,17 @@ export class AiProviderManager {
     }
   }
 
-  private getOrCreateCircuitBreaker(providerId: string, keyId: string): CircuitBreaker {
+  private async getOrCreateCircuitBreaker(providerId: string, keyId: string): Promise<CircuitBreaker> {
     const breakerId = `${providerId}:${keyId}`
     if (!this.circuitBreakers.has(breakerId)) {
-      this.getProviderById(providerId).then(provider => {
-        if (provider) {
-          const options: CircuitBreakerOptions = {
-            threshold: provider.circuitBreakerThreshold,
-            timeout: provider.circuitBreakerTimeout,
-            resetTimeout: provider.healthCheckInterval || 30000
-          }
-          this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, options))
-        }
-      })
-      const defaultOptions: CircuitBreakerOptions = { threshold: 5, timeout: 60000, resetTimeout: 30000 }
-      this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, defaultOptions))
+      const provider = await this.getProviderById(providerId)
+      const options: CircuitBreakerOptions = provider ? {
+        threshold: provider.circuitBreakerThreshold,
+        timeout: provider.circuitBreakerTimeout,
+        resetTimeout: provider.healthCheckInterval || 30000
+      } : { threshold: 5, timeout: 60000, resetTimeout: 30000 }
+      
+      this.circuitBreakers.set(breakerId, new CircuitBreaker(breakerId, options))
     }
     return this.circuitBreakers.get(breakerId)!
   }
@@ -266,7 +282,7 @@ export class AiProviderManager {
     for (const provider of providers) {
       const keys = await this.getProviderKeys(provider.id)
       for (const key of keys) {
-        this.getOrCreateCircuitBreaker(provider.id, key.id)
+        await this.getOrCreateCircuitBreaker(provider.id, key.id)
       }
     }
   }
@@ -295,7 +311,12 @@ export class AiProviderManager {
     }
   }
 
-  private delay(ms: number): Promise<void> { return new Promise(resolve => setTimeout(resolve, ms)) }
+  private delay(ms: number): Promise<void> { 
+    return new Promise(resolve => {
+      // Use setTimeout (which gets mocked by SinonJS fake timers in tests)
+      setTimeout(resolve, ms)
+    })
+  }
 
   private mapDbProviderToAiProvider(dbProvider: DbAiProvider): AiProvider {
     return {
@@ -325,6 +346,7 @@ export class AiProviderManager {
       keyValue: dbKey.apiKey,
       apiKey: dbKey.apiKey,
       enabled: dbKey.enabled,
+      priority: dbKey.priority,
       currentUsage: dbKey.currentUsage,
       dailyQuota: dbKey.dailyQuota || undefined,
       lastUsed: dbKey.lastUsed || undefined,

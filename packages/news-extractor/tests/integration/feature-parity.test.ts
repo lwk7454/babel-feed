@@ -5,16 +5,11 @@
  * and compares extraction results to verify exact feature parity.
  */
 
-import { describe, it, expect, beforeAll } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { Article } from '../../src/article.js'
 import { Configuration } from '../../src/configuration.js'
-import { setupTestDatabase } from '@babel-feed/pgdb'
-
-beforeAll(async () => {
-  await setupTestDatabase()
-})
 
 interface PythonTestMetadata {
   title?: string
